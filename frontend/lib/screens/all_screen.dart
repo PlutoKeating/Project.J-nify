@@ -29,14 +29,16 @@ class _AllScreenState extends State<AllScreen> {
     setState(() => _loading = true);
     try {
       final items = await _api.listItems();
+      if (!mounted) return;
       setState(() {
         _items = items;
         _error = null;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() => _error = e.toString());
     } finally {
-      setState(() => _loading = false);
+      if (mounted) setState(() => _loading = false);
     }
   }
 

@@ -30,14 +30,16 @@ class _NowScreenState extends State<NowScreen> {
     setState(() => _loading = true);
     try {
       final data = await _api.now();
+      if (!mounted) return;
       setState(() {
         _data = data;
         _error = null;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() => _error = e.toString());
     } finally {
-      setState(() => _loading = false);
+      if (mounted) setState(() => _loading = false);
     }
   }
 

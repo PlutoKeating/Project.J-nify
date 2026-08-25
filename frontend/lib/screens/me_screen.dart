@@ -14,7 +14,6 @@ class MeScreen extends StatefulWidget {
 
 class _MeScreenState extends State<MeScreen> {
   final _api = ApiService(ApiClient.instance);
-  Map<String, dynamic> _data = {};
   bool _loading = true;
 
   bool _quietHours = false;
@@ -31,15 +30,15 @@ class _MeScreenState extends State<MeScreen> {
     setState(() => _loading = true);
     try {
       final data = await _api.guardrails();
+      if (!mounted) return;
       final scope = (data['privacy_scope'] as Map<String, dynamic>? ?? {});
       setState(() {
-        _data = data;
         _maxNudge = data['max_nudge_budget'] as int? ?? 3;
         _coarseLocation = scope['coarse_location'] == true;
         _loading = false;
       });
     } catch (_) {
-      setState(() => _loading = false);
+      if (mounted) setState(() => _loading = false);
     }
   }
 
