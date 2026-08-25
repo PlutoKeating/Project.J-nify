@@ -1,0 +1,64 @@
+import '../core/api/api_client.dart';
+import '../models/item_commitment.dart';
+
+/// 业务 API 服务：封装 /v1/... 端点。
+class ApiService {
+  ApiService(this._client);
+
+  final ApiClient _client;
+
+  Future<Map<String, dynamic>> now() async {
+    final data = await _client.get('/v1/now');
+    return data as Map<String, dynamic>;
+  }
+
+  Future<ItemCommitment> capture(
+    String rawText, {
+    String category = 'life',
+  }) async {
+    final data = await _client.post('/v1/items/capture', body: {
+      'raw_text': rawText,
+      'category': category,
+    }) as Map<String, dynamic>;
+    return ItemCommitment.fromJson(data['item'] as Map<String, dynamic>);
+  }
+
+  Future<List<ItemCommitment>> listItems({String? status}) async {
+    final data = await _client.get(
+      '/v1/items',
+      query: status == null ? null : {'status': status},
+    ) as List<dynamic>;
+    return data
+        .map((e) => ItemCommitment.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  Future<Map<String, dynamic>> decide(
+    String id,
+    String decision, {
+    String reason = '',
+  }) async {
+    final data = await _client.post('/v1/items/$id/decision', body: {
+      'decision': decision,
+      'reason': reason,
+    });
+    return data as Map<String, dynamic>;
+  }
+
+  Future<Map<String, dynamic>> guardrails() async {
+    final data = await _client.get('/v1/guardrails');
+    return data as Map<String, dynamic>;
+  }
+
+  Future<Map<String, dynamic>> updateGuardrails(Map<String, dynamic> body) async {
+    final data = await _client.put('/v1/guardrails', body: body);
+    return data as Map<String, dynamic>;
+  }
+
+  Future<dynamic> postSignal(String type, Map<String, dynamic> payload) async {
+    return _client.post('/v1/signals', body: {
+      'signal_type': type,
+      'payload': payload,
+    });
+  }
+}

@@ -1,0 +1,20 @@
+name: jnify_app
+description: "J-nify — 低打扰行动秘书（Jennifer）客户端。spec 见 docs/SPEC.md。"
+publish_to: 'none'
+version: 0.1.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  # Backend 地址等配置完全由 .env 控制（见 .env.example）
+  flutter_dotenv: ^5.1.0
+  http: ^1.2.0
+
+dev_dependencies:
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true

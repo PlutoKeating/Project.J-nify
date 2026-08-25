@@ -1,1 +1,14 @@
 .env
+.dart_tool/
+.packages
+.pub/
+.pub-cache/
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+.idea/
+*.iml
+*.ipr
+*.iws
+.android/
+.ios/
