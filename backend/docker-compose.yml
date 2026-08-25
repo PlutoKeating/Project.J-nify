@@ -1,0 +1,20 @@
+# J-nify backend — compose stack.
+# Single service (api). The published host port is driven by `.env`
+# (`APP_PORT`), so the backend exposes exactly one unique, operator-controlled
+# port — ready to be fronted by intranet penetration to a production URL.
+#
+# Note: all Docker files live only under `backend/` (frontend has none).
+#
+# Usage:  docker compose up --build
+
+services:
+  api:
+    build: .
+    container_name: jnify-api
+    env_file:
+      - .env
+    ports:
+      - "${APP_PORT:-8000}:${APP_PORT:-8000}"
+    volumes:
+      - ./data:/app/data
+    restart: unless-stopped

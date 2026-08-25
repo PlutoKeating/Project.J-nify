@@ -1,0 +1,17 @@
+# J-nify backend — .dockerignore
+# Keep the build context lean; runtime/config artifacts stay out.
+.git
+.github
+.venv
+venv
+__pycache__
+*.pyc
+*.pyo
+.env
+data
+docs
+scripts
+tests
+Dockerfile
+docker-compose.yml
+.dockerignore
