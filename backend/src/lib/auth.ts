@@ -23,9 +23,11 @@ export async function verifyJwt(token: string, supabaseUrl: string): Promise<str
 }
 
 interface MinimalDb {
-  insert(table: unknown): MinimalDb;
-  values(values: unknown): MinimalDb;
-  onConflictDoNothing(): Promise<unknown>;
+  insert(table: unknown): {
+    values(values: unknown): {
+      onConflictDoNothing(): PromiseLike<unknown>;
+    };
+  };
 }
 
 export const requireAuth: MiddlewareHandler<{ Bindings: Env; Variables: { userId: string } }> = async (c, next) => {

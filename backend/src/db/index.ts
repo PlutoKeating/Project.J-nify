@@ -35,15 +35,22 @@ export async function robustGuardrails(db: Db, userId: string): Promise<Guardrai
   };
 }
 
+const DEFAULT_SCOPE = { calendar: true, weather: true, coarse_location: true } as const;
+
 export async function robustPrivacyScope(db: Db, userId: string): Promise<Record<string, boolean>> {
   const rows = await db
     .select()
     .from(schema.userPreferences)
     .where(and(eq(schema.userPreferences.userId, userId), eq(schema.userPreferences.scene, 'guardrails')));
   const row = rows.find((r) => r.key === 'privacy_scope');
-  if (!row) return { calendar: true, weather: true, coarse_location: true };
-  const parsed = JSON.parse(row.value) as Record<string, boolean>;
-  return { calendar: true, weather: true, coarse_location: true, ...parsed };
+  if (!row) return { ...DEFAULT_SCOPE };
+  try {
+    // 解析失败回落默认 scope（不 500）
+    const parsed = JSON.parse(row.value) as Record<string, boolean>;
+    return { ...DEFAULT_SCOPE, ...parsed };
+  } catch {
+    return { ...DEFAULT_SCOPE };
+  }
 }
 
 export async function latestContext(db: Db, userId: string): Promise<Record<string, unknown> | null> {

@@ -1,4 +1,4 @@
-import { desc, eq } from 'drizzle-orm';
+import { desc, eq, sql } from 'drizzle-orm';
 import type { Db } from '../db';
 import { dbSchema as s } from '../db';
 import { computeWindow, type WindowResult } from './window-engine';
@@ -53,16 +53,17 @@ export async function freshOrReuseWindow(
   return { windowId: row.id, result };
 }
 
+// policy 仅保留 maxNudges 用途；nudge_count 自增在 SQL 侧完成（不再依赖调用方陈旧计数）。
 export async function buildNudge(
   db: Db,
   item: ItemRowLike,
-  policy: { maxNudges: number; nudgeCount: number },
+  policy: { maxNudges: number },
   guardrails: GuardrailsLike,
   windowId: string,
   result: WindowResult,
   now: Date = new Date(),
 ): Promise<string | null> {
-  const g = await shouldNudge(policy, guardrails, now);
+  const g = await shouldNudge({ maxNudges: policy.maxNudges, nudgeCount: null }, guardrails, now);
   if (!g.allowed) return null;
   if (!result.reasonText) return null; // 没有理由不通知
   const { title, body, options } = draft(item, result);
@@ -89,7 +90,7 @@ export async function buildNudge(
   );
   await db
     .update(s.escalationPolicies)
-    .set({ nudgeCount: (policy.nudgeCount ?? 0) + 1 })
+    .set({ nudgeCount: sql<number>`${s.escalationPolicies.nudgeCount} + 1` })
     .where(eq(s.escalationPolicies.itemId, item.id));
   return nudge.id;
 }
