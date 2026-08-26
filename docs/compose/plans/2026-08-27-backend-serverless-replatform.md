@@ -2029,28 +2029,29 @@ now.get('/', async (c) => {
     });
   }
   const ctx = await latestContext(db, userId);
-  const scored: { item: (typeof candidates)[number]; windowId: string; fitScore: number; reasonCode: string; reasonText: string }[] = [];
+  const scored: { item: (typeof candidates)[number]; windowId: string; result: ReturnType<typeof computeWindow> }[] = [];
   for (const item of candidates) {
     const { windowId, result } = await freshOrReuseWindow(db, item, { contextFeatures: ctx });
-    scored.push({ item, windowId, fitScore: result.fitScore, reasonCode: result.reasonCode, reasonText: result.reasonText });
+    scored.push({ item, windowId, result });
   }
-  scored.sort((a, b) => b.fitScore - a.fitScore || 0); // fit_score 最高；稳定排序保留 updated_at 序
+  scored.sort((a, b) => b.result.fitScore - a.result.fitScore); // fit_score 最高；稳定排序保留 updated_at 序
   const best = scored[0];
   const policy = await db.select().from(s.escalationPolicies).where(eq(s.escalationPolicies.itemId, best.item.id)).limit(1);
   const guardrails = await robustGuardrails(db, userId);
   const p = policy[0];
+  // 预算以用户护栏为准（policy.maxNudges 仅作建档快照）
   const nudgeId = await buildNudge(
     db,
     best.item,
-    { maxNudges: p?.maxNudges ?? guardrails.maxNudgeBudget, nudgeCount: p?.nudgeCount ?? 0 },
+    { maxNudges: guardrails.maxNudgeBudget, nudgeCount: p?.nudgeCount ?? 0 },
     guardrails,
     best.windowId,
-    { reasonCode: best.reasonCode, reasonText: best.reasonText, fitScore: best.fitScore, windowStart: new Date(), windowEnd: new Date() },
+    best.result,
   );
   if (nudgeId) {
     await db.update(s.itemCommitments).set({ status: 'nudged' }).where(eq(s.itemCommitments.id, best.item.id));
   }
-  const { title, body, options } = draft(best.item, { reasonCode: best.reasonCode, reasonText: best.reasonText, fitScore: best.fitScore, windowStart: new Date(), windowEnd: new Date() });
+  const { title, body, options } = draft(best.item, best.result);
   return c.json({
     greeting: '周六上午 · 只被允许想一件事',
     headline: '现在，只递一件顺手的',
@@ -2063,9 +2064,9 @@ now.get('/', async (c) => {
       due_at: best.item.dueAt,
       created_at: best.item.createdAt,
       updated_at: best.item.updatedAt,
-      reason_code: best.reasonCode,
-      reason_text: best.reasonText,
-      fit_score: best.fitScore,
+      reason_code: best.result.reasonCode,
+      reason_text: best.result.reasonText,
+      fit_score: best.result.fitScore,
       options,
     },
     empty_message: null,
@@ -2371,7 +2372,7 @@ describeIf('integration e2e', () => {
   it('capture -> now shows window with reason', async () => {
     const cap = await call('/v1/items/capture', {
       method: 'POST',
-      body: JSON.stringify({ raw_text: '月底还信用卡', category: 'bill', due_at: new Date(Date.now() + 5 * 86400_000).toISOString() }),
+      body: JSON.stringify({ raw_text: '月底还信用卡', category: 'return', due_at: new Date(Date.now() + 5 * 86400_000).toISOString() }),
     });
     expect(cap.status).toBe(200);
     const capBody = (await cap.json()) as { item: { id: string }; message: string };
@@ -2382,20 +2383,25 @@ describeIf('integration e2e', () => {
     const nowBody = (await r.json()) as { item: { id: string; reason_code: string; options: { code: string }[] } };
     expect(nowBody.item.id).toBe(capBody.item.id);
     expect(nowBody.item.reason_code).toBe('due_soon');
+    // return 属于兜底类目：rescue 应出现
     expect(nowBody.item.options.map((o) => o.code)).toEqual(['now', 'later', 'drop', 'rescue']);
   });
 
-  it('later does not immediately re-serve the item at top', async () => {
+  it('later does not immediately re-serve the same item at top', async () => {
+    // 上一用例已建 due_soon(return) 事项；再录一条 social
+    await call('/v1/items/capture', {
+      method: 'POST',
+      body: JSON.stringify({ raw_text: '回小明消息', category: 'social' }),
+    });
     const r1 = await call('/v1/now');
     const first = ((await r1.json()) as { item: { id: string } }).item;
     await call(`/v1/items/${first.id}/decision`, { method: 'POST', body: JSON.stringify({ decision: 'later' }) });
-    const r2 = await call('/v1/items?status=parked');
-    const parked = (await r2.json()) as { id: string; updated_at: string }[];
-    const target = parked.find((i) => i.id === first.id);
-    expect(target).toBeTruthy(); // 回到 parked
-    // 队尾语义：目标 updated_at 应为队列中最新（最后一名）
-    const last = parked[parked.length - 1];
-    expect(last.id).toBe(first.id);
+    const r2 = await call('/v1/now');
+    const second = ((await r2.json()) as { item: { id: string } }).item;
+    expect(second.id).not.toBe(first.id); // 刚晚点的事项不立刻回顶
+    const list = await call('/v1/items?status=parked');
+    const parked = (await list.json()) as { id: string }[];
+    expect(parked.map((i) => i.id)).toContain(first.id); // 且已回 parked，可恢复
   });
 
   it('guardrails persist across client instances', async () => {
@@ -2728,7 +2734,7 @@ git commit -m "feat(frontend): supabase auth (login/register) + JWT injection in
 - Modify: `frontend/lib/screens/now_screen.dart`
 - Modify: `frontend/lib/screens/me_screen.dart`
 - Modify: `frontend/lib/services/api_service.dart`
-- Modify: `frontend/lib/models/item_commitment.dart`（加 toJson 不需要；仅补 `options` 字段类型）
+- Modify: `frontend/lib/models/item_commitment.dart`（补 const 构造器 + `options` 字段）
 - Test: `frontend/test/focus_card_test.dart`（新增，纯 widget，不触网）
 
 **Interfaces:**
@@ -2915,7 +2921,29 @@ Future<Map<String, dynamic>> decide(String id, String decision, {String reason =
 
 `me_screen.dart` 的 `_load` 增加 `quiet_hours_start/end` 读取；开关状态 = `quiet_hours_start != '00:00'`（开启即默认 23:30—08:30）；`_save` 时当开关切换 PUT `quiet_hours_start: '23:30' / '00:00'` 与 `quiet_hours_end: '08:30' / '00:00'` 成对提交，并把 `_maxNudge`、`_coarseLocation` 一并上送（沿用现有 updateGuardrails）。
 
-- [ ] **Step 6: 新增 focus_card 纯 widget 测试**
+- [ ] **Step 6: 模型扩展 + 新增 focus_card 纯 widget 测试**
+
+`frontend/lib/models/item_commitment.dart`：保留既有 `fromJson`，新增：
+
+```dart
+// 供纯 widget 测试与本地构造使用；线上数据仍走 fromJson。
+const ItemCommitment({
+  required this.id,
+  required this.title,
+  this.category = 'life',
+  this.status = 'parked',
+  this.rawText = '',
+  this.dueAt,
+  this.important = 1,
+  this.urgent = 1,
+  this.estMinutes = 5,
+  this.options = const [],
+});
+
+final List<dynamic> options; // NowItem 的决策选项数组；fromJson 中解析 item['options'] ?? []
+```
+
+说明：构造器参数名与现有字段保持一致（以实际文件为准微调）。`options` 供 FocusCard 按后端渲染；`fromJson` 增加 `options: (json['options'] as List<dynamic>? ?? [])`。
 
 `frontend/test/focus_card_test.dart`：
 
