@@ -5,7 +5,6 @@ import { dbSchema as s } from '../db';
 import { latestContext, robustGuardrails } from '../db';
 import { buildNudge, freshOrReuseWindow } from '../services/orchestrator';
 import { draft } from '../services/brain';
-import { ensureUser } from '../lib/auth';
 import type { WindowResult } from '../services/window-engine';
 
 export const now = new Hono<AppEnv>();
@@ -15,7 +14,6 @@ const ACTIVE = ['parked', 'window_candidate', 'nudged'];
 now.get('/', async (c) => {
   const db = c.get('db');
   const userId = c.get('userId');
-  await ensureUser(db, userId);
   const candidates = await db
     .select()
     .from(s.itemCommitments)

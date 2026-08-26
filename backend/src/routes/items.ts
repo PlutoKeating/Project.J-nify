@@ -2,7 +2,6 @@ import { Hono } from 'hono';
 import { and, desc, eq } from 'drizzle-orm';
 import type { AppEnv } from '../app';
 import { dbSchema as s } from '../db';
-import { ensureUser } from '../lib/auth';
 import { CAPTURE_MESSAGE, captureValues } from '../services/capture';
 import { decisionMessage, effectMetrics, nextState } from '../services/decision-feedback';
 
@@ -13,7 +12,6 @@ items.post('/capture', async (c) => {
   const userId = c.get('userId');
   const body = await c.req.json<{ raw_text?: string; source_type?: string; category?: string; due_at?: string }>();
   if (!body.raw_text?.trim()) return c.json({ detail: 'raw_text is required' }, 422);
-  await ensureUser(db, userId);
   const values = captureValues({
     rawText: body.raw_text,
     sourceType: body.source_type,

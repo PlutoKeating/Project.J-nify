@@ -1,8 +1,9 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
+import { HTTPException } from 'hono/http-exception';
 import type { Env } from './config';
 import { num } from './config';
-import { requireAuth } from './lib/auth';
+import { ensureUser, requireAuth } from './lib/auth';
 import { slidingWindow } from './lib/rate-limit';
 import { createDb, type Db } from './db';
 import { health } from './routes/health';
@@ -24,6 +25,7 @@ export function makeApp(env: Env): Hono<AppEnv> {
   app.use('/v1/*', async (c, next) => {
     const db = createDb(env.DATABASE_URL); // createDb 已有模块级按 URL 缓存
     c.set('db', db);
+    await ensureUser(db, c.get('userId')); // users 懒创建；先落库以免 FK 失败（幂等 onConflictDoNothing）
     const limit = num(env, 'RATE_LIMIT_PER_MINUTE');
     if (limit > 0) {
       const allow = slidingWindow(`${c.get('userId')}:${c.req.path}`, limit, 60_000);
@@ -33,8 +35,9 @@ export function makeApp(env: Env): Hono<AppEnv> {
   });
 
   app.onError((err, c) => {
+    if (err instanceof HTTPException) return err.getResponse();
     console.error(err);
-    return c.json({ detail: 'internal error' }, 500);
+    return c.json({ detail: err instanceof SyntaxError ? 'invalid request body' : 'internal error' }, err instanceof SyntaxError ? 400 : 500);
   });
   app.notFound((c) => c.json({ detail: 'not found' }, 404));
 
