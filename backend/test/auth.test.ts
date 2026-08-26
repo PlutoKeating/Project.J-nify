@@ -38,6 +38,16 @@ describe('verifyJwt', () => {
   it('rejects a garbage token', async () => {
     await expect(verifyJwt('not-a-jwt', jwksUrl)).rejects.toThrow();
   });
+
+  it('rejects a token with a wrong issuer', async () => {
+    const token = await new SignJWT({ sub: 'user-123' })
+      .setProtectedHeader({ alg: 'RS256', kid: 'test' })
+      .setIssuer('https://evil.example/auth/v1')
+      .setIssuedAt()
+      .setExpirationTime('2h')
+      .sign(signKey);
+    await expect(verifyJwt(token, jwksUrl)).rejects.toThrow();
+  });
 });
 
 describe('ensureUser', () => {

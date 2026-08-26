@@ -3,10 +3,15 @@ import type { MiddlewareHandler } from 'hono';
 import type { Env } from '../config';
 import { users as usersTable } from '../db/schema';
 
+const jwksCache = new Map<string, ReturnType<typeof createRemoteJWKSet>>();
 export function jwksFor(supabaseUrl: string) {
-  return createRemoteJWKSet(
-    new URL(`${supabaseUrl.replace(/\/$/, '')}/auth/v1/.well-known/jwks.json`),
-  );
+  const url = `${supabaseUrl.replace(/\/$/, '')}/auth/v1/.well-known/jwks.json`;
+  let set = jwksCache.get(url);
+  if (!set) {
+    set = createRemoteJWKSet(new URL(url));
+    jwksCache.set(url, set);
+  }
+  return set;
 }
 
 export async function verifyJwt(token: string, supabaseUrl: string): Promise<string> {
@@ -28,10 +33,10 @@ export const requireAuth: MiddlewareHandler<{ Bindings: Env; Variables: { userId
   if (!header?.startsWith('Bearer ')) return c.json({ detail: 'unauthorized' }, 401);
   try {
     c.set('userId', await verifyJwt(header.slice(7), c.env.SUPABASE_URL));
-    await next();
   } catch {
     return c.json({ detail: 'unauthorized' }, 401);
   }
+  await next(); // 下游错误交给 app.onError/500，不得吞成 401
 };
 
 export async function ensureUser(db: MinimalDb, userId: string): Promise<void> {
