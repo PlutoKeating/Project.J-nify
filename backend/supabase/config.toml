@@ -1,0 +1,2 @@
+project_id = "jnify"
+# 供 supabase CLI link/push 使用；本地栈(docker)无需启动，仅远端操作。
