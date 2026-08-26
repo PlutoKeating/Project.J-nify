@@ -53,17 +53,17 @@ export async function freshOrReuseWindow(
   return { windowId: row.id, result };
 }
 
-// policy 仅保留 maxNudges 用途；nudge_count 自增在 SQL 侧完成（不再依赖调用方陈旧计数）。
+// policy 携带当前 nudgeCount 仅用于 GATE 判断；nudge_count +1 自增始终在 SQL 侧完成。
 export async function buildNudge(
   db: Db,
   item: ItemRowLike,
-  policy: { maxNudges: number },
+  policy: { maxNudges: number; nudgeCount: number },
   guardrails: GuardrailsLike,
   windowId: string,
   result: WindowResult,
   now: Date = new Date(),
 ): Promise<string | null> {
-  const g = await shouldNudge({ maxNudges: policy.maxNudges, nudgeCount: null }, guardrails, now);
+  const g = shouldNudge(policy, guardrails, now);
   if (!g.allowed) return null;
   if (!result.reasonText) return null; // 没有理由不通知
   const { title, body, options } = draft(item, result);

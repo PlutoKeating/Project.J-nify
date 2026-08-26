@@ -39,7 +39,7 @@ now.get('/', async (c) => {
     }
     scored.sort((a, b) => b.result.fitScore - a.result.fitScore); // fit_score 最高；稳定排序保留 updated_at 序
     const best = scored[0];
-    // policy 行缺失则先 INSERT 默认行（maxNudges 用护栏预算，nudgeCount 0）
+    // policy 行缺失则先 INSERT 默认行（maxNudges 用护栏预算，nudgeCount 0），再取事务内最新行
     const existing = await tx
       .select()
       .from(s.escalationPolicies)
@@ -50,10 +50,15 @@ now.get('/', async (c) => {
         .insert(s.escalationPolicies)
         .values({ itemId: best.item.id, maxNudges: guardrails.maxNudgeBudget, nudgeCount: 0 });
     }
+    const [policyRow] = await tx
+      .select()
+      .from(s.escalationPolicies)
+      .where(eq(s.escalationPolicies.itemId, best.item.id))
+      .limit(1);
     const nudgeId = await buildNudge(
       tx,
       best.item,
-      { maxNudges: guardrails.maxNudgeBudget },
+      { maxNudges: guardrails.maxNudgeBudget, nudgeCount: policyRow.nudgeCount },
       guardrails,
       best.windowId,
       best.result,

@@ -27,7 +27,15 @@ guardrails.get('/', async (c) => {
     .from(s.userPreferences)
     .where(and(eq(s.userPreferences.userId, userId), eq(s.userPreferences.scene, 'guardrails')));
   const row = rows.find((r) => r.key === 'privacy_scope');
-  const privacy = row ? JSON.parse(row.value) : { calendar: true, weather: true, coarse_location: true };
+  // 解析失败回落默认 scope（不 500），与 db/index.ts robustPrivacyScope 一致
+  let privacy: Record<string, boolean> = { calendar: true, weather: true, coarse_location: true };
+  if (row) {
+    try {
+      privacy = JSON.parse(row.value) as Record<string, boolean>;
+    } catch {
+      privacy = { calendar: true, weather: true, coarse_location: true };
+    }
+  }
   return c.json({ quiet_hours_start: g.quietHoursStart, quiet_hours_end: g.quietHoursEnd, max_nudge_budget: g.maxNudgeBudget, privacy_scope: privacy });
 });
 
