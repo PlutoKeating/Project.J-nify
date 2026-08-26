@@ -19,6 +19,9 @@ describe('nextState', () => {
   it('unknown decision keeps status', () => {
     expect(nextState('bogus').status).toBe('bogus');
   });
+  it('unknown decision keeps current status when provided', () => {
+    expect(nextState('bogus', 'parked').status).toBe('parked');
+  });
 });
 
 describe('decisionMessage', () => {

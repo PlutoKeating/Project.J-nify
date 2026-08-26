@@ -9,7 +9,7 @@ export function decisionMessage(decision: string): string {
   return DECISION_MESSAGES[decision] ?? '记下了。';
 }
 
-export function nextState(decision: string): { status: string; closedAt: boolean; touchUpdatedAt: boolean } {
+export function nextState(decision: string, currentStatus = ''): { status: string; closedAt: boolean; touchUpdatedAt: boolean } {
   switch (decision) {
     case 'now':
       return { status: 'done', closedAt: true, touchUpdatedAt: false };
@@ -21,7 +21,7 @@ export function nextState(decision: string): { status: string; closedAt: boolean
     case 'rescue':
       return { status: 'rescued', closedAt: false, touchUpdatedAt: false };
     default:
-      return { status: decision, closedAt: false, touchUpdatedAt: false };
+      return { status: currentStatus || decision, closedAt: false, touchUpdatedAt: false };
   }
 }
 
