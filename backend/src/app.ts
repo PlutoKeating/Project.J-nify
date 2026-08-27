@@ -37,22 +37,6 @@ export function makeApp(env: Env): Hono<AppEnv> {
   app.onError((err, c) => {
     if (err instanceof HTTPException) return err.getResponse();
     console.error(err);
-    // DEBUG=1（仅临时诊断 secret）时返回真实错误详情，便于定位；生产不设置该变量。
-    if (env.DEBUG === '1') {
-      const chain: string[] = [];
-      let cur: unknown = err;
-      for (let i = 0; i < 4 && cur; i++) {
-        const c = cur as Record<string, unknown> & { message?: string };
-        const own: Record<string, unknown> = {};
-        for (const k of Object.getOwnPropertyNames(c)) {
-          const v = (c as Record<string, unknown>)[k];
-          if (typeof v === 'string' || typeof v === 'number' || typeof v === 'boolean') own[k] = v;
-        }
-        chain.push(`[${i}] ${c.message ?? ''}\n  fields=${JSON.stringify(own)}`);
-        cur = (c as { cause?: unknown }).cause;
-      }
-      return c.json({ detail: chain.join('\n') }, 500);
-    }
     return c.json({ detail: err instanceof SyntaxError ? 'invalid request body' : 'internal error' }, err instanceof SyntaxError ? 400 : 500);
   });
   app.notFound((c) => c.json({ detail: 'not found' }, 404));
