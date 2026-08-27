@@ -32,8 +32,13 @@ describeIf('integration e2e', () => {
     supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_ANON_KEY!);
     const email = `test-${Date.now().toString(36)}@jnify.dev`;
     const password = 'password-123456';
-    const { data, error } = await supabase.auth.signUp({ email, password });
-    if (error || !data.session) throw new Error(`signup failed: ${error?.message ?? 'no session'}; 需在 Auth settings 关闭 Confirm email`);
+    // 生产环境 Confirm email 已开启（邮件走 SMTP）→ 注册需确认；用 service key 管理员建已确认用户，
+    // 再真实登录拿会话（等价「用户点确认邮件后首次登录」）。
+    const admin = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_KEY!, { auth: { autoRefreshToken: false, persistSession: false } });
+    const { error: createErr } = await admin.auth.admin.createUser({ email, password, email_confirm: true });
+    if (createErr) throw new Error(`admin createUser failed: ${createErr.message}`);
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error || !data.session) throw new Error(`signin failed: ${error?.message ?? 'no session'}`);
     token = data.session.access_token;
     userId = data.user!.id;
     app = makeApp(env);

@@ -44,13 +44,19 @@ class _NowScreenState extends State<NowScreen> {
   }
 
   Future<void> _capture(String text, String category, DateTime? dueAt) async {
-    await _api.capture(text, category: category, dueAt: dueAt);
+    final res = await _api.capture(text, category: category, dueAt: dueAt);
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('记下了：不急，但我帮您盯着。'),
+      SnackBar(
+        content: Text(res['message'] as String? ?? '记下了：不急，但我帮您盯着。'),
         behavior: SnackBarBehavior.floating,
-        duration: Duration(milliseconds: 2200),
+        duration: const Duration(milliseconds: 2200),
+        // 顶部居中 pill（SPEC §3.5），与 decision toast 一致
+        margin: EdgeInsets.only(
+          top: MediaQuery.of(context).padding.top + 12,
+          left: 48,
+          right: 48,
+        ),
       ),
     );
     _load();
