@@ -112,7 +112,10 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 const SizedBox(height: 8),
                 TextButton(
-                  onPressed: () => setState(() => _isSignUp = !_isSignUp),
+                  onPressed: () => setState(() {
+                    _isSignUp = !_isSignUp;
+                    _error = null; // 切模式时清残留错误（评审 Minor）
+                  }),
                   child: Text(_isSignUp ? '已有账号？去登录' : '没有账号？注册'),
                 ),
               ],
