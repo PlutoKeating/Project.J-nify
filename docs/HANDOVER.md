@@ -41,7 +41,9 @@
 ## 3. 已完成工作（全部双门评审通过 / 真实验证通过）
 
 ### 3.1 后端（T1–T11 全 done）—— 真实功能，零 mockup
-- **11 端点**：`GET /`、`GET /health`、`POST /v1/items/capture`、`GET /v1/items?status=`、`POST /v1/items/{id}/decision`（now/later/drop/rescue，含 message）、`GET /v1/now`、`POST /v1/signals`、`GET|PUT /v1/guardrails`、`DELETE /v1/me/data`、`POST /v1/llm/draft`（模板降级 stub）。
+- **DB 访问层（2026-08-27 重构定案）**：Worker 运行时经 **Supabase REST（PostgREST）** 访问数据库（标准 HTTPS —— workerd 不信任 Supavisor 私有根 CA，ca 注入无效且 Hyperdrive 账号未开通；REST 为已实测唯一可行通道）。原子性写操作走 Postgres RPC：`fn_decide`（决策闭环保留 later 两步队列尾语义）、`fn_create_nudge`（nudge+options+计数自增）、`fn_ingest_signal`（信号三写）。RPC 迁移文件：`20260827000002_rest_rpc.sql`（+修复 0003 to_jsonb 转换）。
+- 运行时 secrets：`SUPABASE_URL` + `SUPABASE_SERVICE_KEY`（service key，仅存 CF Worker secrets 与本机 `.dev.vars`）；迁移/测试仍用 pooler 连接串（node 侧 postgres.js，仅 devDep/script）。
+- **11 端点**（同上）均已生产验证：`GET /`、`GET /health`、`POST /v1/items/capture`、`GET /v1/items?status=`、`POST /v1/items/{id}/decision`（now/later/drop/rescue，含 message）、`GET /v1/now`、`POST /v1/signals`、`GET|PUT /v1/guardrails`、`DELETE /v1/me/data`、`POST /v1/llm/draft`（模板降级 stub）。
 - 认证：Supabase Auth 邮箱体系，`jose` JWKS 验签（模块级记忆化），`Authorization: Bearer`；users 懒创建（中间件 ensureUser）；401 语义完整；llm/draft 按 userId 隔离（修过 IDOR）。
 - 业务：capture→parked；`/now` 候选仅 parked/window_candidate/nudged、updated_at 升序、fit_score 最高（稳定排序）、served 窗口落库、8h 窗口复用、**晚点冷却**（8h 内 later 决策 → 队列尾，全 defer 时服务最久未晚点项且抑制 nudge）；决策事务（later 两步 deferred→parked 触底 updated_at）；护栏持久化（user_preferences，唯一约束 user_id+scene+key）；signals→ContextSnapshot（确定性评分，事务）；me/data 级联删除；频控红线（预算门读事务内新鲜 nudgeCount + SQL 原子自增 + quiet hours，quiet hours 语义与 Python 原版一致 [start,end) UTC）。
 - 质量：**51 单元测试绿**；**集成测试 5/5 真库绿**（注册→capture→now→later→guardrails→signals→me/data→全 defer 抑制 nudge）。

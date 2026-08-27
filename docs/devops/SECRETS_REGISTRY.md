@@ -10,8 +10,9 @@
 | `SMTP_USER` = j_nify@yeah.net | 生产收发件邮箱 | GitHub Actions Secrets（已存）| `gh secret set SMTP_USER` |
 | `SMTP_AUTH_PROD` | yeah.net 客户端授权码（SMTP 密码，非登录密码） | GitHub Actions Secrets（已存）+ 届时填入 Supabase 生产项目 Authentication → Settings → SMTP | `gh secret set SMTP_AUTH_PROD`；切勿发公开渠道 |
 | 发件显示名 | 邮件发件人 | 非敏感 → `docs/devops/smtp.md`（模板随 Task 16 生成） | 文案审校 |
-| `SUPABASE_URL`（生产项目） | Worker 验签 JWKS / Supabase 客户端 | CF Dashboard → Worker → Settings → Variables and Secrets（生产部署前填） | Dashboard 维护 |
-| `DATABASE_URL`（生产，pooler 事务模式 :6543） | Worker 运行时 DB 连接 | CF Dashboard secrets（同上） | Dashboard 维护；`prepare:false` 已在代码固定 |
+| `SUPABASE_URL`（生产项目） | Worker 验签 JWKS / Supabase 客户端 | CF Dashboard → Worker → Settings → Variables and Secrets（已存 dev 值；生产项目建立后更新） | Dashboard 维护 |
+| `SUPABASE_SERVICE_KEY` | **后端 DB 访问（PostgREST，2026-08-27 起）** | CF Dashboard secrets（已存）+ 本机 `backend/.dev.vars`；**只进后端** | Dashboard / `wrangler secret put` 维护 |
+| `DATABASE_URL`（pooler 事务模式 :6543） | 仅迁移脚本/集成测试（node 侧 postgres.js），**无需进 CF Worker** | 本机 `backend/.dev.vars` + GH Actions 集成测试 env | `.dev.vars` 维护 |
 | `LLM_API_BASE/LLM_API_KEY/LLM_MODEL` | 预留 LLM 网关（空则模板降级） | CF Dashboard secrets（同上，暂空） | Dashboard 维护 |
 | Android 签名 keystore 及口令 | 前端 release APK/AAB 签名（Task 16 引入） | GitHub Actions Secrets（届时添加） | `gh secret set` |
 | 本地开发配置（dev 项目 URL/anon/连接串） | 本地 `wrangler dev`/测试 | `backend/.dev.vars`（gitignored） | 本机维护 |
