@@ -1,0 +1,161 @@
+# 前端 APP 自动打包发布：推送 tag vX.Y.Z 触发。
+# - 唯一版本来源：frontend/pubspec.yaml 的 version（tag 与之一致才放行，否则 fail-fast）
+# - Android：ubuntu 上构建 release APK + AAB（当前无签名密钥 → 未签名）
+# - iOS：macos 上 flutter build ipa --no-codesign（未签名）
+# - 汇总 job 把产物挂到 GitHub Release
+# 后端部署不在此工作流内：维持 Cloudflare Dashboard git 集成（Root directory=backend）。
+name: Release Frontend
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write   # softprops/action-gh-release 创建 Release
+  actions: write    # upload-artifact / download-artifact（@v4 需要）
+
+jobs:
+  validate:
+    name: Validate tag matches pubspec version
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Compare tag with frontend/pubspec.yaml version
+        env:
+          GITHUB_REF_NAME: ${{ github.ref_name }}
+        run: |
+          python3 - <<'PY'
+          import os, re, sys, pathlib
+
+          tag = os.environ["GITHUB_REF_NAME"]
+          pub = pathlib.Path("frontend/pubspec.yaml").read_text(encoding="utf-8")
+          m = re.search(r"^version:\s*(\S+)\s*$", pub, re.M)
+          if not m:
+              print("::error::frontend/pubspec.yaml 缺少 version 字段")
+              sys.exit(1)
+          pub_ver = m.group(1).split("+")[0]  # 0.1.0+1 -> 0.1.0（build number 不入 tag）
+          expected = "v" + pub_ver
+          if tag != expected:
+              print(f"::error::tag '{tag}' 与 frontend/pubspec.yaml version '{pub_ver}' 不一致（期望 {expected}）")
+              sys.exit(1)
+          print(f"OK: tag {tag} 与 frontend/pubspec.yaml version {pub_ver} 一致")
+          PY
+
+  android:
+    name: Build Android APK + AAB
+    needs: validate
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      # android/ 平台目录目前未入库（untracked 噪声），CI 冷检出不包含它；
+      # flutter create 只补缺不覆盖，若日后 android/ 入库此步为 no-op。
+      # --org com.jnify 与本地脚手架 applicationId=com.jnify.jnify_app 保持一致。
+      - name: Ensure android platform scaffolding
+        run: flutter create --platforms=android --org com.jnify .
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Build release APK
+        run: flutter build apk --release
+
+      - name: Build release AAB
+        run: flutter build appbundle --release
+
+      - name: Upload Android artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-artifacts
+          if-no-files-found: error
+          path: |
+            build/app/outputs/flutter-apk/app-release.apk
+            build/app/outputs/bundle/release/app-release.aab
+
+  ios:
+    name: Build iOS ipa (no codesign)
+    needs: validate
+    runs-on: macos-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      # ios/ 平台目录同样未入库；flutter create 只补缺不覆盖。
+      # --org com.jnify 与本地 Runner 的 PRODUCT_BUNDLE_IDENTIFIER=com.jnify.jnifyApp 一致。
+      - name: Ensure ios platform scaffolding
+        run: flutter create --platforms=ios --org com.jnify .
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Build unsigned ipa
+        run: flutter build ipa --no-codesign
+
+      - name: Upload iOS artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-artifacts
+          if-no-files-found: error
+          path: build/ios/ipa/*.ipa
+
+  release:
+    name: Create GitHub Release
+    needs: [android, ios]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download Android artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: android-artifacts
+          path: android
+
+      - name: Download iOS artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: ios-artifacts
+          path: ios
+
+      - name: Publish Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: J-nify ${{ github.ref_name }}
+          body: |
+            ## J-nify ${{ github.ref_name }}
+
+            > 版本来源：frontend/pubspec.yaml（详见 `docs/devops/release.md`）。
+
+            ### 产物
+            - **APK**（`app-release.apk`）：Android 直接安装包
+            - **AAB**（`app-release.aab`）：Google Play 上架用
+            - **IPA**（`*.ipa`）：iOS 安装包（**未签名**，需自行签名后分发）
+
+            ### ⚠️ 当前为无签名构建
+            - Android：未配置 keystore（使用调试签名占位），正式上架前需接入签名（见 `docs/devops/release.md`「签名接入」）。
+            - iOS：`--no-codesign` 构建，未签名无法直接安装到真机；需 Apple Developer 证书签名/公证。
+          files: |
+            android/app-release.apk
+            android/app-release.aab
+            ios/*.ipa

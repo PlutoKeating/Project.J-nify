@@ -106,6 +106,14 @@ LICENSE        AGPL-3.0
 - 🔌 [`docs/API.md`](docs/API.md) —— REST API
 - 🚀 [`docs/QUICK_START.md`](docs/QUICK_START.md) —— 快速开始
 
+## CI/CD 与发布
+
+- ✅ **CI 门禁**（`.github/workflows/ci.yml`）：push / PR 自动并行校验 —— 后端 `npm test` + typecheck，前端 `flutter analyze` + `flutter test`。
+- 📦 **前端自动打包发布**（`.github/workflows/release-frontend.yml`）：推送 tag `vX.Y.Z` 触发，校验 tag 与 `frontend/pubspec.yaml` 的 version 一致后，构建 Android APK/AAB（ubuntu）与 iOS 未签名 ipa（macos），汇总为 GitHub Release。流程详见 [`docs/devops/release.md`](docs/devops/release.md)。
+- 🚢 **后端部署**：维持 Cloudflare Dashboard git 集成（Root directory=`backend`），不走 Actions。生产后端唯一 Base URL = **`https://jnify.williamhvollita.dpdns.org`**（前端生产构建默认指向该地址，见 `frontend/lib/core/config/app_config.dart`，无需 `.env`）。
+- 📧 **邮件与 SMTP**（Supabase 自定义 SMTP，j_nify@yeah.net）：配置步骤与确认邮箱 / 重置密码模板见 [`docs/devops/smtp.md`](docs/devops/smtp.md)。
+- 🔐 **密钥台账**：所有 prod 密钥以 GitHub Actions Secrets / Cloudflare Worker Secrets / Supabase 平台存储，仓库内无明文密钥，见 [`docs/devops/SECRETS_REGISTRY.md`](docs/devops/SECRETS_REGISTRY.md)。
+
 ## 路线图
 
 - **M0 骨架** — 录入 → 漂浮 → 手动窗口 → 三选项闭环（✅ 已落地）
