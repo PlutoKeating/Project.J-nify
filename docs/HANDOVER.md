@@ -96,12 +96,14 @@
 
 ## 7. 真机可用 MVP 的必要先决条件与阻塞
 
+> 2026-08-27 更新：**后端生产部署链路已通** —— `push main → CI + Deploy Backend(wrangler) 全绿`，生产 Worker 已在 `https://jnify.williamhvollita.dpdns.org` 响应（`/` 与 `/health` 200）。后续 push 会自动部署，无需 Dashboard 绑定（A 方案绑定可保留或停用以避免双部署）。
+
 | # | 项 | 性质 | 说明 |
 |---|---|---|---|
 | 1 | **T13 前端认证** | 代码 | 无登录页 → 装包也无法注册/登录 |
 | 2 | **T14 前端 M0 缺口** | 代码 | 录入/决策体验不完整 |
 | 3 | **生产 Supabase 项目 + SMTP** | 运维(用户) | 真机用户需进生产库；邮件走 j_nify@yeah.net（绕开 Supabase 邮件额度） |
-| 4 | **CF Worker secrets 注入** | 运维(用户) | 不注入则生产服务无法连库 |
+| 4 | **CF Worker 运行时 secrets 注入** | 运维(用户) | `SUPABASE_URL`/`DATABASE_URL`(pooler :6543)/`LLM_*` 需在 CF Dashboard → Worker → Settings → Variables and Secrets 填入；未注入则 `/v1/*` 全部 401（缺 SUPABASE_URL）、DB 操作失败 |
 | 5 | **APK 产出** | 构建 | 首包仍在构建；产出后即可侧载安装（debug 包允许未知来源） |
 | 6 | Android 签名 / iOS 构建签名 | 运维(用户) | 阻塞商店发布，不阻塞侧载 |
 | 7 | 真实主动推送（FCM/APNs） | 业务 | Nudge 已落库但无推送通道；「主动提醒」尚未真实化（M1 后期） |
@@ -142,6 +144,10 @@ git push origin main            # ssh.github.com:443，重试 2-4 次
 
 ## 9. 运维注意事项
 
+- **后端部署链路（2026-08-27 已通）**：`push main → CI(npm test/typecheck + flutter analyze/test) + Deploy Backend(cloudflare/wrangler-action@v3, node 24) 全绿`。关键点：`wrangler.toml` 必须 `compatibility_flags = ["nodejs_compat"]`（postgres.js/drizzle 依赖 node:events/net/tls，否则部署报 10021 No such module）；node 版本须 24（npm 11 lockfile 与 npm 10 不兼容）；`CLOUDFLARE_API_TOKEN`（cfut_ 用户级，Edit Cloudflare Workers 模板）+ `CLOUDFLARE_ACCOUNT_ID` 已在 GH Secrets。
+- **CF Dashboard 绑定（A 方案）**：原绑定指向已删除的 `master` → 不触发；现已由 Actions 部署取代。Dashboard 的 Builds 绑定可改 main 或停用（避免双部署）。
+- **生产 Worker 运行时 secrets 待填**：`SUPABASE_URL`、`DATABASE_URL`（pooler :6543）、LLM 预留 —— CF Dashboard → Worker → Settings → Variables and Secrets。
+- **Browser Integrity Check**：生产域名被 CF 反爬策略保护，脚本 UA 直连会 403/1010；浏览器/真机 UA 正常。若 Flutter 客户端遇到 1010，需在 CF 该域名的 WAF/Security Level 放行 API 路径或降级 Bot 防护。
 - **SSH push**：workflow 文件推送被 gh token 的 scope 限制 → 一律 `git push origin main`（SSH）。普通提交可用 HTTPS/gh。
 - **golden rule**：任何环境（含 Supabase SQL Editor/Table Editor）不得直接改远端表结构，只走 `backend/supabase/migrations/*.sql` + `npm run db:migrate`。
 - **Sandbox 网络**：直连 Supabase `:5432` 在本机被黑洞 → 一律用 pooler `:6543`（`prepare:false` 已固定）；集成测试偶发 JWKS 冷启动 401 / pooler ECONNRESET → warm 复跑。
