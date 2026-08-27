@@ -1,6 +1,6 @@
 # CI 门禁：push / PR 触发，后端与前端并行校验。
 # 仅做校验（npm test + typecheck / flutter analyze + test），不做任何部署。
-# 后端生产部署维持 Cloudflare Dashboard git 集成（Root directory=backend），不走 Actions。
+# 后端部署：.github/workflows/deploy-backend.yml（wrangler deploy，push main 自动上线）。
 name: CI
 
 on:

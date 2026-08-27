@@ -23,7 +23,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24 # 与 CI 一致（npm 11）；npm 10 的 npm ci 会拒绝 npm11 生成的 lockfile
           cache: npm
           cache-dependency-path: backend/package-lock.json
 
