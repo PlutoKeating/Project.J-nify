@@ -1,3 +1,9 @@
+// 集成 e2e（真实 Supabase 环境；3 个 env 任一缺失时本文件整体跳过）。
+// 运行前置：
+//   ① 需 3 个环境变量：SUPABASE_URL / SUPABASE_ANON_KEY（publishable key）/ DATABASE_URL（pooler 串）；
+//   ② Supabase Auth 需关闭 Confirm email（mailer_autoconfirm=true），否则 signUp 不返回 session；
+//   ③ 迁移需已应用：cd backend && npm run db:migrate（需 DIRECT_DATABASE_URL）。
+// 运行：cd backend && npx vitest run test/integration.test.ts
 import { beforeAll, describe, expect, it } from 'vitest';
 import postgres from 'postgres';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
@@ -24,7 +30,7 @@ describeIf('integration e2e', () => {
       MAX_NUDGE_BUDGET: '3',
     } as never;
     supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_ANON_KEY!);
-    const email = `test-${Date.now() % 100000}@jnify.dev`;
+    const email = `test-${Date.now().toString(36)}@jnify.dev`;
     const password = 'password-123456';
     const { data, error } = await supabase.auth.signUp({ email, password });
     if (error || !data.session) throw new Error(`signup failed: ${error?.message ?? 'no session'}; 需在 Auth settings 关闭 Confirm email`);
@@ -97,5 +103,45 @@ describeIf('integration e2e', () => {
     expect(d.status).toBe(200);
     const list = await call('/v1/items');
     expect((await list.json()) as unknown[]).toEqual([]);
+  });
+
+  it('single item fully deferred: same item served but nudge suppressed', { timeout: 90_000 }, async () => {
+    // 静默时段 start===end ⇒ 永不静默：保证首轮 now 必然 nudge（否则在 23:30-08:30 UTC 跑会假失败）
+    await call('/v1/guardrails', { method: 'PUT', body: JSON.stringify({ quiet_hours_start: '00:00', quiet_hours_end: '00:00', max_nudge_budget: 3 }) });
+    const cap = await call('/v1/items/capture', {
+      method: 'POST',
+      body: JSON.stringify({ raw_text: '整理月报', category: 'work' }),
+    });
+    expect(cap.status).toBe(200);
+    const itemId = ((await cap.json()) as { item: { id: string } }).item.id;
+
+    const countNudges = async (id: string): Promise<number> => {
+      const fresh = postgres(process.env.DATABASE_URL!, { prepare: false, ssl: 'require' });
+      try {
+        const rows = await fresh`
+          select count(*)::int as n
+          from nudges n
+          join item_commitments i on i.id = n.item_id
+          where n.item_id = ${id} and i.user_id = ${userId}
+        `;
+        return Number(rows[0].n);
+      } finally {
+        await fresh.end();
+      }
+    };
+
+    const r1 = await call('/v1/now');
+    expect(r1.status).toBe(200);
+    expect(((await r1.json()) as { item: { id: string } }).item.id).toBe(itemId);
+    expect(await countNudges(itemId)).toBe(1); // 首轮 now 已 nudge
+
+    await call(`/v1/items/${itemId}/decision`, { method: 'POST', body: JSON.stringify({ decision: 'later' }) });
+
+    const r2 = await call('/v1/now');
+    expect(r2.status).toBe(200);
+    const body2 = (await r2.json()) as { item: { id: string; status: string } };
+    expect(body2.item.id).toBe(itemId); // 全 defer 回退：同一事项仍被动可见
+    expect(body2.item.status).not.toBe('nudged'); // 该轮响应不置 nudged
+    expect(await countNudges(itemId)).toBe(1); // 该轮抑制 nudge，nudge 数不变
   });
 });

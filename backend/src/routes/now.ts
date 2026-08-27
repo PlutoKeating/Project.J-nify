@@ -1,5 +1,5 @@
 import { Hono } from 'hono';
-import { and, asc, desc, eq, inArray } from 'drizzle-orm';
+import { and, asc, desc, eq, gt, inArray } from 'drizzle-orm';
 import type { AppEnv } from '../app';
 import { dbSchema as s } from '../db';
 import { latestContext, robustGuardrails } from '../db';
@@ -41,7 +41,7 @@ now.get('/', async (c) => {
     const recentDecisions = await tx
       .select()
       .from(s.decisions)
-      .where(inArray(s.decisions.itemId, candidates.map((i) => i.id)))
+      .where(and(eq(s.decisions.userId, userId), inArray(s.decisions.itemId, candidates.map((i) => i.id)), gt(s.decisions.decidedAt, since)))
       .orderBy(desc(s.decisions.decidedAt));
     const latestByItem = new Map<string, { decision: string; decidedAt: Date }>();
     for (const d of recentDecisions) {
@@ -50,38 +50,48 @@ now.get('/', async (c) => {
     }
     const deferredIds = new Set<string>();
     for (const [itemId, d] of latestByItem) {
-      if (d.decision === 'later' && d.decidedAt.getTime() > since.getTime()) deferredIds.add(itemId);
+      if (d.decision === 'later') deferredIds.add(itemId);
     }
-    const ranked = deferredIds.size > 0
-      ? [...scored.filter((x) => !deferredIds.has(x.item.id)), ...scored.filter((x) => deferredIds.has(x.item.id))]
-      : scored;
+    const deferred = scored.filter((x) => deferredIds.has(x.item.id));
+    const nonDeferred = scored.filter((x) => !deferredIds.has(x.item.id));
+    // 全 defer 时 ranked 不得退化为 scored：按 decidedAt 最早（最久未打扰）的事项服务，避免刚晚点事项立即回顶
+    const ranked = nonDeferred.length > 0
+      ? [...nonDeferred, ...deferred]
+      : deferred.length > 0
+        ? [...deferred].sort((a, b) => latestByItem.get(a.item.id)!.decidedAt.getTime() - latestByItem.get(b.item.id)!.decidedAt.getTime())
+        : scored;
     const best = ranked[0];
-    // policy 行缺失则先 INSERT 默认行（maxNudges 用护栏预算，nudgeCount 0），再取事务内最新行
-    const existing = await tx
-      .select()
-      .from(s.escalationPolicies)
-      .where(eq(s.escalationPolicies.itemId, best.item.id))
-      .limit(1);
-    if (!existing[0]) {
-      await tx
-        .insert(s.escalationPolicies)
-        .values({ itemId: best.item.id, maxNudges: guardrails.maxNudgeBudget, nudgeCount: 0 });
-    }
-    const [policyRow] = await tx
-      .select()
-      .from(s.escalationPolicies)
-      .where(eq(s.escalationPolicies.itemId, best.item.id))
-      .limit(1);
-    const nudgeId = await buildNudge(
-      tx,
-      best.item,
-      { maxNudges: guardrails.maxNudgeBudget, nudgeCount: policyRow.nudgeCount },
-      guardrails,
-      best.windowId,
-      best.result,
-    );
-    if (nudgeId) {
-      await tx.update(s.itemCommitments).set({ status: 'nudged' }).where(eq(s.itemCommitments.id, best.item.id));
+    const bestIsDeferred = deferredIds.has(best.item.id);
+    let nudgeId: string | null = null;
+    // 全 defer 回退：仅被动可见，该轮抑制 nudge（不重复打扰刚晚点的事项）
+    if (!bestIsDeferred) {
+      // policy 行缺失则先 INSERT 默认行（maxNudges 用护栏预算，nudgeCount 0），再取事务内最新行
+      const existing = await tx
+        .select()
+        .from(s.escalationPolicies)
+        .where(eq(s.escalationPolicies.itemId, best.item.id))
+        .limit(1);
+      if (!existing[0]) {
+        await tx
+          .insert(s.escalationPolicies)
+          .values({ itemId: best.item.id, maxNudges: guardrails.maxNudgeBudget, nudgeCount: 0 });
+      }
+      const [policyRow] = await tx
+        .select()
+        .from(s.escalationPolicies)
+        .where(eq(s.escalationPolicies.itemId, best.item.id))
+        .limit(1);
+      nudgeId = await buildNudge(
+        tx,
+        best.item,
+        { maxNudges: guardrails.maxNudgeBudget, nudgeCount: policyRow.nudgeCount },
+        guardrails,
+        best.windowId,
+        best.result,
+      );
+      if (nudgeId) {
+        await tx.update(s.itemCommitments).set({ status: 'nudged' }).where(eq(s.itemCommitments.id, best.item.id));
+      }
     }
     return { best, nudgeId };
   });
