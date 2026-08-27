@@ -23,7 +23,7 @@ export function makeApp(env: Env): Hono<AppEnv> {
   // 先鉴权（拿到 userId 再限流，按用户计；未鉴权不建连）
   app.use('/v1/*', requireAuth);
   app.use('/v1/*', async (c, next) => {
-    const db = await createDb(env.HYPERDRIVE?.connectionString ?? env.DATABASE_URL); // Hyperdrive 优先（CF 侧管 TLS；探活+重试）
+    const db = await createDb(env.DATABASE_URL); // Supavisor 直连 + 私有根 CA（见 db/supabase-pooler-ca.ts）
     c.set('db', db);
     await ensureUser(db, c.get('userId')); // users 懒创建；先落库以免 FK 失败（幂等 onConflictDoNothing）
     const limit = num(env, 'RATE_LIMIT_PER_MINUTE');
