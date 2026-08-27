@@ -23,7 +23,7 @@ describeIf('integration e2e', () => {
       MAX_NUDGE_BUDGET: '3',
     } as never;
     supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_ANON_KEY!);
-    const email = `test-${Date.now()}@jnify.dev`;
+    const email = `test-${Date.now() % 100000}@jnify.dev`;
     const password = 'password-123456';
     const { data, error } = await supabase.auth.signUp({ email, password });
     if (error || !data.session) throw new Error(`signup failed: ${error?.message ?? 'no session'}; 需在 Auth settings 关闭 Confirm email`);
