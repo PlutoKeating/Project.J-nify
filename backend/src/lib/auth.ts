@@ -1,7 +1,6 @@
 import { createRemoteJWKSet, jwtVerify } from 'jose';
 import type { MiddlewareHandler } from 'hono';
 import type { Env } from '../config';
-import { users as usersTable } from '../db/schema';
 
 const jwksCache = new Map<string, ReturnType<typeof createRemoteJWKSet>>();
 export function jwksFor(supabaseUrl: string) {
@@ -23,16 +22,13 @@ export async function verifyJwt(token: string, supabaseUrl: string): Promise<str
 }
 
 interface MinimalDb {
-  insert(table: unknown): {
-    values(values: unknown): {
-      onConflictDoNothing(): PromiseLike<unknown>;
-    };
-  };
+  execute(query: unknown): PromiseLike<unknown>;
 }
 
 export const requireAuth: MiddlewareHandler<{ Bindings: Env; Variables: { userId: string } }> = async (c, next) => {
   const header = c.req.header('Authorization');
   if (!header?.startsWith('Bearer ')) return c.json({ detail: 'unauthorized' }, 401);
+
   const supabaseUrl = c.env?.SUPABASE_URL;
   if (!supabaseUrl) return c.json({ detail: 'unauthorized' }, 401);
   try {
@@ -44,5 +40,9 @@ export const requireAuth: MiddlewareHandler<{ Bindings: Env; Variables: { userId
 };
 
 export async function ensureUser(db: MinimalDb, userId: string): Promise<void> {
-  await db.insert(usersTable as never).values({ id: userId }).onConflictDoNothing();
+  // 用 db.execute 直连同一 pg 客户端做幂等插入：绕开 drizzle insert 的 default 展开路径，
+  // 底层 postgres 错误可透出（code/detail），且 SQL 更简。
+  await db.execute(sql`insert into "public"."users" ("id") values (${userId}) on conflict do nothing`);
 }
+
+import { sql } from 'drizzle-orm';
