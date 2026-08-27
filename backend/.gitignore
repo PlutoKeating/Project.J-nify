@@ -4,3 +4,6 @@ node_modules/
 dist/
 coverage/.env
 *.env.local
+
+# 临时工作目录（探针/产物，收尾统一清理）
+/.scratch/
