@@ -31,7 +31,7 @@
 如任务涉及模块启动、环境变量、脚本或部署，还必须阅读该模块的：
 
 - `**/docs/QUICK_START.md`（若存在）
-- `**/.env.example`（若存在）
+- `**/.env.example` / `**/.dev.vars.example`（若存在；后端现用 `.dev.vars.example`，`.env.example` 已随 Python 后端移除）
 - 相关脚本
 
 如任务涉及容器化部署，还必须阅读：

@@ -1,41 +1,44 @@
 # 快速开始（QUICK START）
 
-## 后端
+前置：Node.js ≥ 20（建议 24）、Flutter SDK（stable）、Supabase 项目（迁移已含在仓库）；生产环境密钥见 `docs/devops/SECRETS_REGISTRY.md`。
 
-后端 `backend/` 完全 Docker 化，端口由 `.env` 控制。
+## 后端（Cloudflare Worker）
 
-```sh
+```bash
 cd backend
-cp .env.example .env          # 按需修改 APP_PORT 等（默认 8000）
-docker compose up --build
+npm ci                          # 安装依赖
+cp .dev.vars.example .dev.vars  # 填：
+                                #   SUPABASE_URL / SUPABASE_SERVICE_KEY（后端专用）
+                                #   DATABASE_URL=pooler 事务连接串（迁移/测试用，Node 侧）
+npx wrangler dev                # 本地起 Worker（http://localhost:8787）
 ```
 
-- Swagger/OpenAPI：`http://localhost:8000/docs`
-- 健康检查：`http://localhost:8000/health`
+**数据库迁移（结构即代码）**：
 
-> 后端独立部署在云端服务器时：只需让 `.env` 中的 `APP_PORT` 绑定到唯一空闲端口，
-> 再将内网穿透（如 frp/ngrok）指到该端口，即可映射到生产 URL。前端地址不参与后端端口决策。
-
-### 本地运行（可选，不使用 Docker）
-
-```sh
-cd backend
-python3 -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
-cp .env.example .env
-python3 -m uvicorn app.main:app --host ${APP_HOST:-0.0.0.0} --port ${APP_PORT:-8000}
+```bash
+DIRECT_DATABASE_URL='postgres://...pooler.../postgres' npm run db:migrate
 ```
 
-## 前端
+- 迁移文件：`backend/supabase/migrations/*.sql`（golden rule：**任何环境不得用 Dashboard 直接改表结构**）。
+- 当前迁移含：15+1 表（0000）、护栏唯一索引（0001）、事务 RPC（0002/0003）、RLS 加固（0004）。
 
-前端为 Flutter（`frontend/`），**无 Docker**。后端地址完全由 `.env` 控制。
+**部署（生产）**：push `main` 且改动 `backend/**` → GitHub Actions 自动 `wrangler deploy` 到
+`https://jnify.williamhvollita.dpdns.org`；亦可 Dashboard → Actions → Deploy Backend → Run workflow 手动触发。
 
-```sh
+## 前端（Flutter）
+
+```bash
 cd frontend
-cp .env.example .env          # 修改 BACKEND_BASE_URL，例如 http://<后端>:<APP_PORT>
+cp .env.example .env    # 可选：覆盖 BACKEND_BASE_URL / SUPABASE_URL / SUPABASE_ANON_KEY（publishable，仅 Auth）
 flutter pub get
 flutter run
 ```
 
-> 注意：本仓库交付的是完整 Flutter **工程代码**（`pubspec.yaml` + `lib/`）。
-> 首次在装有 Flutter SDK 的机器上运行时，需执行 `flutter create .` 生成平台目录，再 `flutter pub get`。
+> 提示：iOS 需 macOS（`flutter build ipa --no-codesign` 仅产 xcarchive）；Android `flutter build apk --release` 侧载安装；
+> 正式安装包从 GitHub Releases 下载（不是从仓库 build 目录分发）。
+
+## 验证清单
+
+- 注册 → 邮箱确认（生产 SMTP 已接，j_nify@yeah.net）→ 登录 → 录入 → 决策 → 登出。
+- 本地集成测试（可选）：`SUPABASE_URL/SUPABASE_ANON_KEY/SUPABASE_SERVICE_KEY/DATABASE_URL` 环境下
+  `npx vitest run test/integration.test.ts`（5 用例：注册用 service key 建已确认用户再真实登录）。

@@ -121,3 +121,12 @@ git tag v<pubspec 版本> && git push origin v<tag>   # 触发 Release 工作流
 - 子代理环境多次崩溃/挂死：判定卡死先看进程级证据（ps 里 gradle/java/dart 是否在跑），再 cancel+重派；任务树记得清理重复项（曾有 T5/T8 重复）。
 - Clash 开启时 SSH（ssh.github.com:443）不通：一律用 HTTPS 推送（已配 workflow scope）。
 - 沙箱直连 Supabase :5432 被黑洞：用 pooler `:6543`；本地 node postgres.js 正常。
+## 10. 发布与 CI/CD 已踩坑（补充记录，2026-08-27 v0.1.0）
+
+- **upload-artifact@v4 会剥离共同根目录**：`frontend/build/app/outputs/...` 上传后内容为 `flutter-apk/...` + `bundle/release/...`；Release 挂载与下载解压后的结构必须按**真实产物结构**写（验 ZIP 再改，勿盲试）。
+- **`--no-codesign` 只产 xcarchive**（无 ipa）；Release 现只挂 Android 产物，iOS 归档留在 CI Artifacts。
+- **release 作业只依赖 android**（iOS 独立、不阻塞发布）。
+- **改工作流后发布须重切 tag**（tag 内嵌工作流快照）：`git tag -d` + 删远端 + 重打。
+- **构建期间勿 kill Gradle 守护进程**（曾直接导致 assembleRelease 失败）；`/tmp FileAlreadyExistsException` 良性；首次 release 构建慢（R8）。
+- 发布前确认 GH Secrets `SUPABASE_URL/SUPABASE_ANON_KEY` 已设（release 包否则会指向 localhost、无法登录）。
+- v0.1.0 正式发布：GitHub Releases「J-nify v0.1.0」（Latest），资产 `app-release.apk`（52.9MB）+ `app-release.aab`（51.5MB）。

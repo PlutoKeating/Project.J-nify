@@ -1,34 +1,34 @@
 # Frontend 快速开始
 
-前置条件：安装 [Flutter SDK](https://flutter.dev)。
-
-> 本仓库已包含 Flutter 工程：`lib/`、`web/` 平台目录、`pubspec.yaml`、`pubspec.lock`、`test/`。首次在装有 Flutter SDK 的机器上仍需 `flutter pub get`。
+前置：Flutter SDK（stable）。仓库已含 `lib/`、`android/ ios/ web/` 平台目录、`pubspec.lock`、`test/`；首次仍需 `flutter pub get`。
 
 ## 运行
 
 ```sh
 cd frontend
-cp .env.example .env        # 修改 BACKEND_BASE_URL 指向后端
+cp .env.example .env        # 可选：本地开发将 BACKEND_BASE_URL 指向 http://localhost:8787（后端 wrangler dev）
 flutter pub get
-flutter run                 # 选择目标设备/平台
+flutter run
 ```
 
-## 验证（本机已通过）
+## 验证（本机已通过：Flutter 3.47.1）
 
 ```sh
-flutter analyze         # 无问题
-flutter test            # widget 冒烟测试通过
-flutter build web --release   # 编译 build/web 成功
+flutter analyze    # 0 issues
+flutter test       # 7 用例全绿（登录/注册表单、HomeShell、MeScreen 登出、焦点卡 options）
+flutter build apk --release --dart-define=SUPABASE_URL=... --dart-define=SUPABASE_ANON_KEY=...   # 出手装包
 ```
 
 ## 配置
 
-`.env`：
+`.env` 字段：
 
 ```
-BACKEND_BASE_URL=http://localhost:8000   # 后端地址（开发/生产可切换；生产唯一地址：https://jnify.williamhvollita.dpdns.org，代码默认值）
+BACKEND_BASE_URL=https://jnify.williamhvollita.dpdns.org   # 生产默认（代码内置）；本地开发改 http://localhost:8787
+SUPABASE_URL=                                             # 生产 release 由 CI dart-define 注入
+SUPABASE_ANON_KEY=
 APP_ENV=development
 API_TIMEOUT=15
 ```
 
-启动前请确保后端已运行（见 backend `docs/QUICK_START.md`），并让 `BACKEND_BASE_URL` 指向它。
+> 生产/发布包无需 `.env`：后端地址内置为生产 Base URL；Supabase 配置（URL + publishable key）由 CI 构建时注入（GH Secrets）。注册后需邮箱确认（生产 SMTP 已接，j_nify@yeah.net）。

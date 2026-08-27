@@ -671,7 +671,7 @@ Decision Feedback	decision + feedback	preference/memory update	不用于羞辱�
 方法	路径	说明	
 POST	`/v1/items/capture`	一句话/分享/语音转写录入	
 GET	`/v1/now`	返回当前唯一 best window 或空态	
-POST	`/v1/items/{id}/decision`	do/later/drop/rescue	
+POST	`/v1/items/{id}/decision`	now/later/drop/rescue	
 GET	`/v1/items?status=`	全部事项列表	
 POST	`/v1/signals`	端侧信号批量上报，受 scope 限制	
 GET	`/v1/guardrails`	安静时段、授权、提醒预算	

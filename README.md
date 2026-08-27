@@ -61,30 +61,35 @@ P 人不是不想做好，是很多事**一旦放下就真的会蒸发**。拖�
 
 | 层 | 技术 | 说明 |
 | --- | --- | --- |
-| 前端 | Flutter (Dart) | 无 Docker；后端地址由 `.env` 的 `BACKEND_BASE_URL` 完全控制 |
-| 后端 | FastAPI + SQLAlchemy + SQLite | 模块化单体；**全 Docker 化**；Docker 文件仅存在于 `backend/` |
+| 前端 | Flutter (Dart) + supabase_flutter | 认证（Supabase Auth）；三屏 UI + 录入/决策闭环；生产后端默认 `https://jnify.williamhvollita.dpdns.org` |
+| 后端 | **Cloudflare Worker**：TypeScript + Hono | 部署=GitHub Actions `wrangler deploy`（push main 自动上线） |
+| 数据 | **Supabase Postgres**（REST/PostgREST + RPC） | 15 实体表 + 事务 RPC；全表 RLS（客户端角色零数据访问） |
+| 账户/邮件 | **Supabase Auth + 生产 SMTP** | 邮箱确认/重置经 j_nify@yeah.net（smtp.yeah.net:465） |
 | 建模 | SPEC §6 的 15 个实体 | USER / ITEM_COMMITMENT / OPPORTUNITY_WINDOW / NUDGE / DECISION … |
 
-后端作为独立单元部署在云端服务器，暴露**唯一端口**，端口完全由 `.env` 控制（`APP_HOST` / `APP_PORT`），方便后期挂内网穿透映射到生产 URL。
+**运行时密钥**只在后端：`SUPABASE_URL` + `SUPABASE_SERVICE_KEY`（CF Worker secrets）；前端仅用客户端级 publishable key 做 Auth；仓库无明文密钥。
 
 ## 快速开始
 
-**后端（Docker）：**
+**后端（本地开发）：**
 
 ```bash
 cd backend
-cp .env.example .env        # 按需改 APP_PORT
-docker compose up --build
-# Swagger: http://localhost:<APP_PORT>/docs
+npm ci                                  # 安装依赖
+cp .dev.vars.example .dev.vars          # 填 SUPABASE_URL / SUPABASE_SERVICE_KEY / DATABASE_URL
+npx wrangler dev                        # 本地起 Worker
 ```
+
+**后端（部署）**：push `main`（改动 `backend/**`）→ GitHub Actions 自动 `wrangler deploy` 到生产；也可手动 Actions → Deploy Backend → Run workflow。
 
 **前端（Flutter）：**
 
 ```bash
 cd frontend
-cp .env.example .env        # 改 BACKEND_BASE_URL 指向后端
+cp .env.example .env                    # 可选：覆盖 BACKEND_BASE_URL / SUPABASE_*（生产默认已内置）
 flutter pub get
 flutter run
+# 发布安装包：见 docs/devops/release.md（打 tag vX.Y.Z 自动出 APK/AAB 并发布 GitHub Release）
 ```
 
 📖 完整说明见 [`docs/QUICK_START.md`](docs/QUICK_START.md)。
@@ -92,10 +97,11 @@ flutter run
 ## 仓库结构
 
 ```
-frontend/      Flutter 客户端（无 Docker）
-backend/       FastAPI 后端 + SQLite（全 Docker 化）
-docs/          文档：SPEC / ARCHITECTURE / API / QUICK_START
-scripts/       通用脚本
+frontend/      Flutter 客户端（认证 + 三屏 + 录入/决策闭环）
+backend/       Cloudflare Worker 后端（TS + Hono；Supabase REST/RPC 数据层）
+docs/          文档：SPEC / ARCHITECTURE / API / QUICK_START / HANDOVER
+docs/devops/   发布规范 / SMTP / 密钥台账
+.github/       GitHub Actions（CI / 后端部署 / 前端发布）
 LICENSE        AGPL-3.0
 ```
 
@@ -105,21 +111,22 @@ LICENSE        AGPL-3.0
 - 🏛️ [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) —— 系统架构
 - 🔌 [`docs/API.md`](docs/API.md) —— REST API
 - 🚀 [`docs/QUICK_START.md`](docs/QUICK_START.md) —— 快速开始
+- 🗂️ [`docs/HANDOVER.md`](docs/HANDOVER.md) —— 项目状态交接（本仓库最新实现/部署/运维要点）
 
 ## CI/CD 与发布
 
 - ✅ **CI 门禁**（`.github/workflows/ci.yml`）：push / PR 自动并行校验 —— 后端 `npm test` + typecheck，前端 `flutter analyze` + `flutter test`。
-- 📦 **前端自动打包发布**（`.github/workflows/release-frontend.yml`）：推送 tag `vX.Y.Z` 触发，校验 tag 与 `frontend/pubspec.yaml` 的 version 一致后，构建 Android APK/AAB（ubuntu）与 iOS 未签名 ipa（macos），汇总为 GitHub Release。流程详见 [`docs/devops/release.md`](docs/devops/release.md)。
-- 🚢 **后端部署**：维持 Cloudflare Dashboard git 集成（Root directory=`backend`），不走 Actions。生产后端唯一 Base URL = **`https://jnify.williamhvollita.dpdns.org`**（前端生产构建默认指向该地址，见 `frontend/lib/core/config/app_config.dart`，无需 `.env`）。
-- 📧 **邮件与 SMTP**（Supabase 自定义 SMTP，j_nify@yeah.net）：配置步骤与确认邮箱 / 重置密码模板见 [`docs/devops/smtp.md`](docs/devops/smtp.md)。
+- 📦 **前端自动打包发布**（`.github/workflows/release-frontend.yml`）：推送 tag `vX.Y.Z` 触发，校验 tag 与 `frontend/pubspec.yaml` 的 version 一致后，构建 Android APK/AAB（ubuntu）并发布 GitHub Release；iOS 归档（xcarchive，macos）。`SUPABASE_URL/SUPABASE_ANON_KEY` 经 GH Secrets 注入构建（dart-define）。流程详见 [`docs/devops/release.md`](docs/devops/release.md)。
+- 🚢 **后端部署**（`.github/workflows/deploy-backend.yml`）：push main（backend/**）自动 `wrangler deploy`，生产后端唯一 Base URL = **`https://jnify.williamhvollita.dpdns.org`**。
+- 📧 **邮件与 SMTP**（Supabase 自定义 SMTP，j_nify@yeah.net）：已上线（confirm-email 开启），模板见 [`docs/devops/smtp.md`](docs/devops/smtp.md)。
 - 🔐 **密钥台账**：所有 prod 密钥以 GitHub Actions Secrets / Cloudflare Worker Secrets / Supabase 平台存储，仓库内无明文密钥，见 [`docs/devops/SECRETS_REGISTRY.md`](docs/devops/SECRETS_REGISTRY.md)。
 
 ## 路线图
 
-- **M0 骨架** — 录入 → 漂浮 → 手动窗口 → 三选项闭环（✅ 已落地）
-- **M1 信号** — 日历 / 天气 / 粗粒度位置 / 使用状态 + 频控红线
-- **M2 Jennifer 大脑** — LLM 解析、拆解、话术、兜底草稿 + 降级护栏
-- **M3 灰度** — 100–300 种子用户 + 指标看板
+- ✅ **M0 骨架** — 录入 → 漂浮 → 手动窗口 → 三选项闭环（**v0.1.0 已发布**，Android 安装包见 GitHub Releases）
+- ⏳ **M1 信号** — 日历 / 天气 / 粗粒度位置 / 使用状态 + 频控红线（信号摄入已可；真实数据源待接）
+- ⏳ **M2 Jennifer 大脑** — LLM 多供应商热重载模型管理组件（部署侧零硬编码要求）
+- ⏳ **M3 灰度** — 100–300 种子用户 + 指标看板
 
 ## 开源协议
 

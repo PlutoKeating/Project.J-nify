@@ -1,41 +1,45 @@
 # API 文档
 
-基于 SPEC §7.2 的 API 草案实现。完整 OpenAPI/Swagger 见后端 `/docs`（FastAPI 自动生成）。
+基于 SPEC §7.2 的 API 草案实现于 Cloudflare Worker 后端。生产 Base URL：**`https://jnify.williamhvollita.dpdns.org`**（本地开发 `http://localhost:8787`，`wrangler dev`）。
 
-所有接口的 base path 为 `/v1`。鉴权为 scaffold 占位：默认使用 `X-User-Id` 请求头（缺省为演示用户）。
+所有接口 base path 为 `/v1`。**鉴权**：`Authorization: Bearer <Supabase Auth JWT>`（邮箱注册/登录后由 supabase_flutter 取得）；缺失/无效 → `401 {"detail":"unauthorized"}`。错误统一 `{"detail":"<msg>"}`。
 
 | 方法 | 路径 | 说明 |
 | --- | --- | --- |
-| POST | `/v1/items/capture` | 一句话 / 分享 / 语音转写录入 |
-| GET | `/v1/now` | 返回当前唯一 best window 或空态 |
-| POST | `/v1/items/{id}/decision` | `do / later / drop / rescue` |
+| POST | `/v1/items/capture` | 一句话 / 分享 / 语音转写录入 → parked |
+| GET | `/v1/now` | 返回当前唯一 best window（含 reason/fit/options）或空态 |
+| POST | `/v1/items/{id}/decision` | `now / later / drop / rescue`（响应含中文 message） |
 | GET | `/v1/items?status=` | 全部事项列表（可选按状态过滤） |
-| POST | `/v1/signals` | 端侧信号批量上报，受 privacy scope 限制 |
+| POST | `/v1/signals` | 端侧信号上报，受 privacy scope 限制（403） |
 | GET | `/v1/guardrails` | 安静时段 / 授权 / 提醒预算 |
-| PUT | `/v1/guardrails` | 更新护栏 |
-| DELETE | `/v1/me/data` | 可验证删除 |
-| POST | `/v1/llm/draft` | 仅生成草稿，不直接执行真实动作 |
+| PUT | `/v1/guardrails` | 更新护栏（持久化到 user_preferences） |
+| DELETE | `/v1/me/data` | 可验证删除（级联清空业务数据） |
+| POST | `/v1/llm/draft` | 草稿生成（当前模板降级 stub） |
+| GET | `/health` | 健康检查 |
 
-## 示例
+## 示例（生产 URL）
 
 ### 录入
 
 ```sh
-curl -X POST http://localhost:8000/v1/items/capture \
-  -H 'Content-Type: application/json' \
+curl -X POST https://jnify.williamhvollita.dpdns.org/v1/items/capture \
+  -H "Authorization: Bearer <JWT>" -H 'Content-Type: application/json' \
   -d '{"raw_text":"月底还信用卡账单","category":"bill","due_at":"2026-09-25T00:00:00"}'
 ```
 
 ### 获取当前最佳窗口
 
 ```sh
-curl http://localhost:8000/v1/now
+curl https://jnify.williamhvollita.dpdns.org/v1/now -H "Authorization: Bearer <JWT>"
 ```
 
-### 决策（三选项闭环）
+### 决策（三选项 + 兜底）
 
 ```sh
-curl -X POST http://localhost:8000/v1/items/<id>/decision \
-  -H 'Content-Type: application/json' \
-  -d '{"decision":"now"}'
+curl -X POST https://jnify.williamhvollita.dpdns.org/v1/items/<id>/decision \
+  -H "Authorization: Bearer <JWT>" -H 'Content-Type: application/json' \
+  -d '{"decision":"later"}'
 ```
+
+> 说明：决策文案由后端返回（`message`），前端 Toast 直接展示；`decision` 取值统一 `now/later/drop/rescue`（`do` 为旧文档笔误，已废弃）。
+> 鉴权：Worker 用 jose 从 Supabase JWKS 验签；数据访问在 Worker 内以 service key 走 PostgREST —— **客户端不需要也拿不到 service key**。
