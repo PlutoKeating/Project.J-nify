@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
@@ -14,10 +15,16 @@ class ApiClient {
   static final ApiClient instance = ApiClient._();
 
   /// 当前 Supabase 会话的 access token；Supabase 未初始化或未登录时为 null。
+  ///
+  /// debug 下 `Supabase.instance` 在未初始化时会先抛 AssertionError（早于
+  /// `isInitialized` 判断），故整体 try/catch 包裹，保证 debug/test 不炸。
   String? get _accessToken {
-    final supabase = Supabase.instance;
-    if (!supabase.isInitialized) return null;
-    return supabase.client.auth.currentSession?.accessToken;
+    try {
+      if (!Supabase.instance.isInitialized) return null;
+      return Supabase.instance.client.auth.currentSession?.accessToken;
+    } catch (_) {
+      return null;
+    }
   }
 
   Map<String, String> _headers([Map<String, String>? extra]) {
@@ -73,6 +80,7 @@ class ApiClient {
   }
 
   dynamic _decode(http.Response res) {
+    _invalidateSessionOn401(res.statusCode);
     final text = utf8.decode(res.bodyBytes);
     if (res.statusCode >= 200 && res.statusCode < 300) {
       return text.isEmpty ? null : jsonDecode(text);
@@ -83,5 +91,23 @@ class ApiClient {
       message = decoded['detail']?.toString() ?? message;
     } catch (_) {}
     throw ApiException(res.statusCode, message);
+  }
+
+  /// 401 = 会话失效（token 过期/被吊销）：fire-and-forget 触发
+  /// `auth.signOut()`，onAuthStateChange 会让 AuthGate 在下次重建时回到登录页。
+  ///
+  /// 幂等（无会话时 signOut 为 no-op）且不阻塞当前请求；signOut 只清理本地
+  /// 会话，与当前请求抛出的 [ApiException]（含 401）互不干扰，无递归风险。
+  void _invalidateSessionOn401(int statusCode) {
+    if (statusCode != 401) return;
+    unawaited(_silentSignOut());
+  }
+
+  Future<void> _silentSignOut() async {
+    try {
+      await Supabase.instance.client.auth.signOut();
+    } catch (_) {
+      // 幂等兜底：会话已失效、无会话或 Supabase 未初始化（debug/test）时忽略。
+    }
   }
 }

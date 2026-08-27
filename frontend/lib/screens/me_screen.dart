@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../core/api/api_client.dart';
 import '../services/api_service.dart';
@@ -47,6 +48,19 @@ class _MeScreenState extends State<MeScreen> {
       'max_nudge_budget': _maxNudge,
       'privacy_scope': {'coarse_location': _coarseLocation},
     });
+  }
+
+  /// 退出登录：成功后 onAuthStateChange 自动让 [AuthGate] 切回 [LoginScreen]，
+  /// 无需手动导航；失败时 SnackBar 提示。
+  Future<void> _signOut() async {
+    try {
+      await Supabase.instance.client.auth.signOut();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('退出登录失败：$e')),
+      );
+    }
   }
 
   @override
@@ -103,6 +117,13 @@ class _MeScreenState extends State<MeScreen> {
                 ),
               ],
             ),
+          const SizedBox(height: 12),
+          const Divider(),
+          ListTile(
+            leading: const Icon(Icons.logout),
+            title: const Text('退出登录'),
+            onTap: _signOut,
+          ),
         ],
       ),
     );

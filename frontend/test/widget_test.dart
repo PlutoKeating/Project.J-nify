@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:jnify_app/screens/home_shell.dart';
 import 'package:jnify_app/screens/login_screen.dart';
+import 'package:jnify_app/screens/me_screen.dart';
 
 /// 纯 widget 冒烟测试：不初始化 Supabase、不触网。
 /// （Supabase.initialize 在 main() 中执行；AuthGate 依赖已初始化的 client，
@@ -72,6 +73,20 @@ void main() {
         find.descendant(of: navBar, matching: find.text('我的')),
         findsOneWidget,
       );
+    });
+  });
+
+  group('MeScreen', () {
+    testWidgets('renders the logout entry without network', (tester) async {
+      // 纯渲染断言：不点按按钮，避免触发 signOut 网络调用。
+      // initState 的 guardrails 请求在测试绑定下返回 mock 400 并被吞掉。
+      // 真实使用中 MeScreen 位于 HomeShell 的 Scaffold body 内，测试同样
+      // 包一层 Scaffold 以提供 ListTile 所需的 Material 祖先。
+      await tester
+          .pumpWidget(const MaterialApp(home: Scaffold(body: MeScreen())));
+      await tester.pumpAndSettle();
+
+      expect(find.text('退出登录'), findsOneWidget);
     });
   });
 }
