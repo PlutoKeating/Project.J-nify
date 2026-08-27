@@ -77,13 +77,13 @@ export async function restInsert<T = Json>(
 }
 
 export async function restUpdate<T = Json>(db: Db, table: string, params: Json, patch: Json): Promise<T[]> {
-  const r = await rest(db, `/${table}${filters(params)}`, { method: 'PATCH', headers: { Prefer: 'return=representation' }, body: JSON.stringify(patch) });
+  const r = await rest(db, `/${table}${qs(filters(params))}`, { method: 'PATCH', headers: { Prefer: 'return=representation' }, body: JSON.stringify(patch) });
   if (!r.ok) throw new Error(`UPDATE ${table} ${r.status}: ${await r.text()}`);
   return (await r.json()) as T[];
 }
 
 export async function restDelete(db: Db, table: string, params: Json): Promise<void> {
-  const r = await rest(db, `/${table}${filters(params)}`, { method: 'DELETE' });
+  const r = await rest(db, `/${table}${qs(filters(params))}`, { method: 'DELETE' });
   if (!r.ok) throw new Error(`DELETE ${table} ${r.status}: ${await r.text()}`);
 }
 
