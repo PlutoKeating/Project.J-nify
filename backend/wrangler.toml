@@ -1,6 +1,7 @@
 name = "j-nify-backend"
 main = "src/index.ts"
 compatibility_date = "2026-08-01"
+compatibility_flags = ["nodejs_compat"] # postgres.js/drizzle 需 Node 兼容层（node:events/net/tls 等）
 workers_dev = true
 
 [vars]
