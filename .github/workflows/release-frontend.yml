@@ -143,12 +143,12 @@ jobs:
             ### 产物
             - **APK**（`app-release.apk`）：Android 直接安装包
             - **AAB**（`app-release.aab`）：Google Play 上架用
-            - **IPA**（`*.ipa`）：iOS 安装包（**未签名**，需自行签名后分发）
+            - **XCArchive**（`Runner.xcarchive`）：iOS 归档（**未签名**，需 Apple 证书签名后分发）
 
             ### ⚠️ 当前为无签名构建
             - Android：未配置 keystore（使用调试签名占位），正式上架前需接入签名（见 `docs/devops/release.md`「签名接入」）。
-            - iOS：`--no-codesign` 构建，未签名无法直接安装到真机；需 Apple Developer 证书签名/公证。
+            - iOS：`--no-codesign` 构建仅产出归档，未签名无法直接安装到真机；需 Apple Developer 证书签名/公证。
           files: |
             android/app-release.apk
             android/app-release.aab
-            ios/*.ipa
+            ios/Runner.xcarchive
