@@ -1,0 +1,42 @@
+name: Deploy Backend (Cloudflare Workers)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - backend/**
+      - .github/workflows/deploy-backend.yml
+
+concurrency:
+  group: backend-deploy
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: backend
+        run: npm ci
+
+      # CI 已跑 test/typecheck；部署 job 精简为直接上线。
+      # 运行期 secrets（DATABASE_URL / SUPABASE_URL / LLM_API_KEY 等）在 CF Dashboard
+      # 的 Worker → Settings → Variables and Secrets 维护，wrangler deploy 不会覆盖。
+      - name: Deploy with Wrangler
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: deploy
+          workingDirectory: backend
