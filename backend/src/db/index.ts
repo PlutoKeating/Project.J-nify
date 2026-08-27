@@ -34,12 +34,9 @@ function qs(params: Record<string, string>): string {
 
 /** 过滤规约：{ column: value } → PostgREST `?column=eq.value`；`order`/`limit` 直通。 */
 function filters(params: Json): Record<string, string> {
+  // PostgREST：操作符在值侧（如 key=eq.v / key=in.(a,b) / key=gt.v）；无操作符时隐式 eq。
   const q: Record<string, string> = {};
-  for (const [k, v] of Object.entries(params)) {
-    // 值若带操作符（如 'status.in' 或值本身形如 '(a,b)'），保持原样；否则默认 eq.
-    const val = String(v);
-    q[k] = /^(eq|neq|gt|gte|lt|lte|in|is|like|ilike|cs|cd)\./.test(val) || (k.includes('.') && /^[(]/.test(val)) ? val : `eq.${val}`;
-  }
+  for (const [k, v] of Object.entries(params)) q[k] = String(v);
   return q;
 }
 

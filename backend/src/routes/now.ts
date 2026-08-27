@@ -26,7 +26,7 @@ now.get('/', async (c) => {
   const userId = c.get('userId');
   const candidates = await restGet<CandidateRow>(db, 'item_commitments', {
     select: 'id,title,category,status,raw_text,due_at,created_at,updated_at',
-    params: { user_id: userId, 'status.in': `(${ACTIVE.join(',')})` },
+    params: { user_id: userId, status: `in.(${ACTIVE.join(',')})` },
     order: 'updated_at.asc',
   });
   if (candidates.length === 0) {
@@ -53,7 +53,7 @@ now.get('/', async (c) => {
   const candidateIds = candidates.map((x) => x.id);
   const recentDecisions = await restGet<{ item_id: string | null; decision: string; decided_at: string }>(db, 'decisions', {
     select: 'item_id,decision,decided_at',
-    params: { user_id: userId, 'item_id.in': `(${candidateIds.join(',')})`, 'decided_at.gt': sinceIso },
+    params: { user_id: userId, item_id: `in.(${candidateIds.join(',')})`, decided_at: `gt.${sinceIso}` },
     order: 'decided_at.desc',
   });
   const latestByItem = new Map<string, { decision: string; decidedAt: Date }>();
