@@ -23,13 +23,18 @@ health.post('/_debug/db', async (c) => {
     const obj = e as Record<string, unknown> & { message?: string };
     out.err = { message: obj.message, fields: Object.fromEntries(Object.keys(obj).filter((k) => ['string', 'number', 'boolean'].includes(typeof obj[k])).map((k) => [k, obj[k]])) };
   }
-  try {
-    const r = await raw`insert into "public"."users" ("id") values (${crypto.randomUUID()}) on conflict do nothing`;
-    out.insertRows = r.length;
-  } catch (e) {
-    const obj = e as Record<string, unknown> & { message?: string };
-    out.insertErr = { message: obj.message, fields: Object.fromEntries(Object.keys(obj).filter((k) => ['string', 'number', 'boolean'].includes(typeof obj[k])).map((k) => [k, obj[k]])) };
-  }
   await raw.end();
+  // 对照实验：边缘直连 DATABASE_URL（不经 Hyperdrive），验证 Supavisor 证书在 workerd 下是否可信
+  if (c.env.DATABASE_URL && c.env.DATABASE_URL !== url) {
+    const direct = postgres(c.env.DATABASE_URL, { prepare: false, ssl: 'require', connect_timeout: 15 });
+    try {
+      const r = await direct`select count(*)::int as n from "public"."users"`;
+      out.direct = { ok: true, users: r[0].n };
+    } catch (e) {
+      const obj = e as Record<string, unknown> & { message?: string };
+      out.direct = { err: obj.message, fields: Object.fromEntries(Object.keys(obj).filter((k) => ['string', 'number', 'boolean'].includes(typeof obj[k])).map((k) => [k, obj[k]])) };
+    }
+    await direct.end().catch(() => undefined);
+  }
   return c.json(out);
 });
