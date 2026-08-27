@@ -37,6 +37,11 @@ export function makeApp(env: Env): Hono<AppEnv> {
   app.onError((err, c) => {
     if (err instanceof HTTPException) return err.getResponse();
     console.error(err);
+    // DEBUG=1（仅临时诊断 secret）时返回真实错误详情，便于定位；生产不设置该变量。
+    if (env.DEBUG === '1') {
+      const msg = err instanceof Error ? `${err.message}\n${err.stack ?? ''}`.slice(0, 600) : String(err);
+      return c.json({ detail: msg }, 500);
+    }
     return c.json({ detail: err instanceof SyntaxError ? 'invalid request body' : 'internal error' }, err instanceof SyntaxError ? 400 : 500);
   });
   app.notFound((c) => c.json({ detail: 'not found' }, 404));

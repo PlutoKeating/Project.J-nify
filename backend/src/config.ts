@@ -14,6 +14,7 @@ export interface Env {
   LLM_API_BASE?: string;
   LLM_API_KEY?: string;
   LLM_MODEL?: string;
+  DEBUG?: string;
 }
 
 export const DEFAULTS = {
