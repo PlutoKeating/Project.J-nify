@@ -39,8 +39,14 @@ export function makeApp(env: Env): Hono<AppEnv> {
     console.error(err);
     // DEBUG=1（仅临时诊断 secret）时返回真实错误详情，便于定位；生产不设置该变量。
     if (env.DEBUG === '1') {
-      const msg = err instanceof Error ? `${err.message}\n${err.stack ?? ''}`.slice(0, 2500) : String(err);
-      return c.json({ detail: msg }, 500);
+      const chain: string[] = [];
+      let cur: unknown = err;
+      for (let i = 0; i < 4 && cur; i++) {
+        const c = cur as Error & { code?: string; severity?: string; detail?: string; position?: string };
+        chain.push(`[${i}] ${c.message}${c.code ? ` code=${c.code}` : ''}${c.detail ? ` detail=${c.detail}` : ''}${c.severity ? ` sev=${c.severity}` : ''}`);
+        cur = (c as { cause?: unknown }).cause;
+      }
+      return c.json({ detail: chain.join('\n') }, 500);
     }
     return c.json({ detail: err instanceof SyntaxError ? 'invalid request body' : 'internal error' }, err instanceof SyntaxError ? 400 : 500);
   });
