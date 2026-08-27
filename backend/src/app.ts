@@ -42,8 +42,13 @@ export function makeApp(env: Env): Hono<AppEnv> {
       const chain: string[] = [];
       let cur: unknown = err;
       for (let i = 0; i < 4 && cur; i++) {
-        const c = cur as Error & { code?: string; severity?: string; detail?: string; position?: string };
-        chain.push(`[${i}] ${c.message}${c.code ? ` code=${c.code}` : ''}${c.detail ? ` detail=${c.detail}` : ''}${c.severity ? ` sev=${c.severity}` : ''}`);
+        const c = cur as Record<string, unknown> & { message?: string };
+        const own: Record<string, unknown> = {};
+        for (const k of Object.getOwnPropertyNames(c)) {
+          const v = (c as Record<string, unknown>)[k];
+          if (typeof v === 'string' || typeof v === 'number' || typeof v === 'boolean') own[k] = v;
+        }
+        chain.push(`[${i}] ${c.message ?? ''}\n  fields=${JSON.stringify(own)}`);
         cur = (c as { cause?: unknown }).cause;
       }
       return c.json({ detail: chain.join('\n') }, 500);
