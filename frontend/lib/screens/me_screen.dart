@@ -36,6 +36,9 @@ class _MeScreenState extends State<MeScreen> {
       setState(() {
         _maxNudge = data['max_nudge_budget'] as int? ?? 3;
         _coarseLocation = scope['coarse_location'] == true;
+        // 安静时段：开启即默认 23:30—08:30（后端默认值），关闭存 '00:00' 成对。
+        _quietHours =
+            (data['quiet_hours_start'] as String? ?? '00:00') != '00:00';
         _loading = false;
       });
     } catch (_) {
@@ -45,6 +48,9 @@ class _MeScreenState extends State<MeScreen> {
 
   Future<void> _save() async {
     await _api.updateGuardrails({
+      // 成对提交安静时段：开启 23:30—08:30，关闭 '00:00'。
+      'quiet_hours_start': _quietHours ? '23:30' : '00:00',
+      'quiet_hours_end': _quietHours ? '08:30' : '00:00',
       'max_nudge_budget': _maxNudge,
       'privacy_scope': {'coarse_location': _coarseLocation},
     });
