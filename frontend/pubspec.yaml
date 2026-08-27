@@ -12,6 +12,7 @@ dependencies:
   # Backend 地址等配置完全由 .env 控制（见 .env.example）
   flutter_dotenv: ^5.1.0
   http: ^1.2.0
+  supabase_flutter: ^2.17.2
 
 dev_dependencies:
   flutter_test:
