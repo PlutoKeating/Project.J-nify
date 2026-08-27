@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import type { AppEnv } from '../app';
-import { latestContext, restGet, restInsert, robustGuardrails } from '../db';
+import { latestContext, restGet, restInsert, restUpdate, robustGuardrails } from '../db';
 import { buildNudge, freshOrReuseWindow } from '../services/orchestrator';
 import { draft } from '../services/brain';
 import type { ItemRowLike } from '../services/orchestrator';
@@ -93,7 +93,7 @@ now.get('/', async (c) => {
       best.result,
     );
     if (nudgeId) {
-      await restInsert(db, 'item_commitments', { id: best.item.id, status: 'nudged' }, { onConflict: 'id' });
+      await restUpdate(db, 'item_commitments', { id: best.item.id }, { status: 'nudged' });
     }
   }
 
