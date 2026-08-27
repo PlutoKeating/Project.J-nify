@@ -76,8 +76,8 @@ jobs:
           name: android-artifacts
           if-no-files-found: error
           path: |
-            build/app/outputs/flutter-apk/app-release.apk
-            build/app/outputs/bundle/release/app-release.aab
+            frontend/build/app/outputs/flutter-apk/app-release.apk
+            frontend/build/app/outputs/bundle/release/app-release.aab
 
   ios:
     name: Build iOS ipa (no codesign)
@@ -109,7 +109,7 @@ jobs:
         with:
           name: ios-artifacts
           if-no-files-found: error
-          path: build/ios/ipa/*.ipa
+          path: frontend/build/ios/ipa/*.ipa
 
   release:
     name: Create GitHub Release
