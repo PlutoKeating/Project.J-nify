@@ -149,6 +149,5 @@ jobs:
             - Android：未配置 keystore（使用调试签名占位），正式上架前需接入签名（见 `docs/devops/release.md`「签名接入」）。
             - iOS：`--no-codesign` 构建仅产出归档，未签名无法直接安装到真机；需 Apple Developer 证书签名/公证。
           files: |
-            android/app-release.apk
-            android/app-release.aab
-            ios/Runner.xcarchive
+            android/frontend/build/app/outputs/flutter-apk/app-release.apk
+            android/frontend/build/app/outputs/bundle/release/app-release.aab
