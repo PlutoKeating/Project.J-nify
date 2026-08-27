@@ -61,20 +61,14 @@ jobs:
           channel: stable
           cache: true
 
-      # android/ 平台目录目前未入库（untracked 噪声），CI 冷检出不包含它；
-      # flutter create 只补缺不覆盖，若日后 android/ 入库此步为 no-op。
-      # --org com.jnify 与本地脚手架 applicationId=com.jnify.jnify_app 保持一致。
-      - name: Ensure android platform scaffolding
-        run: flutter create --platforms=android --org com.jnify .
-
       - name: Install dependencies
         run: flutter pub get
 
       - name: Build release APK
-        run: flutter build apk --release
+        run: flutter build apk --release --dart-define=SUPABASE_URL=${{ secrets.SUPABASE_URL }} --dart-define=SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}
 
       - name: Build release AAB
-        run: flutter build appbundle --release
+        run: flutter build appbundle --release --dart-define=SUPABASE_URL=${{ secrets.SUPABASE_URL }} --dart-define=SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}
 
       - name: Upload Android artifacts
         uses: actions/upload-artifact@v4
@@ -102,16 +96,13 @@ jobs:
           channel: stable
           cache: true
 
-      # ios/ 平台目录同样未入库；flutter create 只补缺不覆盖。
-      # --org com.jnify 与本地 Runner 的 PRODUCT_BUNDLE_IDENTIFIER=com.jnify.jnifyApp 一致。
-      - name: Ensure ios platform scaffolding
-        run: flutter create --platforms=ios --org com.jnify .
-
+      # ios/ 平台目录已入库；无需 ensure。构建时注入 Supabase 配置（secrets），
+      # 运行时可选签名（当前 --no-codesign）。
       - name: Install dependencies
         run: flutter pub get
 
       - name: Build unsigned ipa
-        run: flutter build ipa --no-codesign
+        run: flutter build ipa --no-codesign --dart-define=SUPABASE_URL=${{ secrets.SUPABASE_URL }} --dart-define=SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}
 
       - name: Upload iOS artifact
         uses: actions/upload-artifact@v4
