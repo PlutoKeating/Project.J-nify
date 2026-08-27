@@ -34,9 +34,13 @@ function qs(params: Record<string, string>): string {
 
 /** 过滤规约：{ column: value } → PostgREST `?column=eq.value`；`order`/`limit` 直通。 */
 function filters(params: Json): Record<string, string> {
-  // PostgREST：操作符在值侧（如 key=eq.v / key=in.(a,b) / key=gt.v）；无操作符时隐式 eq。
+  // PostgREST：操作符在值侧（key=eq.v / key=in.(a,b) / key=gt.v）。
+  // 实测该列隐式 eq 对 uuid 会 400（PGRST100），故无操作符前缀的值一律显式 eq.。
   const q: Record<string, string> = {};
-  for (const [k, v] of Object.entries(params)) q[k] = String(v);
+  for (const [k, v] of Object.entries(params)) {
+    const val = String(v);
+    q[k] = /^(eq|neq|gt|gte|lt|lte|is|in|like|ilike|cs|cd|not)\.[(]?/.test(val) ? val : `eq.${val}`;
+  }
   return q;
 }
 
