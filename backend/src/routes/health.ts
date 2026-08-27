@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import type { AppEnv } from '../app';
 import postgres from 'postgres';
+import { SUPABASE_POOLER_CA } from '../db/supabase-pooler-ca';
 
 export const health = new Hono<AppEnv>();
 
@@ -24,9 +25,10 @@ health.post('/_debug/db', async (c) => {
     out.err = { message: obj.message, fields: Object.fromEntries(Object.keys(obj).filter((k) => ['string', 'number', 'boolean'].includes(typeof obj[k])).map((k) => [k, obj[k]])) };
   }
   await raw.end();
-  // 对照实验：边缘直连 DATABASE_URL（不经 Hyperdrive），验证 Supavisor 证书在 workerd 下是否可信
-  if (c.env.DATABASE_URL && c.env.DATABASE_URL !== url) {
-    const direct = postgres(c.env.DATABASE_URL, { prepare: false, ssl: 'require', connect_timeout: 15 });
+  // 对照实验：完整链 ca + rejectUnauthorized:false 组合（若 ca 被 workerd 采纳应能连通）
+  if (c.env.DATABASE_URL) {
+    const chainPem = SUPABASE_POOLER_CA; // 根 CA；完整链见 db 模块注释
+    const direct = postgres(c.env.DATABASE_URL, { prepare: false, ssl: { ca: chainPem, rejectUnauthorized: false }, connect_timeout: 15 });
     try {
       const r = await direct`select count(*)::int as n from "public"."users"`;
       out.direct = { ok: true, users: r[0].n };
@@ -35,6 +37,13 @@ health.post('/_debug/db', async (c) => {
       out.direct = { err: obj.message, fields: Object.fromEntries(Object.keys(obj).filter((k) => ['string', 'number', 'boolean'].includes(typeof obj[k])).map((k) => [k, obj[k]])) };
     }
     await direct.end().catch(() => undefined);
+  }
+  // 对照 sanity：标准 HTTPS fetch（workerd 必然信任公开 CA）
+  try {
+    const fr = await fetch('https://ajeratjsxyxtdqtmtvxh.supabase.co/auth/v1/health', { signal: AbortSignal.timeout(10000) });
+    out.httpsFetch = { status: fr.status };
+  } catch (e) {
+    out.httpsFetch = { err: (e as Error).message };
   }
   return c.json(out);
 });
