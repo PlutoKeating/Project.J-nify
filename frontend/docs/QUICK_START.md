@@ -26,7 +26,7 @@ flutter build web --release   # 编译 build/web 成功
 `.env`：
 
 ```
-BACKEND_BASE_URL=http://localhost:8000   # 后端地址（开发/生产可切换）
+BACKEND_BASE_URL=http://localhost:8000   # 后端地址（开发/生产可切换；生产唯一地址：https://jnify.williamhvollita.dpdns.org，代码默认值）
 APP_ENV=development
 API_TIMEOUT=15
 ```

@@ -23,7 +23,7 @@
 `.env`（不入库，交付 `.env.example`）：
 
 ```
-BACKEND_BASE_URL=http://localhost:8000
+BACKEND_BASE_URL=http://localhost:8000   # 生产唯一地址：https://jnify.williamhvollita.dpdns.org（代码默认值）
 APP_ENV=development
 API_TIMEOUT=15
 ```

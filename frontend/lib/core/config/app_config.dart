@@ -11,7 +11,11 @@ class AppConfig {
 
   static final AppConfig instance = AppConfig._();
 
-  String backendBaseUrl = 'http://localhost:8000';
+  /// 生产上线环境唯一后端 Base URL（Cloudflare Worker，用户 2026-08-27 定案）。
+  /// 开发环境通过 `.env` 的 `BACKEND_BASE_URL` 覆盖（见 `.env.example`）。
+  static const prodBackendBaseUrl = 'https://jnify.williamhvollita.dpdns.org';
+
+  String backendBaseUrl = prodBackendBaseUrl;
   String appEnv = 'development';
   int apiTimeoutSeconds = 15;
 
