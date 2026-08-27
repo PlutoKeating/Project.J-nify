@@ -101,19 +101,21 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
-      - name: Build unsigned ipa
+      - name: Build unsigned archive (ipa needs Apple signing)
         run: flutter build ipa --no-codesign --dart-define=SUPABASE_URL=${{ secrets.SUPABASE_URL }} --dart-define=SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}
 
-      - name: Upload iOS artifact
+      # --no-codesign 只产出 xcarchive（iOS 签名 IPA 需 Apple Developer 证书，后续接）
+      - name: Upload iOS archive
         uses: actions/upload-artifact@v4
         with:
           name: ios-artifacts
           if-no-files-found: error
-          path: frontend/build/ios/ipa/*.ipa
+          path: frontend/build/ios/archive/Runner.xcarchive
 
   release:
     name: Create GitHub Release
-    needs: [android, ios]
+    # MVP 安装包 = Android APK；iOS 为 xcarchive 附加产物，失败不阻塞发布
+    needs: [android]
     runs-on: ubuntu-latest
     steps:
       - name: Download Android artifacts
