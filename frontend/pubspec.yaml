@@ -1,7 +1,7 @@
 name: jnify_app
 description: "J-nify — 低打扰行动秘书（Jennifer）客户端。spec 见 docs/SPEC.md。"
 publish_to: 'none'
-version: 0.1.0+1
+version: 0.1.1+2
 
 environment:
   sdk: '>=3.0.0 <4.0.0'

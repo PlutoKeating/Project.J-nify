@@ -130,3 +130,4 @@ git tag v<pubspec 版本> && git push origin v<tag>   # 触发 Release 工作流
 - **构建期间勿 kill Gradle 守护进程**（曾直接导致 assembleRelease 失败）；`/tmp FileAlreadyExistsException` 良性；首次 release 构建慢（R8）。
 - 发布前确认 GH Secrets `SUPABASE_URL/SUPABASE_ANON_KEY` 已设（release 包否则会指向 localhost、无法登录）。
 - v0.1.0 正式发布：GitHub Releases「J-nify v0.1.0」（Latest），资产 `app-release.apk`（52.9MB）+ `app-release.aab`（51.5MB）。
+- **v0.1.1 热修复（启动黑屏）**：v0.1.0 APK 安装后完全黑屏。根因=`AppConfig.load()` 中 `dotenv.load('.env')` 默认 `isOptional:false`，release 包无 `.env` 资产 → 抛 `FileNotFoundError` → `runApp` 未执行。修复=改 `isOptional:true` 回退编译期默认值；回归测试 `frontend/test/app_config_test.dart`；本机验证 8/8 测试通过、release APK 构建成功（dart-define 注入正确、无 localhost）。

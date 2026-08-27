@@ -37,6 +37,7 @@ git tag v0.1.0 && git push origin v0.1.0
 5. **tag 重切**：工作流修改后需 `git tag -d` + 删远端 tag + 重新打 tag 指向新提交（tag 内嵌工作流快照）。
 6. **不要打断构建**：勿在 `flutter build`/gradle 运行中 kill 守护进程（会 assembleRelease 失败）；`/tmp FileAlreadyExistsException` 为良性告警；首次 release 构建较慢（R8）。
 7. **发布前确认 GH Secrets**：`SUPABASE_URL` / `SUPABASE_ANON_KEY` 缺失会让 release 包指向 localhost（登录必坏）。
+8. **`.env` 缺失导致启动黑屏（v0.1.1 修复）**：`main()` 里 `AppConfig.load()` → `dotenv.load('.env')` 默认 `isOptional: false`，而 release APK 无 `.env` 资产（pubspec 未声明 assets、`.env` 在 .gitignore）→ `load()` 抛 `FileNotFoundError` → `runApp` 未执行 → **完全黑屏**。修复：`dotenv.load(fileName: '.env', isOptional: true)` 静默回退到编译期默认值（`String.fromEnvironment` + 内置 prod Base URL）。回归测试：`frontend/test/app_config_test.dart`。
 
 ## 当前签名状态（⚠️ 无签名）
 

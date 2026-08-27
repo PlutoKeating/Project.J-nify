@@ -32,7 +32,9 @@ class AppConfig {
   String supabaseAnonKey = defaultSupabaseAnonKey;
 
   Future<void> load() async {
-    await dotenv.load(fileName: '.env');
+    // isOptional：发布构建没有 .env 资产（pubspec 未声明、.env 被 gitignore），
+    // 缺失时必须静默回退到编译期默认值，否则 load 抛异常导致启动黑屏。
+    await dotenv.load(fileName: '.env', isOptional: true);
     backendBaseUrl = dotenv.env[Env.backendBaseUrl] ?? backendBaseUrl;
     appEnv = dotenv.env[Env.appEnv] ?? appEnv;
     apiTimeoutSeconds =
