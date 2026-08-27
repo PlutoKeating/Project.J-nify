@@ -15,6 +15,7 @@ export interface Env {
   LLM_API_KEY?: string;
   LLM_MODEL?: string;
   DEBUG?: string;
+  HYPERDRIVE?: { connectionString: string };
 }
 
 export const DEFAULTS = {

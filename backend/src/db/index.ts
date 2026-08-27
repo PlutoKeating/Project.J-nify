@@ -16,6 +16,7 @@ export function createDb(databaseUrl: string): Db {
   const hit = cache.get(databaseUrl);
   if (hit) return hit;
   // pooler 事务模式不支持 prepared statements，必须 prepare:false
+  // ssl：生产经 Hyperdrive（CF 侧管 TLS，证书受信任）；残留直连路径（本地/无 Hyperdrive env）也能走 TLS。
   const client = postgres(databaseUrl, { prepare: false, ssl: 'require' });
   const db = drizzle(client, { schema });
   cache.set(databaseUrl, db);

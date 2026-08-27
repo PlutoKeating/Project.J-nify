@@ -4,6 +4,11 @@ compatibility_date = "2026-08-01"
 compatibility_flags = ["nodejs_compat"] # postgres.js/drizzle 需 Node 兼容层（node:events/net/tls 等）
 workers_dev = true
 
+# Hyperdrive: Workers→Supabase 池化端点的正式通道（CF 侧管 TLS，规避 workerd CA 与 Supavisor 证书链不兼容）
+[[hyperdrive]]
+binding = "HYPERDRIVE"
+id = "9646b4df7b634a5d94120d1b782bf2c3"
+
 [vars]
 APP_ENV = "production"
 APP_VERSION = "0.1.0"
