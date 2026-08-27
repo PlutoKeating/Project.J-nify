@@ -1,158 +1,123 @@
-# J-nify 项目交接文档（HANDOVER）
+# J-nify 项目交接文档（HANDOVER）— v0.1.0
 
-> 生成：2026-08-27（重构会话）。目的：让**新 session 可立即找回工作状态**。
-> 与本仓库同级的权威信息源：`docs/compose/specs/2026-08-27-backend-replatform-supabase-design.md`（设计）、`docs/compose/plans/2026-08-27-backend-serverless-replatform.md`（实现计划）、`docs/devops/SECRETS_REGISTRY.md`（密钥台账）。
-> ⚠️ 本仓库为 **public**：本文档不含任何密钥明文，只列「名称 + 存放位置」；真值见 `backend/.dev.vars`（gitignored）、GitHub Actions Secrets、CF Dashboard、Supabase 平台。
+> 更新：2026-08-27（v0.1.0 正式版发布日）。目的：让**新 session 可立即找回工作状态**。
+> 权威信息源：`docs/compose/specs/2026-08-27-backend-replatform-supabase-design.md`、`docs/compose/plans/2026-08-27-backend-serverless-replatform.md`、`docs/devops/SECRETS_REGISTRY.md`（密钥台账）。
+> ⚠️ 仓库 **public**：本文不含任何密钥明文，只列「名称 + 存放位置」；真值在 GitHub Actions Secrets / CF Dashboard Worker secrets / 本机 `backend/.dev.vars`（gitignored）/ 密码管理器。
 
 ---
 
-## 1. 项目定位与技术栈
+## 1. 项目定位与技术栈（定案版）
 
-- **产品**：J-nify ——「低打扰行动秘书」Jennifer。P 人友好：录入一句话 → 低电量漂浮 → 在顺手窗口（日历空档/天气/顺路/使用状态/死线距离）出现 → 四选项（现在做/晚点/算了/帮我兜底）。不催、不羞辱、每次给理由、永远有体面退路。
-- **仓库**：`PlutoKeating/Project.J-nify`（GitHub，**public**），AGPL-3.0。
-- **用户**（本会话）：PlutoKeating；GitHub 账号 github.com/PlutoKeating（gh 已登录，OAuth token）。
-
-**技术栈（演进定案）**：
+- **产品**：J-nify ——「低打扰行动秘书」Jennifer。P 人友好：录入一句话 → 低电量漂浮 → 顺手窗口出现 → 四选项（现在做/晚点/算了/帮我兜底）。不催、不羞辱、每次给理由、永远有体面退路。
+- **仓库**：`PlutoKeating/Project.J-nify`（GitHub，**public**，AGPL-3.0）。分支 `main`（本地=远端）。
 
 | 层 | 技术 | 备注 |
 |---|---|---|
-| 前端 | Flutter (Dart) 3.47.1 stable | supabase_flutter（认证，T13 引入）；android/ios/web 平台 |
-| 后端 | **Cloudflare Worker**：TypeScript + Hono + Drizzle ORM + postgres.js | `prepare:false` + `ssl`；部署=CF Dashboard git 集成（push main 自动 wrangler deploy） |
-| 数据库/账户 | **Supabase** Postgres + Auth（完整邮箱体系） | 表结构只经 `backend/supabase/migrations/*.sql`（golden rule）；JWKS 验签 |
-| CI/CD | **GitHub Actions**（仅 CI 门禁 + 前端自动打包发布；后端部署维持 CF） | 见 `.github/workflows/` |
+| 前端 | Flutter (Dart) 3.47.1 stable | supabase_flutter 2.17.2（Auth）；android/ios/web；minSdk 31；iOS target 15.0 |
+| 后端 | **Cloudflare Worker**：TypeScript + Hono | 部署=GitHub Actions `wrangler deploy`（push main 自动）；生产 URL `https://jnify.williamhvollita.dpdns.org` |
+| **DB 访问** | **Supabase REST (PostgREST) + Postgres RPC** | 2026-08-27 定案：worker 内 postgres.js 直连不可行（Supavisor 私有根 CA 不被 workerd 信任、Hyperdrive 未开通）→ 全部走标准 HTTPS fetch；事务写走 `fn_decide`/`fn_create_nudge`/`fn_ingest_signal` |
+| 认证 | **Supabase Auth（当前项目即生产）** | 完整邮箱体系；邮箱确认开启，确认/重置邮件经 **j_nify@yeah.net** SMTP；Worker JWKS 验签 |
+| CI/CD | GitHub Actions：`ci.yml` + `release-frontend.yml` + `deploy-backend.yml` | 后端部署在 Actions；前端 tag 自动出 APK/AAB/ipa 并发布 Release |
+
+**生产环境定案（2026-08-27 用户纠正）**：用户提供的 Supabase 项目 `ajeratjsxyxtdqtmtvxh` 与邮箱 `j_nify@yeah.net` **即生产环境** —— 不存在「待建生产项目」。
 
 ---
 
-## 2. 仓库状态
+## 2. 生产上线状态（v0.1.0）
 
-- 分支：`main`（本地与远端 `origin/main` 同步）。远端默认分支=main；原 master 已删除。
-- HEAD：`59107aa`（2026-08-27）。
-- 目录要点：
-  - `backend/`：Worker 源码（src/ 含 config/db/lib/services/routes）+ supabase 迁移 + scripts/apply-migrations.ts + test/（14 个测试文件）
-  - `frontend/`：Flutter 应用（lib/ 三屏骨架 + android/ios 平台脚手架，minSdk 31）
-  - `.github/workflows/`：ci.yml、release-frontend.yml
-  - `docs/`：SPEC/ARCHITECTURE/API/QUICK_START + devops/（release/smtp/SECRETS_REGISTRY）+ compose/（spec/plan）
-  - `AGENTS.md`（原 Agents.md 已改名）：Agent 工作规范（必读）
-
-**推送方式（重要）**：含 `.github/workflows` 的提交**不能用 HTTPS+gh token 推送**（OAuth token 缺 `workflow` scope，GitHub 拒绝）；必须走 SSH 远端 `origin`（`ssh.github.com:443`，间歇性断管 → 重试 2-4 次 `git push origin main`）。普通提交两种皆可。
-
----
-
-## 3. 已完成工作（全部双门评审通过 / 真实验证通过）
-
-### 3.1 后端（T1–T11 全 done）—— 真实功能，零 mockup
-- **DB 访问层（2026-08-27 重构定案）**：Worker 运行时经 **Supabase REST（PostgREST）** 访问数据库（标准 HTTPS —— workerd 不信任 Supavisor 私有根 CA，ca 注入无效且 Hyperdrive 账号未开通；REST 为已实测唯一可行通道）。原子性写操作走 Postgres RPC：`fn_decide`（决策闭环保留 later 两步队列尾语义）、`fn_create_nudge`（nudge+options+计数自增）、`fn_ingest_signal`（信号三写）。RPC 迁移文件：`20260827000002_rest_rpc.sql`（+修复 0003 to_jsonb 转换）。
-- 运行时 secrets：`SUPABASE_URL` + `SUPABASE_SERVICE_KEY`（service key，仅存 CF Worker secrets 与本机 `.dev.vars`）；迁移/测试仍用 pooler 连接串（node 侧 postgres.js，仅 devDep/script）。
-- **11 端点**（同上）均已生产验证：`GET /`、`GET /health`、`POST /v1/items/capture`、`GET /v1/items?status=`、`POST /v1/items/{id}/decision`（now/later/drop/rescue，含 message）、`GET /v1/now`、`POST /v1/signals`、`GET|PUT /v1/guardrails`、`DELETE /v1/me/data`、`POST /v1/llm/draft`（模板降级 stub）。
-- 认证：Supabase Auth 邮箱体系，`jose` JWKS 验签（模块级记忆化），`Authorization: Bearer`；users 懒创建（中间件 ensureUser）；401 语义完整；llm/draft 按 userId 隔离（修过 IDOR）。
-- 业务：capture→parked；`/now` 候选仅 parked/window_candidate/nudged、updated_at 升序、fit_score 最高（稳定排序）、served 窗口落库、8h 窗口复用、**晚点冷却**（8h 内 later 决策 → 队列尾，全 defer 时服务最久未晚点项且抑制 nudge）；决策事务（later 两步 deferred→parked 触底 updated_at）；护栏持久化（user_preferences，唯一约束 user_id+scene+key）；signals→ContextSnapshot（确定性评分，事务）；me/data 级联删除；频控红线（预算门读事务内新鲜 nudgeCount + SQL 原子自增 + quiet hours，quiet hours 语义与 Python 原版一致 [start,end) UTC）。
-- 质量：**51 单元测试绿**；**集成测试 5/5 真库绿**（注册→capture→now→later→guardrails→signals→me/data→全 defer 抑制 nudge）。
-- 迁移：`20260827000000_init.sql`（15 实体+1 关联+7 索引）、`20260827000001_unique_user_preferences.sql`；已应用到 dev 项目；`npm run db:migrate` 幂等。
-
-### 3.2 CI/CD 与运维基建
-- `.github/workflows/ci.yml`：push/PR 门禁（backend npm test+typecheck；frontend flutter analyze+test）。
-- `.github/workflows/release-frontend.yml`：tag `v*` → 校验 pubspec 版本 → APK/AAB（ubuntu）+ ipa --no-codesign（macos）→ softprops/action-gh-release 发布。
-- `docs/devops/release.md`（发布规范）、`docs/devops/smtp.md`（SMTP 配置 + 邮件 HTML 模板）、`docs/devops/SECRETS_REGISTRY.md`（密钥台账）。
-- prod SMTP 密钥已存 **GitHub Actions Secrets**：`SMTP_HOST/SMTP_PORT/SMTP_USER/SMTP_AUTH_PROD`。
-- 生产后端 Base URL：`https://jnify.williamhvollita.dpdns.org`（用户已在 CF 配置；前端 `app_config.dart` 的 `prodBackendBaseUrl` 默认值已写入）。
-
-### 3.3 前端（部分）
-- 三屏 UI（now/all/me）+ ApiClient/ApiService（真实 API 调用）+ 模型。
-- android/ios 平台脚手架（minSdk 31）已提交（`20cb2cc`）。
-- **缺失**：认证与登录（T13）、M0 缺口（T14）——见 §6。
-
-### 3.4 环境事实（dev）
-- Supabase dev 项目 ref：`ajeratjsxyxtdqtmtvxh`（region ap-southeast-1；直连 :5432 在本沙箱被黑洞，**用 pooler** `aws-0-ap-southeast-1.pooler.supabase.com:6543`）。
-- dev 凭据在 `backend/.dev.vars`（gitignored，含 SUPABASE_URL/ANON/DATABASE_URL(DIRECT 同池化串)）。
-- Auth「Confirm email」已通过管理 API 关闭（mailer_autoconfirm=true，测试用；生产保持开启并走 SMTP）。
-- 本地 `wrangler dev`/集成测试命令见 §8。
+| 能力 | 状态 | 说明 |
+|---|---|---|
+| 后端 11 端点 | ✅ 生产可用 | capture/list/decision/now/signals/guardrails/me.data/llm.draft + root/health；全链路真实探测 200 |
+| 数据库 | ✅ | 15+1 表 + RPC，迁移 `0000..0004` 全应用（supabase/migrations/） |
+| **数据安全 RLS** | ✅ | 全表 RLS + anon/authenticated 权限回收；publishable key 直读数据 → 401（解包攻击路径封死） |
+| **生产邮件** | ✅ | SMTP live：`smtp.yeah.net:465`、`j_nify@yeah.net`、sender `J-nify Jennifer`、`mailer_autoconfirm=false`（确认开启） |
+| 前端认证 | ✅ | 注册→邮箱确认→登录→登出→401 自动重登（gotrue 源码级验证） |
+| 前端 M0 缺口 | ✅ | Toast 收口（顶部 pill 2.2s + 后端文案）、rescue 按钮（后端 options 驱动）、分类/期限录入、护栏真实读写 |
+| **安装包** | ✅ | `frontend/build/app/outputs/flutter-apk/app-release.apk`（52.9MB，内置生产 Supabase 配置）；debug 包同目录 app-debug.apk |
+| CI/CD+部署 | ✅ | 三工作流全绿；push main 自动上线；**v0.1.0 正式发布流程运行中**（Release 将含 APK/AAB/ipa） |
+| 密钥与文档 | ✅ | GH Secrets（9 项）/ CF Worker secrets（SUPABASE_URL/SERVICE_KEY）/ 台账 / 本 HANDOVER 同步 |
 
 ---
 
-## 4. 任务树现状（task tool）
+## 3. 后端（架构与实现要点）
 
-- **done**：T1（探索）、T1.1（spec）、T3.1–T3.11（后端全部任务，每任务 spec+质量双门）。
-- **in_progress**：T3.17（Task 16 CI/CD —— 交付物已提交推送，**评审待补**）；T4（Flutter 工具链 —— 工具链已装好、平台骨架已提交，**APK 首包构建未完成**，见 §5；同义任务 T5/T8 已 abandoned）。
-- **open**：T3.12（文档矛盾修正：SPEC.md:674 与 API.md:11 的 decision 值 `do→now`、README 栈描述/scripts 行、API.md 鉴权描述）、T3.13（前端认证）、T3.14（前端 M0 缺口）、T3.15（验收报告）、T3.16（质量硬化测试批次：audit 单测、rate-limit 过期测试、window-engine 边界、escalation 同日窗口/空回落、brain 空白标题、decision 精确文案+effectMetrics）。
-
----
-
-## 5. 进行中事项（交接时刻）
-
-1. **Flutter 首包构建（T4 尾部）**：会话结束时 general-51 仍在跑 `flutter build apk --debug`（Gradle 首次下载+编译，通常 20–40 分钟）。恢复步骤：`cd frontend && flutter build apk --debug` 直至出现 `build/app/outputs/flutter-apk/app-debug.apk`；再跑 `flutter analyze`、`flutter test`；若前序步骤全部完成且仅剩构建，直接构建即可。APK 产出后把路径记录进验收报告（T3.15）。
-2. **T3.17 评审补票**：`.github/workflows` 两份 YAML（已通过 python yaml 校验、零密钥命中、结构符合 brief）→ 补一次 spec/质量评审后 `task done T3.17`。
-3. **T3.11 复验**：修复提交 `59107aa`（e2e 邮箱 base36 唯一、now.ts 全 defer 显式回退+抑制 nudge、冷却查询加界 user_id+gt(since)、测试头注释、新增第 5 个 e2e 用例）——general-55 已实证 5/5 绿 + typecheck 0 错误，但建议新 session 快速复跑一次确认（命令见 §8）。
+- **目录**：`backend/src/{config,app,index}.ts` + `lib/{auth,audit,privacy,rate-limit}.ts` + `services/{capture,context,decision-feedback,window-engine,escalation,brain,orchestrator}.ts` + `routes/{health,items,now,signals,guardrails,me,llm}.ts` + `db/index.ts`（REST 层 `restGet/restInsert/restUpdate/restDelete/restRpc` + `robustGuardrails/robustPrivacyScope/latestContext`）。
+- **运行时 secrets**：`SUPABASE_URL` + `SUPABASE_SERVICE_KEY`（仅 CF Worker secrets + 本机 `.dev.vars`）；「前端/仓库永不出现 service key」。
+- **postgres.js 仅剩**：`scripts/apply-migrations.ts`（迁移）与 `test/integration.test.ts`（真库断言）—— Node 侧 devDep，绝不在 Worker 运行时。
+- **PostgREST 经验（避免重踩）**：操作符在值侧（`key=in.(a,b)`/`key=gt.v`）；带 uuid 的普通值必须显式 `eq.`（隐式 eq 报 PGRST100）；upsert 用 `on-conflict` + `Prefer: resolution=merge-duplicates`；jsonb 列写数值须 `to_jsonb`（RPC 内）。
+- **频控红线**：`shouldNudge` 预算门读事务内最新 `nudge_count`；RPC `fn_create_nudge` 内 SQL 自增（`nudge_count = nudge_count + 1`）；晚点冷却（8h 内 later → 队列尾，全 defer 回退服务最久未打扰项并抑制 nudge）—— redline.test.ts 以源码断言钉住。
+- **测试**：单元 48（+集成 5 独立）；集成测试在确认邮件开启下用 service key `auth.admin.createUser({email_confirm:true})` + 真实登录拿会话。
 
 ---
 
-## 6. 待办工作（按优先级）
+## 4. 前端
 
-1. **T13 前端认证**（最大阻塞）：`supabase_flutter` 接入（Supabase.initialize 用 `SUPABASE_URL`+publishable key）、登录/注册页、AuthGate（authStateChanges → LoginScreen/HomeShell）、ApiClient 附 `Authorization: Bearer`（supabase_flutter 取 accessToken）、main.dart 重构；含 widget 测试（静态交付 + `flutter test` 本地验证，工具链已可用）。
-2. **T14 前端 M0 缺口**：Toast 收口（SnackBar 顶部 pill 2.2s，复用后端 message）；FocusCard **按后端 options 渲染**（含 rescue「帮我兜底」，不再硬编码 3 按钮）；capture 输入分类 chips（life/chore/bill/return/study/social）+ 可选期限（无/明天/7天/两周）；MeScreen 安静时段/预算/位置**真实读写**（PUT guardrails）；models 补 options 字段与 const 构造器。
-3. **T12 文档修正**：SPEC.md:674 `do→now`、API.md:11 同、API.md 鉴权段改 Bearer、README 栈描述（Worker/Supabase）、scripts/ 行、验证边界小节。
-4. **T3.16 硬化测试批次**（见 §4 清单）。
-5. **T3.15 验收报告**（docs/compose/reports/）：按 spec [S12] 逐项 ✅/⏳ + 证据命令输出 + 用户回补项（flutter 验证、CF 部署、真机安装）。
-6. **用户侧运维**：生产 Supabase 项目创建 + SMTP（j_nify@yeah.net，smtp.yeah.net:465，授权码=GH Secret SMTP_AUTH_PROD）+ CF Worker secrets 注入（SUPABASE_URL/DATABASE_URL(pooler :6543)/LLM_*）；Android 签名 keystore（release 商店发布）；iOS 构建/签名（需 macOS）。
-
----
-
-## 7. 真机可用 MVP 的必要先决条件与阻塞
-
-> 2026-08-27 更新：**后端生产部署链路已通** —— `push main → CI + Deploy Backend(wrangler) 全绿`，生产 Worker 已在 `https://jnify.williamhvollita.dpdns.org` 响应（`/` 与 `/health` 200）。后续 push 会自动部署，无需 Dashboard 绑定（A 方案绑定可保留或停用以避免双部署）。
-
-| # | 项 | 性质 | 说明 |
-|---|---|---|---|
-| 1 | **T13 前端认证** | 代码 | 无登录页 → 装包也无法注册/登录 |
-| 2 | **T14 前端 M0 缺口** | 代码 | 录入/决策体验不完整 |
-| 3 | ~~生产 Supabase 项目~~ **已定案：当前 dev 项目即生产**；SMTP 已上线 | ✅ 完成 | 2026-08-27：当前项目即生产环境；确认/重置邮件经 j_nify@yeah.net（smtp.yeah.net:465）发送，mailer_autoconfirm=false |
-| 4 | **CF Worker 运行时 secrets** | ✅ 已完成 | `SUPABASE_URL`+`SUPABASE_SERVICE_KEY` 已注入（wrangler secret）；数据库经 REST+service key 访问 |
-| 5 | **APK 产出** | 构建 | 首包仍在构建；产出后即可侧载安装（debug 包允许未知来源） |
-| 6 | Android 签名 / iOS 构建签名 | 运维(用户) | 阻塞商店发布，不阻塞侧载 |
-| 7 | 真实主动推送（FCM/APNs） | 业务 | Nudge 已落库但无推送通道；「主动提醒」尚未真实化（M1 后期） |
-
-「拒绝 mockup」：后端全真实；前端全调真实 API；唯一 stub=llm/draft（设计内模板降级）。
+- `lib/core/config/app_config.dart`：`prodBackendBaseUrl = https://jnify.williamhvollita.dpdns.org`（默认）；Supabase url/anon 经 `String.fromEnvironment`（release 由 CI dart-define 注入）。
+- 认证：`lib/auth/auth_gate.dart`（authStateChanges → LoginScreen/HomeShell）+ `login_screen.dart`（登录/注册切换、确认邮件提示）+ `me_screen.dart` 退出登录；`api_client.dart` Bearer 注入 + 401→静默登出 + 未初始化 guard（try/catch 包 `Supabase.instance`）。
+- M0：`capture_input` 分类 chips+期限；`focus_card` 按后端 options 渲染（now 主按钮/later/drop/rescue tonal）；Toast 顶部 pill；`me_screen` 护栏真实读写（安静时段开关='00:00' 关闭约定）。
+- 测试：7/7 widget（纯组件、不 mock 网络策略）+ `flutter analyze` 0 issues。
+- **构建**：release 必须带 `--dart-define=SUPABASE_URL=... --dart-define=SUPABASE_ANON_KEY=...`（CI secrets 已配；本机构建示例见 §7）。**勿在构建中途 kill Gradle 守护进程**（会致 assembleRelease 失败；`/tmp FileAlreadyExistsException` 为良性告警）。
 
 ---
 
-## 8. 常用命令速查
+## 5. CI/CD（GitHub Actions，3 条 + 1 触发）
+
+| 工作流 | 触发 | 内容 |
+|---|---|---|
+| `ci.yml` | push/PR | backend: npm ci+test+typecheck；frontend: flutter analyze+test |
+| `deploy-backend.yml` | push main（backend/**）+ workflow_dispatch | wrangler deploy（node 24；secrets: CLOUDFLARE_API_TOKEN + CLOUDFLARE_ACCOUNT_ID） |
+| `release-frontend.yml` | tag `v*` | 校验 tag=pubspec 版本 → Android APK+AAB（ubuntu）+ iOS ipa --no-codesign（macos）→ GitHub Release（secrets: SUPABASE_URL/SUPABASE_ANON_KEY dart-define） |
+
+**GH Secrets 清单（9 项已设）**：CLOUDFLARE_ACCOUNT_ID、CLOUDFLARE_API_TOKEN、SMTP_AUTH_PROD、SMTP_HOST、SMTP_PORT、SMTP_USER、SUPABASE_ANON_KEY、SUPABASE_URL。**CF Worker secrets**：SUPABASE_URL、SUPABASE_SERVICE_KEY（DEBUG 已删）。
+- 推送提示：gh token 已补 workflow scope → **所有推送（含 workflow 文件）直接 HTTPS**；SSH（ssh.github.com:443）在 Clash 环境下不通，勿再用。
+
+---
+
+## 6. 密钥与运维
+
+- 台账：`docs/devops/SECRETS_REGISTRY.md`（SMTP 四项、Supabase URL/SERVICE_KEY、CF token、连接串等的位置与轮换方式；真值不进仓库）。
+- 迁移 golden rule：改表/函数一律 `backend/supabase/migrations/<ts>_<name>.sql` + `npm run db:migrate`（DIRECT_DATABASE_URL=pooler 串），禁 Dashboard 直改。
+- 临时文件约定：探针等放 `backend/.scratch/`（已 gitignore），收尾整体清一次；**工作途中不执行 rm**。
+- 邮件模板：默认 Supabase 文案在用；自设计模板（docs/devops/smtp.md 内 HTML）可后续贴入 Auth → Email Templates。
+
+---
+
+## 7. 常用命令速查
 
 ```bash
-# 后端测试（backend/ 下）
-npm test                        # 51 unit（无环境）；集成 5 条无 env 自动 skip
-npm run typecheck               # tsc --noEmit
-# 集成测试（真库；用 pooler 串）
-SUPABASE_URL=https://ajeratjsxyxtdqtmtvxh.supabase.co \
-SUPABASE_ANON_KEY=<dev.vars 中的值> \
-DATABASE_URL=<dev.vars 中的池化串> \
-npx vitest run test/integration.test.ts   # 期待 5/5；冷启动偶发假红灯 → warm 复跑
-# 迁移（幂等）
-npm run db:migrate              # 需 DIRECT_DATABASE_URL env
+# 后端（backend/）
+npm test && npm run typecheck          # 48 unit（集成 5 需 env 自动跑）
+SUPABASE_URL=... SUPABASE_ANON_KEY=... SUPABASE_SERVICE_KEY=... DATABASE_URL=<pooler串> \
+  npx vitest run test/integration.test.ts   # 5/5（确认邮件开启流程）
+DIRECT_DATABASE_URL=<pooler串> npm run db:migrate
 
-# 本地起 Worker（backend/）
-npx wrangler dev                # 读 .dev.vars
+# 前端（frontend/；flutter 在 ~/.local/bin）
+flutter analyze && flutter test
+flutter build apk --release \
+  --dart-define=SUPABASE_URL=https://ajeratjsxyxtdqtmtvxh.supabase.co \
+  --dart-define=SUPABASE_ANON_KEY=<GH secret 值或本地变量>
 
-# 前端（frontend/；flutter 已在 ~/.local/bin）
-flutter pub get && flutter analyze && flutter test
-flutter build apk --debug       # 首包慢（Gradle）
-
-# 发布（用户操作，规范见 docs/devops/release.md）
-git tag v0.1.0 && git push origin v0.1.0   # 触发 Actions 自动构建+Release
-
-# 推送（含 workflow 文件必须走 SSH 远端；断管重试）
-git push origin main            # ssh.github.com:443，重试 2-4 次
+# 发布（用户/CI）
+git tag v<pubspec 版本> && git push origin v<tag>   # 触发 Release 工作流
 ```
 
 ---
 
-## 9. 运维注意事项
+## 8. 剩余工作（均非 v0.1.0 阻塞）
 
-- **后端部署链路（2026-08-27 已通）**：`push main → CI(npm test/typecheck + flutter analyze/test) + Deploy Backend(cloudflare/wrangler-action@v3, node 24) 全绿`。关键点：`wrangler.toml` 必须 `compatibility_flags = ["nodejs_compat"]`（postgres.js/drizzle 依赖 node:events/net/tls，否则部署报 10021 No such module）；node 版本须 24（npm 11 lockfile 与 npm 10 不兼容）；`CLOUDFLARE_API_TOKEN`（cfut_ 用户级，Edit Cloudflare Workers 模板）+ `CLOUDFLARE_ACCOUNT_ID` 已在 GH Secrets。
-- **CF Dashboard 绑定（A 方案）**：原绑定指向已删除的 `master` → 不触发；现已由 Actions 部署取代。Dashboard 的 Builds 绑定可改 main 或停用（避免双部署）。
-- **生产 Worker 运行时 secrets 待填**：`SUPABASE_URL`、`DATABASE_URL`（pooler :6543）、LLM 预留 —— CF Dashboard → Worker → Settings → Variables and Secrets。
-- **Browser Integrity Check**：生产域名被 CF 反爬策略保护，脚本 UA 直连会 403/1010；浏览器/真机 UA 正常。若 Flutter 客户端遇到 1010，需在 CF 该域名的 WAF/Security Level 放行 API 路径或降级 Bot 防护。
-- **SSH push**：workflow 文件推送被 gh token 的 scope 限制 → 一律 `git push origin main`（SSH）。普通提交可用 HTTPS/gh。
-- **golden rule**：任何环境（含 Supabase SQL Editor/Table Editor）不得直接改远端表结构，只走 `backend/supabase/migrations/*.sql` + `npm run db:migrate`。
-- **Sandbox 网络**：直连 Supabase `:5432` 在本机被黑洞 → 一律用 pooler `:6543`（`prepare:false` 已固定）；集成测试偶发 JWKS 冷启动 401 / pooler ECONNRESET → warm 复跑。
-- **子代理稳定性**：本环境多次出现子代理进程重启/挂死（UnknownError/orphaned）；长命令（flutter/Gradle 下载）会让代理心跳长时间静默——**判定卡死前先查进程级证据**（`ps` 里 java/gradle/dartvm 是否在跑）；确认卡死则 cancel+重派，任务树注意清理重复项（如 T5/T8 已 abandoned）。
-- **生产邮件**：Supabase Auth 自定义 SMTP 用 j_nify@yeah.net（模板在 docs/devops/smtp.md；显示名 J-nify · Jennifer）。
-- **M1/M2 后续**：M1 信号源（日历/天气/位置/使用状态真实采集+scope 授权流程）、真实推送通道、M2 LLM 接线（jennifer_brain 目前恒 degraded 模板），均有架构预留。
+1. **真机冒烟**（用户）：侧载 `app-release.apk` → 注册（收确认邮件）→ 确认 → 登录 → 录入 → 决策 → 登出。
+2. 邮件模板美化（可用 smtp.md 内 HTML）。
+3. Android 商店签名 keystore（侧载不需）；iOS 发布签名（需 macOS + 开发者账号）。
+4. 文档打磨：frontend/docs 同步认证/M0（此前评审 Minor）；`SPEC.md:674`/`API.md` 的 decision `do→now` 修正（T12 计划项）；app_config Supabase 配置 fail-fast（T12 计划项）。
+5. 质量硬化测试批次（T3.16）：audit 单测、rate-limit 过期测试、window-engine 边界、escalation 同日窗口/空回落、brain 空白标题、decision 精确文案+effectMetrics。
+6. 验收报告（T15，docs/compose/reports/）。
+7. M1 信号源（日历/天气/位置/使用状态真实采集）、真实推送通道（FCM/APNs，Nudge 已落库未推送）、M2 LLM 接线（当前 brain 恒模板降级；用户要求多供应商热重载模型管理组件，部署侧零硬编码）。
+
+---
+
+## 9. 会话运维经验（防重踩）
+
+- **不要在构建中 kill Gradle 守护进程**（曾致 assembleRelease 失败）；`/tmp FileAlreadyExistsException` 是良性警告。
+- 子代理环境多次崩溃/挂死：判定卡死先看进程级证据（ps 里 gradle/java/dart 是否在跑），再 cancel+重派；任务树记得清理重复项（曾有 T5/T8 重复）。
+- Clash 开启时 SSH（ssh.github.com:443）不通：一律用 HTTPS 推送（已配 workflow scope）。
+- 沙箱直连 Supabase :5432 被黑洞：用 pooler `:6543`；本地 node postgres.js 正常。
