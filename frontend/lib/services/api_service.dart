@@ -12,15 +12,17 @@ class ApiService {
     return data as Map<String, dynamic>;
   }
 
-  Future<ItemCommitment> capture(
+  Future<Map<String, dynamic>> capture(
     String rawText, {
     String category = 'life',
+    DateTime? dueAt,
   }) async {
     final data = await _client.post('/v1/items/capture', body: {
       'raw_text': rawText,
       'category': category,
+      if (dueAt != null) 'due_at': dueAt.toUtc().toIso8601String(),
     }) as Map<String, dynamic>;
-    return ItemCommitment.fromJson(data['item'] as Map<String, dynamic>);
+    return data;
   }
 
   Future<List<ItemCommitment>> listItems({String? status}) async {

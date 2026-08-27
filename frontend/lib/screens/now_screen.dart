@@ -43,15 +43,37 @@ class _NowScreenState extends State<NowScreen> {
     }
   }
 
-  Future<void> _capture(String text) async {
-    await _api.capture(text);
+  Future<void> _capture(String text, String category, DateTime? dueAt) async {
+    await _api.capture(text, category: category, dueAt: dueAt);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('记下了：不急，但我帮您盯着。'),
+        behavior: SnackBarBehavior.floating,
+        duration: Duration(milliseconds: 2200),
+      ),
+    );
     _load();
   }
 
   Future<void> _decide(String decision) async {
     final item = _data['item'] as Map<String, dynamic>?;
     if (item == null) return;
-    await _api.decide(item['id'] as String, decision);
+    final res = await _api.decide(item['id'] as String, decision);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(res['message'] as String? ?? '已处理'),
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(milliseconds: 2200),
+        // 顶部居中 pill：margin 顶部垫高，贴近 SPEC §3.5
+        margin: EdgeInsets.only(
+          top: MediaQuery.of(context).padding.top + 12,
+          left: 48,
+          right: 48,
+        ),
+      ),
+    );
     _load();
   }
 
@@ -86,10 +108,14 @@ class _NowScreenState extends State<NowScreen> {
         child: Text(_data['empty_message'] as String? ?? '没有必须此刻处理的事'),
       );
     }
+    final commitment = ItemCommitment.fromJson(item);
     return SingleChildScrollView(
       child: FocusCard(
-        item: ItemCommitment.fromJson(item),
+        item: commitment,
         reasonText: item['reason_text'] as String?,
+        options: commitment.options
+            .map((e) => Map<String, String>.from(e as Map))
+            .toList(),
         onDecide: _decide,
       ),
     );
