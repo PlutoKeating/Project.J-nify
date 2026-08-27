@@ -33,8 +33,10 @@ interface MinimalDb {
 export const requireAuth: MiddlewareHandler<{ Bindings: Env; Variables: { userId: string } }> = async (c, next) => {
   const header = c.req.header('Authorization');
   if (!header?.startsWith('Bearer ')) return c.json({ detail: 'unauthorized' }, 401);
+  const supabaseUrl = c.env?.SUPABASE_URL;
+  if (!supabaseUrl) return c.json({ detail: 'unauthorized' }, 401);
   try {
-    c.set('userId', await verifyJwt(header.slice(7), c.env.SUPABASE_URL));
+    c.set('userId', await verifyJwt(header.slice(7), supabaseUrl));
   } catch {
     return c.json({ detail: 'unauthorized' }, 401);
   }

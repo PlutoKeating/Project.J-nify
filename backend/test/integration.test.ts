@@ -11,9 +11,10 @@ describeIf('integration e2e', () => {
   let app: ReturnType<typeof makeApp>;
   let token = '';
   let userId = '';
+  let env: Parameters<typeof makeApp>[0];
 
   beforeAll(async () => {
-    const env = {
+    env = {
       ...process.env,
       SUPABASE_URL: process.env.SUPABASE_URL!,
       SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY!,
@@ -33,12 +34,16 @@ describeIf('integration e2e', () => {
   });
 
   const call = (path: string, init: RequestInit = {}) =>
-    app.request(path, {
-      ...init,
-      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json', ...init.headers },
-    });
+    app.request(
+      path,
+      {
+        ...init,
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json', ...init.headers },
+      },
+      env as never, // Hono app.request 第三参注入 Bindings 环境（否则 c.env 为 undefined → 401）
+    );
 
-  it('capture -> now shows window with reason', async () => {
+  it('capture -> now shows window with reason', { timeout: 90_000 }, async () => {
     const cap = await call('/v1/items/capture', {
       method: 'POST',
       body: JSON.stringify({ raw_text: '月底还信用卡', category: 'return', due_at: new Date(Date.now() + 5 * 86400_000).toISOString() }),
@@ -56,7 +61,7 @@ describeIf('integration e2e', () => {
     expect(nowBody.item.options.map((o) => o.code)).toEqual(['now', 'later', 'drop', 'rescue']);
   });
 
-  it('later does not immediately re-serve the same item at top', async () => {
+  it('later does not immediately re-serve the same item at top', { timeout: 90_000 }, async () => {
     // 上一用例已建 due_soon(return) 事项；再录一条 social
     await call('/v1/items/capture', {
       method: 'POST',
@@ -73,11 +78,11 @@ describeIf('integration e2e', () => {
     expect(parked.map((i) => i.id)).toContain(first.id); // 且已回 parked，可恢复
   });
 
-  it('guardrails persist across client instances', async () => {
+  it('guardrails persist across client instances', { timeout: 90_000 }, async () => {
     await call('/v1/guardrails', { method: 'PUT', body: JSON.stringify({ max_nudge_budget: 5 }) });
-    // 独立连接直接查库，验证持久化（不依赖 app 内的连接缓存）
+    // 独立连接直接查库，验证持久化（不依赖 app 内的连接缓存）；按 user_id 过滤，避免历次运行残留行
     const fresh = postgres(process.env.DATABASE_URL!, { prepare: false, ssl: 'require' });
-    const rows = await fresh`select value from user_preferences where "key" = 'max_nudge_budget' and scene = 'guardrails'`;
+    const rows = await fresh`select value from user_preferences where "key" = 'max_nudge_budget' and scene = 'guardrails' and user_id = ${userId}`;
     await fresh.end();
     expect(rows.length).toBe(1);
     expect(rows[0].value).toBe('5');
@@ -85,7 +90,7 @@ describeIf('integration e2e', () => {
     expect(((await g.json()) as { max_nudge_budget: number }).max_nudge_budget).toBe(5);
   });
 
-  it('signals accepted and me/data deletes everything', async () => {
+  it('signals accepted and me/data deletes everything', { timeout: 90_000 }, async () => {
     const s = await call('/v1/signals', { method: 'POST', body: JSON.stringify({ signal_type: 'usage', payload: { free_slot: true } }) });
     expect(s.status).toBe(200);
     const d = await call('/v1/me/data', { method: 'DELETE' });

@@ -1,5 +1,5 @@
 import { Hono } from 'hono';
-import { and, asc, eq, inArray } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray } from 'drizzle-orm';
 import type { AppEnv } from '../app';
 import { dbSchema as s } from '../db';
 import { latestContext, robustGuardrails } from '../db';
@@ -36,7 +36,26 @@ now.get('/', async (c) => {
       scored.push({ item, windowId, result });
     }
     scored.sort((a, b) => b.result.fitScore - a.result.fitScore); // fit_score 最高；稳定排序保留 updated_at 序
-    const best = scored[0];
+    // 「晚点」冷却：最近 8h 内选过 later 的事项移到队列尾（换窗口语义，不立即回顶/重复打扰）
+    const since = new Date(Date.now() - 8 * 3600_000);
+    const recentDecisions = await tx
+      .select()
+      .from(s.decisions)
+      .where(inArray(s.decisions.itemId, candidates.map((i) => i.id)))
+      .orderBy(desc(s.decisions.decidedAt));
+    const latestByItem = new Map<string, { decision: string; decidedAt: Date }>();
+    for (const d of recentDecisions) {
+      if (!d.itemId || latestByItem.has(d.itemId)) continue;
+      latestByItem.set(d.itemId, { decision: d.decision, decidedAt: d.decidedAt });
+    }
+    const deferredIds = new Set<string>();
+    for (const [itemId, d] of latestByItem) {
+      if (d.decision === 'later' && d.decidedAt.getTime() > since.getTime()) deferredIds.add(itemId);
+    }
+    const ranked = deferredIds.size > 0
+      ? [...scored.filter((x) => !deferredIds.has(x.item.id)), ...scored.filter((x) => deferredIds.has(x.item.id))]
+      : scored;
+    const best = ranked[0];
     // policy 行缺失则先 INSERT 默认行（maxNudges 用护栏预算，nudgeCount 0），再取事务内最新行
     const existing = await tx
       .select()
