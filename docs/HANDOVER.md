@@ -104,8 +104,8 @@
 |---|---|---|---|
 | 1 | **T13 前端认证** | 代码 | 无登录页 → 装包也无法注册/登录 |
 | 2 | **T14 前端 M0 缺口** | 代码 | 录入/决策体验不完整 |
-| 3 | **生产 Supabase 项目 + SMTP** | 运维(用户) | 真机用户需进生产库；邮件走 j_nify@yeah.net（绕开 Supabase 邮件额度） |
-| 4 | **CF Worker 运行时 secrets 注入** | 运维(用户) | `SUPABASE_URL`/`DATABASE_URL`(pooler :6543)/`LLM_*` 需在 CF Dashboard → Worker → Settings → Variables and Secrets 填入；未注入则 `/v1/*` 全部 401（缺 SUPABASE_URL）、DB 操作失败 |
+| 3 | ~~生产 Supabase 项目~~ **已定案：当前 dev 项目即生产**；SMTP 已上线 | ✅ 完成 | 2026-08-27：当前项目即生产环境；确认/重置邮件经 j_nify@yeah.net（smtp.yeah.net:465）发送，mailer_autoconfirm=false |
+| 4 | **CF Worker 运行时 secrets** | ✅ 已完成 | `SUPABASE_URL`+`SUPABASE_SERVICE_KEY` 已注入（wrangler secret）；数据库经 REST+service key 访问 |
 | 5 | **APK 产出** | 构建 | 首包仍在构建；产出后即可侧载安装（debug 包允许未知来源） |
 | 6 | Android 签名 / iOS 构建签名 | 运维(用户) | 阻塞商店发布，不阻塞侧载 |
 | 7 | 真实主动推送（FCM/APNs） | 业务 | Nudge 已落库但无推送通道；「主动提醒」尚未真实化（M1 后期） |

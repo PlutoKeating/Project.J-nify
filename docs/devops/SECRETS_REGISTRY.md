@@ -10,7 +10,7 @@
 | `SMTP_USER` = j_nify@yeah.net | 生产收发件邮箱 | GitHub Actions Secrets（已存）| `gh secret set SMTP_USER` |
 | `SMTP_AUTH_PROD` | yeah.net 客户端授权码（SMTP 密码，非登录密码） | GitHub Actions Secrets（已存）+ 届时填入 Supabase 生产项目 Authentication → Settings → SMTP | `gh secret set SMTP_AUTH_PROD`；切勿发公开渠道 |
 | 发件显示名 | 邮件发件人 | 非敏感 → `docs/devops/smtp.md`（模板随 Task 16 生成） | 文案审校 |
-| `SUPABASE_URL`（生产项目） | Worker 验签 JWKS / Supabase 客户端 | CF Dashboard → Worker → Settings → Variables and Secrets（已存 dev 值；生产项目建立后更新） | Dashboard 维护 |
+| `SUPABASE_URL`（**当前项目即生产**） | Worker 验签 JWKS / Supabase 客户端 | CF Dashboard secrets（已存）+ GH Secrets | Dashboard 维护 |
 | `SUPABASE_SERVICE_KEY` | **后端 DB 访问（PostgREST，2026-08-27 起）** | CF Dashboard secrets（已存）+ 本机 `backend/.dev.vars`；**只进后端** | Dashboard / `wrangler secret put` 维护 |
 | `DATABASE_URL`（pooler 事务模式 :6543） | 仅迁移脚本/集成测试（node 侧 postgres.js），**无需进 CF Worker** | 本机 `backend/.dev.vars` + GH Actions 集成测试 env | `.dev.vars` 维护 |
 | `LLM_API_BASE/LLM_API_KEY/LLM_MODEL` | 预留 LLM 网关（空则模板降级） | CF Dashboard secrets（同上，暂空） | Dashboard 维护 |
@@ -20,4 +20,4 @@
 ## 轮换与泄露处置
 - 任一密钥疑似泄露：立即在对应平台轮换（网易授权码→设置页重新生成；CF/Supabase→控制台重新生成），随后 `gh secret set` 覆盖，并更新本台账。
 - 邮件模板与 SMTP 配置步骤见 `docs/devops/smtp.md`（Task 16 交付）。
-- 生产 Supabase 项目创建后，按本台账把 SMTP 四项填入 Authentication → Settings → SMTP provider，即可用 j_nify@yeah.net 发送确认/重置邮件（绕开 Supabase 邮件额度）。
+- **SMTP 已上线（2026-08-27）**：确认/重置邮件经 j_nify@yeah.net（smtp.yeah.net:465，sender `J-nify Jennifer`）发送，mailer_autoconfirm=false（确认开启）。
