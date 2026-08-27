@@ -1,15 +1,24 @@
-import { desc, eq, sql } from 'drizzle-orm';
 import type { Db } from '../db';
-import { dbSchema as s } from '../db';
+import { restGet, restInsert, restRpc } from '../db';
 import { computeWindow, type WindowResult } from './window-engine';
 import { shouldNudge, type GuardrailsLike } from './escalation';
-import { draft, type DraftOption } from './brain';
+import { draft } from './brain';
 
 export interface ItemRowLike {
   id: string;
   title: string;
   category: string;
   dueAt: Date | null;
+}
+
+interface WindowRow {
+  id: string;
+  window_start: string;
+  window_end: string;
+  fit_score: number | null;
+  reason_code: string;
+  reason_text: string;
+  created_at: string;
 }
 
 // 若既有 window 未过期则复用（不重复 Nudge）；否则新建并落库。
@@ -19,41 +28,38 @@ export async function freshOrReuseWindow(
   opts: { contextFeatures?: Record<string, unknown>; now?: Date } = {},
 ): Promise<{ windowId: string; result: WindowResult }> {
   const now = opts.now ?? new Date();
-  const existing = await db
-    .select()
-    .from(s.opportunityWindows)
-    .where(eq(s.opportunityWindows.itemId, item.id))
-    .orderBy(desc(s.opportunityWindows.createdAt))
-    .limit(1);
-  if (existing[0] && new Date(existing[0].windowEnd).getTime() > now.getTime()) {
+  const existing = await restGet<WindowRow>(db, 'opportunity_windows', {
+    select: 'id,window_start,window_end,fit_score,reason_code,reason_text,created_at',
+    params: { item_id: item.id },
+    order: 'created_at.desc',
+    limit: 1,
+  });
+  if (existing[0] && new Date(existing[0].window_end).getTime() > now.getTime()) {
     return {
       windowId: existing[0].id,
       result: {
-        reasonCode: existing[0].reasonCode,
-        reasonText: existing[0].reasonText,
-        fitScore: Number(existing[0].fitScore ?? 0),
-        windowStart: new Date(existing[0].windowStart),
-        windowEnd: new Date(existing[0].windowEnd),
+        reasonCode: existing[0].reason_code,
+        reasonText: existing[0].reason_text,
+        fitScore: Number(existing[0].fit_score ?? 0),
+        windowStart: new Date(existing[0].window_start),
+        windowEnd: new Date(existing[0].window_end),
       },
     };
   }
   const result = computeWindow(item, { contextFeatures: opts.contextFeatures, now });
-  const [row] = await db
-    .insert(s.opportunityWindows)
-    .values({
-      itemId: item.id,
-      windowStart: result.windowStart,
-      windowEnd: result.windowEnd,
-      fitScore: result.fitScore,
-      reasonCode: result.reasonCode,
-      reasonText: result.reasonText,
-      status: 'served',
-    })
-    .returning({ id: s.opportunityWindows.id });
+  const [row] = await restInsert<{ id: string }>(db, 'opportunity_windows', {
+    item_id: item.id,
+    window_start: result.windowStart.toISOString(),
+    window_end: result.windowEnd.toISOString(),
+    fit_score: result.fitScore,
+    reason_code: result.reasonCode,
+    reason_text: result.reasonText,
+    status: 'served',
+  });
   return { windowId: row.id, result };
 }
 
-// policy 携带当前 nudgeCount 仅用于 GATE 判断；nudge_count +1 自增始终在 SQL 侧完成。
+// policy 携带当前 nudgeCount 仅用于 GATE 判断；nudge 落库与 nudge_count+1 自增由 RPC 事务完成。
 export async function buildNudge(
   db: Db,
   item: ItemRowLike,
@@ -63,34 +69,17 @@ export async function buildNudge(
   result: WindowResult,
   now: Date = new Date(),
 ): Promise<string | null> {
-  const g = shouldNudge(policy, guardrails, now);
-  if (!g.allowed) return null;
+  if (!shouldNudge(policy, guardrails, now).allowed) return null;
   if (!result.reasonText) return null; // 没有理由不通知
   const { title, body, options } = draft(item, result);
-  const [nudge] = await db
-    .insert(s.nudges)
-    .values({
-      itemId: item.id,
-      windowId,
-      intensity: g.intensity,
-      channel: 'push',
-      title,
-      body,
-      status: 'scheduled',
-    })
-    .returning({ id: s.nudges.id });
-  await db.insert(s.nudgeOptions).values(
-    options.map((o: DraftOption, i: number) => ({
-      nudgeId: nudge.id,
-      optionCode: o.code,
-      label: o.label,
-      actionType: o.actionType,
-      sortOrder: i,
-    })),
-  );
-  await db
-    .update(s.escalationPolicies)
-    .set({ nudgeCount: sql<number>`${s.escalationPolicies.nudgeCount} + 1` })
-    .where(eq(s.escalationPolicies.itemId, item.id));
-  return nudge.id;
+  const out = await restRpc<{ nudgeId: string }>(db, 'fn_create_nudge', {
+    p_item_id: item.id,
+    p_window_id: windowId,
+    p_intensity: shouldNudge(policy, guardrails, now).intensity,
+    p_channel: 'push',
+    p_title: title,
+    p_body: body,
+    p_options: options,
+  });
+  return out.nudgeId ?? null;
 }

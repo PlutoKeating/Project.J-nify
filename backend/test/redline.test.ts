@@ -1,7 +1,7 @@
 // SPEC §9.4 频控红线：单事项默认最多 3 次主动提醒。
-// buildNudge 是 DB-bound 的，无法在无库的单测里直接调用其 gate 路径，
-// 因此这里用两层断言钉住接线：(a) 纯函数 shouldNudge 的预算门；
-// (b) orchestrator/now 路由确实把真实 nudgeCount 传进门（代码审阅的机器替身）。
+// buildNudge 走 PostgREST/RPC（DB-bound），无库单测里用两层断言钉住接线：
+// (a) 纯函数 shouldNudge 的预算门；(b) orchestrator/now 确实把真实 nudgeCount 传进门
+// 且计数自增在 RPC（SQL 侧）完成——代码审阅的机器替身。
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
@@ -22,7 +22,7 @@ describe('nudge redline (SPEC §9.4 频控红线)', () => {
     expect(shouldNudge({ maxNudges: 3, nudgeCount: 2 }, G, DAY).allowed).toBe(true);
   });
 
-  it('buildNudge policy 形状携带 nudgeCount 且不再硬编码 null', () => {
+  it('buildNudge policy 形状携带 nudgeCount，不硬编码 null', () => {
     expect(buildNudge.length).toBe(6); // (db, item, policy, guardrails, windowId, result, now=…)
     const src = read('src/services/orchestrator.ts');
     expect(src).toContain('nudgeCount: number');
@@ -30,16 +30,16 @@ describe('nudge redline (SPEC §9.4 频控红线)', () => {
     expect(src).toMatch(/shouldNudge\(policy, guardrails, now\)/); // 完整 policy 直传 gate
   });
 
-  it('buildNudge 保留 SQL 侧 nudge_count 自增（sql 来自 drizzle-orm）', () => {
+  it('nudge 落库 + nudge_count 自增在 RPC（SQL 侧事务）完成', () => {
     const src = read('src/services/orchestrator.ts');
-    expect(src).toMatch(/from 'drizzle-orm'/);
-    expect(src).toMatch(/sql<number>/);
-    expect(src).toContain('nudgeCount} + 1');
+    expect(src).toMatch(/fn_create_nudge/);
+    const sql = read('supabase/migrations/20260827000002_rest_rpc.sql');
+    expect(sql).toContain('nudge_count = nudge_count + 1');
   });
 
-  it('now 路由把事务内最新 policyRow.nudgeCount 传给 buildNudge', () => {
+  it('now 路由把最新 policyRow.nudgeCount 传给 buildNudge（含全 defer 抑制）', () => {
     const src = read('src/routes/now.ts');
-    expect(src).toContain('const [policyRow] = await tx');
-    expect(src).toContain('nudgeCount: policyRow.nudgeCount');
+    expect(src).toContain('nudgeCount: policyRow.nudge_count');
+    expect(src).toContain('if (!deferredIds.has(best.item.id))');
   });
 });

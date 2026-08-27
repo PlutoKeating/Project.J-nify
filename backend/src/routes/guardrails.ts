@@ -1,41 +1,24 @@
 import { Hono } from 'hono';
-import { and, eq } from 'drizzle-orm';
 import type { AppEnv } from '../app';
-import { dbSchema as s, robustGuardrails, type Db } from '../db';
+import { restGet, restInsert, robustGuardrails, type Db } from '../db';
 
 export const guardrails = new Hono<AppEnv>();
 
 async function upsert(db: Db, userId: string, key: string, value: string) {
-  const existing = await db
-    .select()
-    .from(s.userPreferences)
-    .where(and(eq(s.userPreferences.userId, userId), eq(s.userPreferences.scene, 'guardrails'), eq(s.userPreferences.key, key)))
-    .limit(1);
-  if (existing[0]) {
-    await db.update(s.userPreferences).set({ value, updatedAt: new Date() }).where(eq(s.userPreferences.id, existing[0].id));
-  } else {
-    await db.insert(s.userPreferences).values({ userId, scene: 'guardrails', key, value });
-  }
+  // PostgREST upsert：on_conflict(user_id, scene, key) + resolution=merge-duplicates
+  await restInsert(
+    db,
+    'user_preferences',
+    { user_id: userId, scene: 'guardrails', key, value },
+    { onConflict: 'user_id,scene,key' },
+  );
 }
 
 guardrails.get('/', async (c) => {
   const db = c.get('db');
   const userId = c.get('userId');
   const g = await robustGuardrails(db, userId);
-  const rows = await db
-    .select()
-    .from(s.userPreferences)
-    .where(and(eq(s.userPreferences.userId, userId), eq(s.userPreferences.scene, 'guardrails')));
-  const row = rows.find((r) => r.key === 'privacy_scope');
-  // 解析失败回落默认 scope（不 500），与 db/index.ts robustPrivacyScope 一致
-  let privacy: Record<string, boolean> = { calendar: true, weather: true, coarse_location: true };
-  if (row) {
-    try {
-      privacy = JSON.parse(row.value) as Record<string, boolean>;
-    } catch {
-      privacy = { calendar: true, weather: true, coarse_location: true };
-    }
-  }
+  const privacy = await robustPrivacyScopeGuardrails(db, userId);
   return c.json({ quiet_hours_start: g.quietHoursStart, quiet_hours_end: g.quietHoursEnd, max_nudge_budget: g.maxNudgeBudget, privacy_scope: privacy });
 });
 
@@ -50,3 +33,17 @@ guardrails.put('/', async (c) => {
   const g = await robustGuardrails(db, userId);
   return c.json({ quiet_hours_start: g.quietHoursStart, quiet_hours_end: g.quietHoursEnd, max_nudge_budget: g.maxNudgeBudget, privacy_scope: body.privacy_scope ?? { calendar: true, weather: true, coarse_location: true } });
 });
+
+async function robustPrivacyScopeGuardrails(db: Db, userId: string): Promise<Record<string, boolean>> {
+  const rows = await restGet<{ key: string; value: string }>(db, 'user_preferences', {
+    select: 'key,value', params: { user_id: userId, scene: 'guardrails' },
+  });
+  const row = rows.find((r) => r.key === 'privacy_scope');
+  const fallback = { calendar: true, weather: true, coarse_location: true };
+  if (!row) return fallback;
+  try {
+    return { ...fallback, ...JSON.parse(row.value) };
+  } catch {
+    return fallback;
+  }
+}

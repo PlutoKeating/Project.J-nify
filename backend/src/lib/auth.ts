@@ -1,6 +1,8 @@
 import { createRemoteJWKSet, jwtVerify } from 'jose';
 import type { MiddlewareHandler } from 'hono';
 import type { Env } from '../config';
+import type { Db } from '../db';
+import { restInsert } from '../db';
 
 const jwksCache = new Map<string, ReturnType<typeof createRemoteJWKSet>>();
 export function jwksFor(supabaseUrl: string) {
@@ -21,9 +23,6 @@ export async function verifyJwt(token: string, supabaseUrl: string): Promise<str
   return payload.sub;
 }
 
-interface MinimalDb {
-  execute(query: unknown): PromiseLike<unknown>;
-}
 
 export const requireAuth: MiddlewareHandler<{ Bindings: Env; Variables: { userId: string } }> = async (c, next) => {
   const header = c.req.header('Authorization');
@@ -39,10 +38,7 @@ export const requireAuth: MiddlewareHandler<{ Bindings: Env; Variables: { userId
   await next(); // 下游错误交给 app.onError/500，不得吞成 401
 };
 
-export async function ensureUser(db: MinimalDb, userId: string): Promise<void> {
-  // 用 db.execute 直连同一 pg 客户端做幂等插入：绕开 drizzle insert 的 default 展开路径，
-  // 底层 postgres 错误可透出（code/detail），且 SQL 更简。
-  await db.execute(sql`insert into "public"."users" ("id") values (${userId}) on conflict do nothing`);
+export async function ensureUser(db: Db, userId: string): Promise<void> {
+  // PostgREST upsert：users 首访懒创建（幂等）
+  await restInsert(db, 'users', { id: userId }, { onConflict: 'id' });
 }
-
-import { sql } from 'drizzle-orm';

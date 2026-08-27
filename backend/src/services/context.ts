@@ -1,32 +1,15 @@
 import type { Db } from '../db';
-import { dbSchema as s } from '../db';
+import { restRpc } from '../db';
 
 export async function ingestSignal(
   db: Db,
   userId: string,
   input: { signalType: string; payload: Record<string, unknown>; occurredAt: Date },
 ): Promise<void> {
-  const occurredAt = input.occurredAt;
-  await db.transaction(async (tx) => {
-    const [signal] = await tx
-      .insert(s.signalEvents)
-      .values({ userId, signalType: input.signalType, payload: input.payload, occurredAt })
-      .returning({ id: s.signalEvents.id });
-    const features = input.payload;
-    const availability = features.free_slot ? 0.6 : 0.3;
-    const friction = features.low_friction ? 0.2 : 0.7;
-    const [snapshot] = await tx
-      .insert(s.contextSnapshots)
-      .values({
-        userId,
-        snapshotKey: `${input.signalType}:${occurredAt.toISOString()}`,
-        contextFeatures: features,
-        availabilityScore: availability,
-        frictionScore: friction,
-      })
-      .returning({ id: s.contextSnapshots.id });
-    await tx
-      .insert(s.contextSnapshotSignals)
-      .values({ contextSnapshotId: snapshot.id, signalEventId: signal.id });
+  await restRpc(db, 'fn_ingest_signal', {
+    p_user_id: userId,
+    p_signal_type: input.signalType,
+    p_payload: input.payload,
+    p_occurred_at: input.occurredAt.toISOString(),
   });
 }

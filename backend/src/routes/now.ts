@@ -1,24 +1,34 @@
 import { Hono } from 'hono';
-import { and, asc, desc, eq, gt, inArray } from 'drizzle-orm';
 import type { AppEnv } from '../app';
-import { dbSchema as s } from '../db';
-import { latestContext, robustGuardrails } from '../db';
+import { latestContext, restGet, restInsert, robustGuardrails } from '../db';
 import { buildNudge, freshOrReuseWindow } from '../services/orchestrator';
 import { draft } from '../services/brain';
+import type { ItemRowLike } from '../services/orchestrator';
 import type { WindowResult } from '../services/window-engine';
 
 export const now = new Hono<AppEnv>();
 
 const ACTIVE = ['parked', 'window_candidate', 'nudged'];
 
+interface CandidateRow {
+  id: string;
+  title: string;
+  category: string;
+  status: string;
+  raw_text: string;
+  due_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 now.get('/', async (c) => {
   const db = c.get('db');
   const userId = c.get('userId');
-  const candidates = await db
-    .select()
-    .from(s.itemCommitments)
-    .where(and(eq(s.itemCommitments.userId, userId), inArray(s.itemCommitments.status, ACTIVE)))
-    .orderBy(asc(s.itemCommitments.updatedAt));
+  const candidates = await restGet<CandidateRow>(db, 'item_commitments', {
+    select: 'id,title,category,status,raw_text,due_at,created_at,updated_at',
+    params: { user_id: userId, 'status.in': `(${ACTIVE.join(',')})` },
+    order: 'updated_at.asc',
+  });
   if (candidates.length === 0) {
     return c.json({
       greeting: '周六上午 · 只被允许想一件事',
@@ -29,85 +39,77 @@ now.get('/', async (c) => {
   }
   const ctx = await latestContext(db, userId);
   const guardrails = await robustGuardrails(db, userId);
-  const { best, nudgeId } = await db.transaction(async (tx) => {
-    const scored: { item: (typeof candidates)[number]; windowId: string; result: WindowResult }[] = [];
-    for (const item of candidates) {
-      const { windowId, result } = await freshOrReuseWindow(tx, item, { contextFeatures: ctx ?? undefined });
-      scored.push({ item, windowId, result });
-    }
-    scored.sort((a, b) => b.result.fitScore - a.result.fitScore); // fit_score 最高；稳定排序保留 updated_at 序
-    // 「晚点」冷却：最近 8h 内选过 later 的事项移到队列尾（换窗口语义，不立即回顶/重复打扰）
-    const since = new Date(Date.now() - 8 * 3600_000);
-    const recentDecisions = await tx
-      .select()
-      .from(s.decisions)
-      .where(and(eq(s.decisions.userId, userId), inArray(s.decisions.itemId, candidates.map((i) => i.id)), gt(s.decisions.decidedAt, since)))
-      .orderBy(desc(s.decisions.decidedAt));
-    const latestByItem = new Map<string, { decision: string; decidedAt: Date }>();
-    for (const d of recentDecisions) {
-      if (!d.itemId || latestByItem.has(d.itemId)) continue;
-      latestByItem.set(d.itemId, { decision: d.decision, decidedAt: d.decidedAt });
-    }
-    const deferredIds = new Set<string>();
-    for (const [itemId, d] of latestByItem) {
-      if (d.decision === 'later') deferredIds.add(itemId);
-    }
-    const deferred = scored.filter((x) => deferredIds.has(x.item.id));
-    const nonDeferred = scored.filter((x) => !deferredIds.has(x.item.id));
-    // 全 defer 时 ranked 不得退化为 scored：按 decidedAt 最早（最久未打扰）的事项服务，避免刚晚点事项立即回顶
-    const ranked = nonDeferred.length > 0
-      ? [...nonDeferred, ...deferred]
-      : deferred.length > 0
-        ? [...deferred].sort((a, b) => latestByItem.get(a.item.id)!.decidedAt.getTime() - latestByItem.get(b.item.id)!.decidedAt.getTime())
-        : scored;
-    const best = ranked[0];
-    const bestIsDeferred = deferredIds.has(best.item.id);
-    let nudgeId: string | null = null;
-    // 全 defer 回退：仅被动可见，该轮抑制 nudge（不重复打扰刚晚点的事项）
-    if (!bestIsDeferred) {
-      // policy 行缺失则先 INSERT 默认行（maxNudges 用护栏预算，nudgeCount 0），再取事务内最新行
-      const existing = await tx
-        .select()
-        .from(s.escalationPolicies)
-        .where(eq(s.escalationPolicies.itemId, best.item.id))
-        .limit(1);
-      if (!existing[0]) {
-        await tx
-          .insert(s.escalationPolicies)
-          .values({ itemId: best.item.id, maxNudges: guardrails.maxNudgeBudget, nudgeCount: 0 });
-      }
-      const [policyRow] = await tx
-        .select()
-        .from(s.escalationPolicies)
-        .where(eq(s.escalationPolicies.itemId, best.item.id))
-        .limit(1);
-      nudgeId = await buildNudge(
-        tx,
-        best.item,
-        { maxNudges: guardrails.maxNudgeBudget, nudgeCount: policyRow.nudgeCount },
-        guardrails,
-        best.windowId,
-        best.result,
-      );
-      if (nudgeId) {
-        await tx.update(s.itemCommitments).set({ status: 'nudged' }).where(eq(s.itemCommitments.id, best.item.id));
-      }
-    }
-    return { best, nudgeId };
+
+  const items: ItemRowLike[] = candidates.map((r) => ({ id: r.id, title: r.title, category: r.category, dueAt: r.due_at ? new Date(r.due_at) : null }));
+  const scored: { item: ItemRowLike; row: CandidateRow; windowId: string; result: WindowResult }[] = [];
+  for (let i = 0; i < candidates.length; i++) {
+    const { windowId, result } = await freshOrReuseWindow(db, items[i], { contextFeatures: ctx ?? undefined });
+    scored.push({ item: items[i], row: candidates[i], windowId, result });
+  }
+  scored.sort((a, b) => b.result.fitScore - a.result.fitScore);
+
+  // 「晚点」冷却：最近 8h 内选过 later 的事项移到队列尾
+  const sinceIso = new Date(Date.now() - 8 * 3600_000).toISOString();
+  const candidateIds = candidates.map((x) => x.id);
+  const recentDecisions = await restGet<{ item_id: string | null; decision: string; decided_at: string }>(db, 'decisions', {
+    select: 'item_id,decision,decided_at',
+    params: { user_id: userId, 'item_id.in': `(${candidateIds.join(',')})`, 'decided_at.gt': sinceIso },
+    order: 'decided_at.desc',
   });
-  const { title, body, options } = draft(best.item, best.result);
+  const latestByItem = new Map<string, { decision: string; decidedAt: Date }>();
+  for (const d of recentDecisions) {
+    if (!d.item_id || latestByItem.has(d.item_id)) continue;
+    latestByItem.set(d.item_id, { decision: d.decision, decidedAt: new Date(d.decided_at) });
+  }
+  const deferredIds = new Set<string>();
+  for (const [itemId, d] of latestByItem) {
+    if (d.decision === 'later') deferredIds.add(itemId);
+  }
+  const deferred = scored.filter((x) => deferredIds.has(x.item.id));
+  const nonDeferred = scored.filter((x) => !deferredIds.has(x.item.id));
+  const ranked = nonDeferred.length > 0
+    ? [...nonDeferred, ...deferred]
+    : deferred.length > 0
+      ? [...deferred].sort((a, b) => latestByItem.get(a.item.id)!.decidedAt.getTime() - latestByItem.get(b.item.id)!.decidedAt.getTime())
+      : scored;
+  const best = ranked[0];
+
+  let nudgeId: string | null = null;
+  if (!deferredIds.has(best.item.id)) {
+    // policy 行缺失则先建默认行，再取最新计数用于频控门
+    const existing = await restGet<{ nudge_count: number }>(db, 'escalation_policies', {
+      select: 'nudge_count', params: { item_id: best.item.id }, limit: 1,
+    });
+    if (!existing[0]) {
+      await restInsert(db, 'escalation_policies', { item_id: best.item.id, max_nudges: guardrails.maxNudgeBudget, nudge_count: 0 });
+    }
+    const policyRow = existing[0] ?? { nudge_count: 0 };
+    nudgeId = await buildNudge(
+      db,
+      best.item,
+      { maxNudges: guardrails.maxNudgeBudget, nudgeCount: policyRow.nudge_count ?? 0 },
+      guardrails,
+      best.windowId,
+      best.result,
+    );
+    if (nudgeId) {
+      await restInsert(db, 'item_commitments', { id: best.item.id, status: 'nudged' }, { onConflict: 'id' });
+    }
+  }
+
+  const { options } = draft(best.item, best.result);
   return c.json({
     greeting: '周六上午 · 只被允许想一件事',
     headline: '现在，只递一件顺手的',
     item: {
       id: best.item.id,
       title: best.item.title,
-      raw_text: best.item.rawText,
+      raw_text: best.row.raw_text,
       category: best.item.category,
-      status: nudgeId ? 'nudged' : best.item.status,
-      due_at: best.item.dueAt,
-      created_at: best.item.createdAt,
-      updated_at: best.item.updatedAt,
+      status: nudgeId ? 'nudged' : best.row.status,
+      due_at: best.row.due_at,
+      created_at: best.row.created_at,
+      updated_at: best.row.updated_at,
       reason_code: best.result.reasonCode,
       reason_text: best.result.reasonText,
       fit_score: best.result.fitScore,

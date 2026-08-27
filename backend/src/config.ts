@@ -1,6 +1,7 @@
 export interface Env {
   SUPABASE_URL: string;
-  DATABASE_URL: string;
+  SUPABASE_SERVICE_KEY: string;
+  DATABASE_URL?: string;
   DIRECT_DATABASE_URL?: string;
   SUPABASE_ANON_KEY?: string;
   APP_ENV?: string;

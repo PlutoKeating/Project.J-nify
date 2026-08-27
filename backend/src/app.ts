@@ -5,7 +5,7 @@ import type { Env } from './config';
 import { num } from './config';
 import { ensureUser, requireAuth } from './lib/auth';
 import { slidingWindow } from './lib/rate-limit';
-import { createDb, type Db } from './db';
+import { makeDb, type Db } from './db';
 import { health } from './routes/health';
 import { items } from './routes/items';
 import { now } from './routes/now';
@@ -23,9 +23,9 @@ export function makeApp(env: Env): Hono<AppEnv> {
   // 先鉴权（拿到 userId 再限流，按用户计；未鉴权不建连）
   app.use('/v1/*', requireAuth);
   app.use('/v1/*', async (c, next) => {
-    const db = await createDb(env.DATABASE_URL); // Supavisor 直连 + 私有根 CA（见 db/supabase-pooler-ca.ts）
+    const db = makeDb(env.SUPABASE_URL, env.SUPABASE_SERVICE_KEY); // Supabase REST（PostgREST，标准 HTTPS）
     c.set('db', db);
-    await ensureUser(db, c.get('userId')); // users 懒创建；先落库以免 FK 失败（幂等 onConflictDoNothing）
+    await ensureUser(db, c.get('userId')); // users 懒创建（upsert 幂等）
     const limit = num(env, 'RATE_LIMIT_PER_MINUTE');
     if (limit > 0) {
       const allow = slidingWindow(`${c.get('userId')}:${c.req.path}`, limit, 60_000);
