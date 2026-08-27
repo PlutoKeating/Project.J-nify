@@ -6,6 +6,7 @@ on:
     paths:
       - backend/**
       - .github/workflows/deploy-backend.yml
+  workflow_dispatch: # 手动重部署入口：Actions → Deploy Backend → Run workflow
 
 concurrency:
   group: backend-deploy
