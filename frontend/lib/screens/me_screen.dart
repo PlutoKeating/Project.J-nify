@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../core/api/api_client.dart';
@@ -21,11 +22,24 @@ class _MeScreenState extends State<MeScreen> {
   bool _quietHours = false;
   bool _coarseLocation = false;
   int _maxNudge = 3;
+  String _appVersion = AppConfig.appVersion;
 
   @override
   void initState() {
     super.initState();
     _load();
+    _loadAppVersion();
+  }
+
+  /// 运行时从已安装包读取版本与构建号（替代写死的 AppConfig.appVersion）。
+  Future<void> _loadAppVersion() async {
+    try {
+      final info = await PackageInfo.fromPlatform();
+      if (!mounted) return;
+      setState(() => _appVersion = '${info.version}+${info.buildNumber}');
+    } catch (_) {
+      // 读取失败时保留 AppConfig 默认版本
+    }
   }
 
   Future<void> _load() async {
@@ -124,26 +138,26 @@ class _MeScreenState extends State<MeScreen> {
                 ),
                 const Divider(),
                 const ListTile(title: Text('关于 J-nify')),
-                const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('J-nify 是产品的名字——英文直白意为「P 人变 J」：把计划感偏弱、容易拖延的人，变成更有秩序感的人。'),
-                      SizedBox(height: 8),
-                      Text('Jennifer 是这款 App 里的智能体，也是品牌吉祥物，名字取自 J-nify 对应的「J-nifier」（把 P 人变成 J 的那个人）的谐音，是一位懂 P 人的 J 人助理。'),
-                      SizedBox(height: 12),
-                      Text('“不急，但我帮您盯着。”'),
-                      SizedBox(height: 12),
-                      Row(
+                      const Text('J-nify 是产品的名字——英文直白意为「P 人变 J」：把计划感偏弱、容易拖延的人，变成更有秩序感的人。'),
+                      const SizedBox(height: 8),
+                      const Text('Jennifer 是这款 App 里的智能体，也是品牌吉祥物，名字取自 J-nify 对应的「J-nifier」（把 P 人变成 J 的那个人）的谐音，是一位懂 P 人的 J 人助理。'),
+                      const SizedBox(height: 12),
+                      const Text('“不急，但我帮您盯着。”'),
+                      const SizedBox(height: 12),
+                      const Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text('官方网站：'),
                           Flexible(child: SelectableText('https://j-nify.arr2018.dpdns.org')),
                         ],
                       ),
-                      SizedBox(height: 4),
-                      Text('版本：${AppConfig.appVersion}'),
+                      const SizedBox(height: 4),
+                      Text('版本：$_appVersion'),
                     ],
                   ),
                 ),
