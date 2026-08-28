@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../core/config/app_config.dart';
+
 /// 登录 / 注册页：邮箱 + 密码，登录与注册可一键切换。
 /// 登录成功后 Supabase 会话建立，[AuthGate] 自动切到 [HomeShell]。
 class LoginScreen extends StatefulWidget {
@@ -50,6 +52,37 @@ class _LoginScreenState extends State<LoginScreen> {
       setState(() => _error = e.toString());
     } finally {
       if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _forgotPassword() async {
+    final emailCtrl = TextEditingController();
+    final email = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('重置密码'),
+        content: TextField(
+          controller: emailCtrl,
+          keyboardType: TextInputType.emailAddress,
+          decoration: const InputDecoration(labelText: '邮箱'),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('取消')),
+          FilledButton(onPressed: () => Navigator.pop(ctx, emailCtrl.text.trim()), child: const Text('发送重置邮件')),
+        ],
+      ),
+    );
+    if (email == null || email.isEmpty) return;
+    try {
+      await Supabase.instance.client.auth.resetPasswordForEmail(
+        email,
+        redirectTo: AppConfig.appLinkVerify,
+      );
+      if (!mounted) return;
+      setState(() => _error = '重置邮件已发送，请查收后按链接设置新密码');
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _error = '发送失败：$e');
     }
   }
 
@@ -136,6 +169,11 @@ class _LoginScreenState extends State<LoginScreen> {
                   }),
                   child: Text(_isSignUp ? '已有账号？去登录' : '没有账号？注册'),
                 ),
+                if (!_isSignUp)
+                  TextButton(
+                    onPressed: _forgotPassword,
+                    child: const Text('忘记密码？'),
+                  ),
               ],
             ),
           ),

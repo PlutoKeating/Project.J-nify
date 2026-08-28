@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../core/api/api_client.dart';
 import '../screens/home_shell.dart';
 import '../screens/login_screen.dart';
+import '../screens/onboarding_screen.dart';
+import '../services/api_service.dart';
+import '../services/tour_registry.dart';
 
 /// 认证门卫：监听 Supabase 会话变化，未登录 → [LoginScreen]，已登录 →
 /// [HomeShell]。依赖 [Supabase.initialize] 已在 [main] 完成（本组件不触发
@@ -37,6 +41,12 @@ class _AuthGateState extends State<AuthGate> {
     }
   }
 
+  Future<void> _syncPending() async {
+    try {
+      await ApiService(ApiClient.instance).syncPending();
+    } catch (_) {}
+  }
+
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<AuthState>(
@@ -44,7 +54,16 @@ class _AuthGateState extends State<AuthGate> {
       builder: (context, snapshot) {
         final session = Supabase.instance.client.auth.currentSession;
         if (session == null) return const LoginScreen();
-        return const HomeShell();
+        _syncPending();
+        return FutureBuilder<bool>(
+          future: TourRegistry.instance.shouldShow('onboarding', 1),
+          builder: (context, tour) {
+            if (tour.connectionState != ConnectionState.done || tour.data != true) {
+              return const HomeShell();
+            }
+            return OnboardingScreen(onFinished: () => setState(() {}));
+          },
+        );
       },
     );
   }

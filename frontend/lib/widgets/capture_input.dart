@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-typedef CaptureSubmit = void Function(String text, String category, DateTime? dueAt);
+typedef CaptureSubmit = void Function(String text, String category, DateTime? dueAt, int estMinutes);
 
 const _categories = [
   ('life', '生活'),
@@ -12,6 +12,7 @@ const _categories = [
 ];
 
 const _dueOptions = [(null, '无期限'), (1, '明天'), (7, '一周'), (14, '两周')];
+const _durationOptions = [(1, '30秒'), (5, '5分钟'), (15, '15分钟'), (30, '30分钟')];
 
 /// 录入输入框（SPEC §4.3 Capture）：分类 chips + 可选期限 + 黑底「记下」按钮。
 class CaptureInput extends StatefulWidget {
@@ -27,6 +28,7 @@ class _CaptureInputState extends State<CaptureInput> {
   final _controller = TextEditingController();
   String _category = 'life';
   int? _dueDays;
+  int _estMinutes = 5;
 
   @override
   void dispose() {
@@ -36,11 +38,16 @@ class _CaptureInputState extends State<CaptureInput> {
 
   void _submit() {
     final text = _controller.text.trim();
-    if (text.isEmpty) return;
+    if (text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('一句话就够'), behavior: SnackBarBehavior.floating, duration: Duration(milliseconds: 1500)),
+      );
+      return;
+    }
     final dueAt = _dueDays == null
         ? null
         : DateTime.now().add(Duration(days: _dueDays!));
-    widget.onSubmit(text, _category, dueAt);
+    widget.onSubmit(text, _category, dueAt, _estMinutes);
     _controller.clear();
     setState(() => _dueDays = null);
   }
@@ -102,6 +109,19 @@ class _CaptureInputState extends State<CaptureInput> {
                 label: Text(label),
                 selected: _dueDays == days,
                 onSelected: (_) => setState(() => _dueDays = days),
+                visualDensity: VisualDensity.compact,
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 6,
+          children: [
+            for (final (minutes, label) in _durationOptions)
+              ChoiceChip(
+                label: Text(label),
+                selected: _estMinutes == minutes,
+                onSelected: (_) => setState(() => _estMinutes = minutes),
                 visualDensity: VisualDensity.compact,
               ),
           ],

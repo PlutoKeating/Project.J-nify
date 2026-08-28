@@ -43,3 +43,8 @@ API_TIMEOUT=15
 ```
 
 > 生产/发布包无需 `.env`：后端地址内置为生产 Base URL；Supabase 配置（URL + publishable key）由 CI 构建时注入（GH Secrets）。注册后需邮箱确认（生产 SMTP 已接，j_nify@yeah.net）。
+
+> v0.2.0 新增环境变量（release 用 `--dart-define` 注入，本地写 gitignored `.env`）：
+> - `OPENWEATHER_API_KEY`（天气，免费可商用需署名 "Weather by OpenWeather"）
+> - `TIANDITU_KEY`（天地图逆地理编码，坐标先模糊化）
+> 新依赖：flutter_local_notifications / flutter_timezone / timezone / permission_handler / geolocator / sqflite / shared_preferences / path。

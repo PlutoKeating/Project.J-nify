@@ -15,10 +15,18 @@ dependencies:
   # Backend 地址等配置完全由 .env 控制（见 .env.example）
   app_links: ^7.2.1
   flutter_dotenv: ^5.1.0
+  flutter_local_notifications: ^17.2.4
+  flutter_timezone: ^4.1.0
+  geolocator: ^13.0.2
   http: ^1.2.0
+  path: ^1.9.0
+  permission_handler: ^11.3.1
   # 运行时读取包版本/构建号（About us 展示）
   package_info_plus: ^8.0.0
+  shared_preferences: ^2.3.3
+  sqflite: ^2.4.1
   supabase_flutter: ^2.17.2
+  timezone: ^0.9.4
 
 dev_dependencies:
   flutter_test:

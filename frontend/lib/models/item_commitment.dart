@@ -8,6 +8,7 @@ class ItemCommitment {
     this.rawText = '',
     this.category = 'life',
     this.status = 'parked',
+    this.reasonText,
     this.importance = 1,
     this.urgency = 1,
     this.abandonCost = 0,
@@ -24,6 +25,7 @@ class ItemCommitment {
   final String rawText;
   final String category;
   final String status;
+  final String? reasonText;
   final int importance;
   final int urgency;
   final int abandonCost;
@@ -45,6 +47,7 @@ class ItemCommitment {
       rawText: json['raw_text'] as String? ?? '',
       category: json['category'] as String? ?? 'life',
       status: json['status'] as String,
+      reasonText: json['reason_text'] as String?,
       importance: json['importance'] as int? ?? 3,
       urgency: json['urgency'] as int? ?? 3,
       abandonCost: json['abandon_cost'] as int? ?? 0,

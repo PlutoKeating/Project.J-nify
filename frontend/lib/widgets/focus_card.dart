@@ -81,6 +81,26 @@ class FocusCard extends StatelessWidget {
   Widget build(BuildContext context) {
     const accent = Color(0xFFFF5A4E);
     final buttons = _options;
+    final chips = <Widget>[
+      Chip(
+        label: Text('约 ${item.estMinutes} 分钟'),
+        backgroundColor: const Color(0xFFFFF0EF),
+        labelStyle: const TextStyle(fontSize: 12, color: Color(0xFF17171A)),
+        visualDensity: VisualDensity.compact,
+      ),
+      const Chip(
+        label: Text('为什么是现在'),
+        backgroundColor: Color(0xFFFFF0EF),
+        labelStyle: TextStyle(fontSize: 12, color: Color(0xFF17171A)),
+        visualDensity: VisualDensity.compact,
+      ),
+      const Chip(
+        label: Text('可晚点'),
+        backgroundColor: Color(0xFFFFF0EF),
+        labelStyle: TextStyle(fontSize: 12, color: Color(0xFF17171A)),
+        visualDensity: VisualDensity.compact,
+      ),
+    ];
     return Card(
       elevation: 0,
       color: Colors.white,
@@ -110,6 +130,8 @@ class FocusCard extends StatelessWidget {
                   .bodyMedium
                   ?.copyWith(color: Colors.grey[600]),
             ),
+            const SizedBox(height: 12),
+            Wrap(spacing: 6, runSpacing: 6, children: chips),
             const SizedBox(height: 20),
             for (final (i, option) in buttons.indexed) ...[
               if (i > 0) const SizedBox(height: 8),

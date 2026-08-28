@@ -192,22 +192,6 @@ class _MeScreenState extends State<MeScreen> {
                     _save();
                   }),
                 ),
-                ListTile(
-                  title: const Text('反打扰上限'),
-                  subtitle: Text('单事项默认最多 $_maxNudge 次'),
-                  trailing: DropdownButton<int>(
-                    value: _maxNudge,
-                    items: const [
-                      DropdownMenuItem(value: 1, child: Text('1')),
-                      DropdownMenuItem(value: 2, child: Text('2')),
-                      DropdownMenuItem(value: 3, child: Text('3')),
-                    ],
-                    onChanged: (v) => setState(() {
-                      _maxNudge = v ?? 3;
-                      _save();
-                    }),
-                  ),
-                ),
                 const Divider(),
                 const ExpansionTile(
                   key: ValueKey('privacy'),
@@ -216,7 +200,7 @@ class _MeScreenState extends State<MeScreen> {
                   children: [
                     Padding(
                       padding: EdgeInsets.fromLTRB(16, 0, 16, 12),
-                      child: Text('数据仅本地缓存；位置仅粗粒度；不采集精确轨迹。'),
+                      child: Text('原始信号（屏幕使用/日历/位置/天气上下文）仅在本机处理、不上传；事项与决策记录加密存储于云端，仅您本人可访问；位置坐标先模糊化再使用；可随时删除全部数据。'),
                     ),
                   ],
                 ),
@@ -265,4 +249,3 @@ class _MeScreenState extends State<MeScreen> {
     );
   }
 }
-

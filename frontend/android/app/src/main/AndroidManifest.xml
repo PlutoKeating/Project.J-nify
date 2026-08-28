@@ -1,10 +1,18 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
     <!-- 网络权限：release 构建仅合入 main 清单（debug/profile 的 INTERNET 权限
          只对对应构建类型生效）。缺此行会导致 release APK 无网络权限，注册/登录
          时任何网络请求（含 DNS 解析）立即失败（Failed host lookup）。 -->
     <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- v0.2.0：本地通知 / 定位（模糊化）/ 系统日历只读 / 屏幕使用统计（特殊权限） -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
+    <uses-permission android:name="android.permission.READ_CALENDAR"/>
+    <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS"
+        tools:ignore="ProtectedPermissions"/>
     <application
-        android:label="jnify_app"
+        android:label="@string/app_name"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

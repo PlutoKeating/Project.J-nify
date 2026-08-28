@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 品牌名定案（E6）：全端统一严格大小写 J-nify -->
+    <string name="app_name">J-nify</string>
+</resources>

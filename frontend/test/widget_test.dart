@@ -131,7 +131,7 @@ void main() {
 
       // 折叠：正文不可见
       expect(find.textContaining('把计划感偏弱'), findsNothing);
-      expect(find.textContaining('数据仅本地缓存'), findsNothing);
+      expect(find.textContaining('原始信号'), findsNothing);
 
       await tester.ensureVisible(find.text('关于 J-nify'));
       await tester.tap(find.text('关于 J-nify'));
@@ -141,7 +141,7 @@ void main() {
       await tester.ensureVisible(find.text('隐私说明'));
       await tester.tap(find.text('隐私说明'));
       await tester.pumpAndSettle();
-      expect(find.textContaining('数据仅本地缓存'), findsOneWidget);
+      expect(find.textContaining('原始信号'), findsOneWidget);
     });
   });
 }

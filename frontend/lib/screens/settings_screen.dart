@@ -217,6 +217,41 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
+  Future<void> _deleteAccount() async {
+    final confirmCtrl = TextEditingController();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('注销账户'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('将永久删除您的全部事项与记录，且无法恢复。请输入「删除」确认。'),
+            const SizedBox(height: 8),
+            TextField(controller: confirmCtrl, decoration: const InputDecoration(labelText: '输入「删除」')),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('取消')),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, confirmCtrl.text.trim() == '删除'),
+            child: const Text('确认注销'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    setState(() => _busy = true);
+    try {
+      await _api.deleteAllData();
+      await Supabase.instance.client.auth.signOut();
+    } catch (e) {
+      _toast('注销失败：$e');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
@@ -271,6 +306,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
               '修改邮箱需在当前密码验证后，前往新邮箱点击确认链接完成，确认后请重新登录。',
               style: TextStyle(color: Colors.grey, fontSize: 12),
             ),
+          ),
+          const Divider(),
+          ListTile(
+            leading: Icon(Icons.delete_forever_outlined, color: colorScheme.error),
+            title: const Text('删除我的数据 / 注销账户'),
+            subtitle: const Text('永久删除全部事项与记录'),
+            onTap: _busy ? null : _deleteAccount,
           ),
         ],
       ),

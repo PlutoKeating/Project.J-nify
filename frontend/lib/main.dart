@@ -1,9 +1,13 @@
+import 'dart:async';
+
 import 'package:app_links/app_links.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'auth/auth_gate.dart';
 import 'core/config/app_config.dart';
+import 'services/jennifer_local_engine.dart';
+import 'services/notifications_service.dart';
 
 /// 全局 ScaffoldMessenger：供深链等无 BuildContext 场景弹出错误提示。
 final _rootMessengerKey = GlobalKey<ScaffoldMessengerState>();
@@ -26,6 +30,9 @@ Future<void> main() async {
       detectSessionInUri: false,
     ),
   );
+  // 本地通知初始化 + 通知内「别再提」动作 → 本地静默 + 同步后端
+  NotificationsService.instance.onMuteAction = (itemId) => JenniferLocalEngine.instance.mute(itemId);
+  unawaited(NotificationsService.instance.init());
   runApp(const JnifyApp());
   _bindDeepLinkHandler();
 }
