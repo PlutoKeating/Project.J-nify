@@ -139,7 +139,7 @@
 | Q7 | 对话范围 | **推荐**：完整工程化落地（聊天 UI + harness + MCP 风格工具） |
 | Q8 | 本地/云端边界 | **方案 A**：原始信号本地；事项/决策上云（匿名+加密） |
 | Q9 | Firebase | 无 Firebase 项目、不引入该框架 |
-| Q10 | 天气/天地图 key | 天地图已有；天气源=**OpenWeather 免费可商用（需署名）**，key 获取指引见 §五；OpenWeather key 待用户提供 |
+| Q10 | 天气/天地图 key | 天地图已有；天气源=**OpenWeather 免费可商用（需署名）**；**OpenWeather prod key 已由用户提供（2026-08-29），存于 GH Secret `OPENWEATHER_API_KEY`** |
 | Q11 | OAuth 凭据 | **同 Q4**：本期不接，记录缺口 |
 | Q12 | 生产库集成测试 | **先不做**：不新增生产 service key 到 CI；CI 维持跳过 |
 | Q13 | 告警通道 | **两个都做**：GitHub Issues（GH_PAT 最小权限）+ SMTP 邮件；secret 创建指引见 §五 |
@@ -170,28 +170,31 @@
 ## 五、外部凭据获取与配置指引（用户执行）
 
 ### 5.1 天气源：OpenWeather（免费可商用）
-1. 打开 https://home.openweathermap.org/users/sign_up 注册账号（邮箱验证）。
-2. 登录后进入 https://home.openweathermap.org/api_keys 创建 API Key（默认即免费计划）。
-3. 免费计划额度：60 次/分钟、1,000,000 次/月；**商用允许，但必须在 App「关于/隐私」页与官网注明"Weather by OpenWeather"**（署名义务）。
-4. 把 Key 提供给实施（App 端配置 `OPENWEATHER_API_KEY`；位置模糊化后请求，仅取天气结果）。
+1. **状态：已就绪（2026-08-29）**。用户提供的 prod key 已存入 GH Actions Secret `OPENWEATHER_API_KEY`（release 构建经 `--dart-define=OPENWEATHER_API_KEY=...` 注入，本地开发走 gitignored `.env`；**真值不落库**）。
+2. 免费计划额度：60 次/分钟、1,000,000 次/月；**商用允许，但必须在 App「关于/隐私」页与官网注明"Weather by OpenWeather"**（署名义务）。
+3. App 侧使用要求：位置模糊化后请求，仅取天气结果，结果本地缓存。
 > 说明：天地图 Key 用户已有；逆地理编码仅用于把模糊化坐标转成城市/区域名，坐标先取整（约 1km 精度）再调用。
 
 ### 5.2 GitHub 告警 Token（最小权限）
 1. GitHub → Settings → Developer settings → **Fine-grained personal access tokens** → Generate new token。
 2. Repository access：**Only select repositories** → 只选 `PlutoKeating/Project.J-nify`。
 3. Permissions：只开 **Issues → Read and write**（不要授 repo contents/admin 等其他权限）。
-4. 生成后复制 token → 存为 CF Worker Secret `GH_PAT`（`wrangler secret put GH_PAT` 或 Cloudflare Dashboard → Worker → Settings → Secrets）。
+4. 生成后复制 token → **存为 GH Actions Secret `GH_PAT`**，再运行 `sync-worker-secrets` 工作流同步到 CF Worker（当前工作流已预留该步骤，GH 中未配置时自动跳过）。
 
 ### 5.3 管理员账号（admin 面板）
 1. 生成强随机口令（建议 20+ 位，大小写+数字+符号）。
-2. 存为 CF Worker Secrets：`ADMIN_USERNAME`（管理员用户名）、`ADMIN_PASSWORD`（口令）、`SESSION_SECRET`（随机长字符串，用于登录会话签名）。
+2. **状态：`SESSION_SECRET` 已配置（2026-08-29，随机 64 位 hex，GH Secret + CF Worker Secret 同步）**；`ADMIN_USERNAME` / `ADMIN_PASSWORD` 待用户创建后存入 GH Secrets，再运行 `sync-worker-secrets` 工作流同步。
+3. 存法：`gh secret set ADMIN_USERNAME` / `gh secret set ADMIN_PASSWORD`，然后 GitHub Actions 手动运行 `sync-worker-secrets`。
 
 ### 5.4 SMTP 告警（复用现有邮箱）
-1. 现有 `j_nify@yeah.net` 的客户端授权码已存于 GH Secrets（`SMTP_AUTH_PROD`）。
-2. 复制到 CF Worker Secrets：`SMTP_HOST=smtp.yeah.net`、`SMTP_PORT=465`、`SMTP_USER=j_nify@yeah.net`、`SMTP_AUTH=<授权码>`。
+1. **状态：已全部配置到 CF Worker（2026-08-29）**：`SMTP_HOST=smtp.yeah.net`、`SMTP_PORT=465`、`SMTP_USER=j_nify@yeah.net`、`SMTP_AUTH=<yeah.net 客户端授权码>`，经 `sync-worker-secrets` 工作流从 GH Secrets 同步，已 `wrangler secret list` 验证。
+2. 后端告警邮件实现统一读取 `SMTP_HOST` / `SMTP_PORT` / `SMTP_USER` / `SMTP_AUTH`。
 
 ### 5.5 提交到台账
-上述新增 secret 名称统一登记到 `docs/devops/SECRETS_REGISTRY.md`（由后端实施模块更新），真值不落库。
+上述新增 secret 名称统一登记到 `docs/devops/SECRETS_REGISTRY.md`（已完成 2026-08-29），真值不落库。
+
+### 5.6 凭据同步工作流（新增）
+`.github/workflows/sync-worker-secrets.yml`（2026-08-29 新增，当前在特性分支 `chore/sync-worker-secrets`，待用户批准合入 main）：手动触发，把 GH Actions Secrets 中的 `SMTP_HOST/PORT/USER/AUTH_PROD`、`SESSION_SECRET`、以及（若配置）`ADMIN_USERNAME/ADMIN_PASSWORD/GH_PAT` 同步为 CF Worker secrets，并以 `wrangler secret list` 验证。真值不落库、不写入日志（GitHub 自动掩码）。
 
 ---
 
