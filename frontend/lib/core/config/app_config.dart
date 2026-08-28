@@ -19,8 +19,8 @@ class AppConfig {
   /// 官网生产域名（landing page，Cloudflare Pages）。
   static const websiteUrl = 'https://j-nify.arr2018.dpdns.org';
 
-  /// App 版本，与 `pubspec.yaml` 的 `version` 保持一致（About us 展示用）。
-  static const appVersion = '0.1.3+1';
+  /// App 版本，与 `pubspec.yaml` 的 `version` 保持一致（About us 展示失败时的回退值）。
+  static const appVersion = '0.1.4+1';
 
   /// Supabase 端点编译期默认值（`--dart-define=SUPABASE_URL=...` 可注入；
   /// 运行时 `.env` 覆盖优先）。
