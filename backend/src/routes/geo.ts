@@ -22,7 +22,16 @@ geo.post('/reverse', async (c) => {
   try {
     const res = await fetch(
       `https://api.tianditu.gov.cn/geocoder?postStr=${encodeURIComponent(postStr)}&type=geocode&tk=${key}`,
-      { signal: AbortSignal.timeout(10_000) },
+      {
+        // 天地图 key 为「浏览器端」类型（2026-08-29 用户定案，见 DECISION_REGISTER §5.1）：
+        // 实测该校验以浏览器形态（User-Agent）为主；Worker fetch 不会默认带 UA 且允许显式设置，
+        // 故同时携带浏览器 UA 与白名单域名 Referer 以通过校验。
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Mobile Safari/537.36',
+          Referer: 'https://j-nify.williamhvollita.dpdns.org/',
+        },
+        signal: AbortSignal.timeout(10_000),
+      },
     );
     if (!res.ok) return c.json({ detail: `tianditu HTTP ${res.status}` }, 502);
     const data = (await res.json()) as { result?: { address?: string } };

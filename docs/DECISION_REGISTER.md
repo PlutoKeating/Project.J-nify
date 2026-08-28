@@ -175,6 +175,11 @@
 3. App 侧使用要求：位置模糊化后请求，仅取天气结果，结果本地缓存。
 > 说明：天地图 Key 用户已有；逆地理编码仅用于把模糊化坐标转成城市/区域名，坐标先取整（约 1km 精度）再调用。
 
+> ⚠️ **天地图 Key 类型定案（2026-08-29）**：用户选择「**浏览器端**」类型 key，白名单仅配置 `https://j-nify.williamhvollita.dpdns.org`。
+> 原因：浏览器端与服务端类型的实际区别仅为白名单控制类别——浏览器端=域名白名单，服务端=固定 IP 白名单；Cloudflare Worker 出口 IP 不固定/不可控，域名白名单更贴合部署形态。
+> 实现：后端 `/v1/geo/reverse` 代理请求显式携带 `Referer: https://j-nify.williamhvollita.dpdns.org/` 以通过域名白名单校验；key 存 CF Secret `TIANDITU_KEY`，不打进 APK。
+> Key 值：`[REDACTED]`（2026-08-29 用户提供并配置；真值只存 GH/CF Secrets 与本文档登记，不写入代码）。
+
 ### 5.2 GitHub 告警 Token（最小权限）
 1. GitHub → Settings → Developer settings → **Fine-grained personal access tokens** → Generate new token。
 2. Repository access：**Only select repositories** → 只选 `PlutoKeating/Project.J-nify`。

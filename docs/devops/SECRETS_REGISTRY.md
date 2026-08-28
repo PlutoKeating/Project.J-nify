@@ -13,7 +13,7 @@
 | `OPENWEATHER_API_KEY` | App 本地天气查询（免费可商用，需署名 "Weather by OpenWeather"；2026-08-29 用户提供 prod key） | GitHub Actions Secrets（已存）；release 构建经 `--dart-define` 注入，本地开发走 gitignored `.env` | `gh secret set OPENWEATHER_API_KEY` |
 | `ADMIN_USERNAME` / `ADMIN_PASSWORD` | admin 面板登录账号口令 | 待用户创建 → GitHub Actions Secrets → 同步 CF Worker Secrets | `gh secret set` 后运行 `configure-worker-secrets` |
 | `GH_PAT` | 告警自动建 GitHub Issue（fine-grained，仅 Issues read/write） | 待用户创建 → GitHub Actions Secrets → 同步 CF Worker Secrets | 创建指引见 `docs/DECISION_REGISTER.md` §5.2 |
-| `TIANDITU_KEY` | 天地图逆地理编码（服务端 key，App 经 `/v1/geo/reverse` 代理调用，不打包进 APK） | 待用户创建 → CF Worker Secrets | 天地图控制台注册 → 申请「服务端」类型 key → `wrangler secret put TIANDITU_KEY` |
+| `TIANDITU_KEY` | 天地图逆地理编码（**浏览器端**类型 key，域名白名单 `j-nify.williamhvollita.dpdns.org`；App 经 `/v1/geo/reverse` 代理调用，不打包进 APK；代理请求携带 Referer 过白名单，见 DECISION_REGISTER §5.1） | 已配置（2026-08-29，用户提供）→ CF Worker Secrets | 天地图控制台申请「浏览器端」key → 白名单配本站域名 |
 | 发件显示名 | 邮件发件人 | 非敏感 → `docs/devops/smtp.md`（模板随 Task 16 生成） | 文案审校 |
 | `SUPABASE_URL`（**当前项目即生产**） | Worker 验签 JWKS / Supabase 客户端 | CF Dashboard secrets（已存）+ GH Secrets | Dashboard 维护 |
 | `SUPABASE_SERVICE_KEY` | **后端 DB 访问（PostgREST，2026-08-27 起）** | CF Dashboard secrets（已存）+ 本机 `backend/.dev.vars`；**只进后端** | Dashboard / `wrangler secret put` 维护 |
