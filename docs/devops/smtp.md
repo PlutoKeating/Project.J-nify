@@ -170,6 +170,6 @@
 
 ## 4. 生产环境说明
 
-- 前端生产构建默认后端地址 = **`https://jnify.williamhvollita.dpdns.org`**（Cloudflare Worker，`frontend/lib/core/config/app_config.dart` 的 `prodBackendBaseUrl`；发布构建无需 `.env`）。
+- 前端生产构建默认后端地址 = **`https://j-nify.williamhvollita.dpdns.org`**（Cloudflare Worker，`frontend/lib/core/config/app_config.dart` 的 `prodBackendBaseUrl`；发布构建无需 `.env`）。
 - 邮件中的跳转链接目标由 Supabase 项目 **Site URL / RedirectTo** 配置决定。⚠️ **曾因 Site URL 为默认 `http://localhost:3000`，所有邮件的 `{{ .ConfirmationURL }}` 都指向 localhost（手机上无效）**。现 Site URL 已改为 **`https://j-nify.arr2018.dpdns.org`**（App Link 域），退回 App 内处理（`app_links` + `verifyOTP`）。完整配置（Site URL / Redirect URL / App Link 校验资产 / 会话时长）见 `docs/devops/email-callback.md`。
 - 密钥维护与轮换见 `docs/devops/SECRETS_REGISTRY.md`。

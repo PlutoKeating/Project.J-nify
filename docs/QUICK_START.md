@@ -23,7 +23,7 @@ DIRECT_DATABASE_URL='postgres://...pooler.../postgres' npm run db:migrate
 - 当前迁移含：15+1 表（0000）、护栏唯一索引（0001）、事务 RPC（0002/0003）、RLS 加固（0004）。
 
 **部署（生产）**：push `main` 且改动 `backend/**` → GitHub Actions 自动 `wrangler deploy` 到
-`https://jnify.williamhvollita.dpdns.org`；亦可 Dashboard → Actions → Deploy Backend → Run workflow 手动触发。
+`https://j-nify.williamhvollita.dpdns.org`；亦可 Dashboard → Actions → Deploy Backend → Run workflow 手动触发。
 
 ## 前端（Flutter）
 

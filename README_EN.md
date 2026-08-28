@@ -59,7 +59,7 @@ She notes it, then disappears. When the **truly fitting** moment comes, she retu
 
 | Layer | Tech | Notes |
 | --- | --- | --- |
-| Frontend | Flutter (Dart) + supabase_flutter | Auth (Supabase Auth); three-screen UI + capture/decision loop; prod backend default `https://jnify.williamhvollita.dpdns.org` |
+| Frontend | Flutter (Dart) + supabase_flutter | Auth (Supabase Auth); three-screen UI + capture/decision loop; prod backend default `https://j-nify.williamhvollita.dpdns.org` |
 | Backend | **Cloudflare Worker**: TypeScript + Hono | Deploy = GitHub Actions `wrangler deploy` (auto on push to main) |
 | Data | **Supabase Postgres** (REST/PostgREST + RPC) | 15 entity tables + transactional RPC; full-table RLS (zero client-role data access) |
 | Accounts/email | **Supabase Auth + prod SMTP** | Confirmation/reset via j_nify@yeah.net (smtp.yeah.net:465) |
@@ -125,7 +125,7 @@ Product landing site: [https://j-nify.arr2018.dpdns.org](https://j-nify.arr2018.
 
 - ✅ **CI gate** (`.github/workflows/ci.yml`): on push / PR, parallel checks —— backend `npm test` + typecheck, frontend `flutter analyze` + `flutter test`.
 - 📦 **Frontend auto build & release** (`.github/workflows/release-frontend.yml`): trigger on tag `vX.Y.Z`, verify the tag matches `frontend/pubspec.yaml`'s version, build Android APK/AAB (ubuntu, **fixed release-keystore signed**), and publish a GitHub Release; iOS archive (xcarchive, macos, unsigned — needs Apple cert). `SUPABASE_URL/SUPABASE_ANON_KEY` injected into the build via GH Secrets (dart-define). ⚠️ The `+N` in `pubspec.yaml` (= Android `versionCode`) must strictly increase per release (a decrease once blocked overlay installs); see [`docs/devops/release.md`](docs/devops/release.md).
-- 🚢 **Backend deploy** (`.github/workflows/deploy-backend.yml`): on push to main (backend/**) auto `wrangler deploy`; the single prod backend Base URL = **`https://jnify.williamhvollita.dpdns.org`**.
+- 🚢 **Backend deploy** (`.github/workflows/deploy-backend.yml`): on push to main (backend/**) auto `wrangler deploy`; the single prod backend Base URL = **`https://j-nify.williamhvollita.dpdns.org`**.
 - 📧 **Email & SMTP** (Supabase custom SMTP, j_nify@yeah.net): live (confirm-email on); templates in [`docs/devops/smtp.md`](docs/devops/smtp.md).
 - 🔐 **Secrets registry**: all prod secrets live in GitHub Actions Secrets / Cloudflare Worker Secrets / Supabase; no plaintext secrets in the repo; see [`docs/devops/SECRETS_REGISTRY.md`](docs/devops/SECRETS_REGISTRY.md).
 

@@ -29,7 +29,7 @@
 | 层 | 技术 | 备注 |
 |---|---|---|
 | 前端 | Flutter (Dart) 3.47.1 stable | supabase_flutter 2.17.2（Auth）；android/ios/web；minSdk 31；iOS target 15.0 |
-| 后端 | **Cloudflare Worker**：TypeScript + Hono | 部署=GitHub Actions `wrangler deploy`（push main 自动）；生产 URL `https://jnify.williamhvollita.dpdns.org` |
+| 后端 | **Cloudflare Worker**：TypeScript + Hono | 部署=GitHub Actions `wrangler deploy`（push main 自动）；生产 URL `https://j-nify.williamhvollita.dpdns.org` |
 | **DB 访问** | **Supabase REST (PostgREST) + Postgres RPC** | 2026-08-27 定案：worker 内 postgres.js 直连不可行（Supavisor 私有根 CA 不被 workerd 信任、Hyperdrive 未开通）→ 全部走标准 HTTPS fetch；事务写走 `fn_decide`/`fn_create_nudge`/`fn_ingest_signal` |
 | 认证 | **Supabase Auth（当前项目即生产）** | 完整邮箱体系；邮箱确认开启，确认/重置邮件经 **j_nify@yeah.net** SMTP；Worker JWKS 验签 |
 | CI/CD | GitHub Actions：`ci.yml` + `release-frontend.yml` + `deploy-backend.yml` | 后端部署在 Actions；前端 tag 自动出 APK/AAB/ipa 并发布 Release |
@@ -67,7 +67,7 @@
 
 ## 4. 前端
 
-- `lib/core/config/app_config.dart`：`prodBackendBaseUrl = https://jnify.williamhvollita.dpdns.org`（默认）；Supabase url/anon 经 `String.fromEnvironment`（release 由 CI dart-define 注入）。
+- `lib/core/config/app_config.dart`：`prodBackendBaseUrl = https://j-nify.williamhvollita.dpdns.org`（默认）；Supabase url/anon 经 `String.fromEnvironment`（release 由 CI dart-define 注入）。
 - 认证：`lib/auth/auth_gate.dart`（authStateChanges → LoginScreen/HomeShell）+ `login_screen.dart`（登录/注册切换、确认邮件提示）+ `me_screen.dart` 退出登录；`api_client.dart` Bearer 注入 + 401→静默登出 + 未初始化 guard（try/catch 包 `Supabase.instance`）。
 - M0：`capture_input` 分类 chips+期限；`focus_card` 按后端 options 渲染（now 主按钮/later/drop/rescue tonal）；Toast 顶部 pill；`me_screen` 护栏真实读写（安静时段开关='00:00' 关闭约定）。
 - 测试：7/7 widget（纯组件、不 mock 网络策略）+ `flutter analyze` 0 issues。

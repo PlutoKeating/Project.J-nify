@@ -35,7 +35,7 @@ flutter build apk --release --dart-define=SUPABASE_URL=... --dart-define=SUPABAS
 `.env` 字段：
 
 ```
-BACKEND_BASE_URL=https://jnify.williamhvollita.dpdns.org   # 生产默认（代码内置）；本地开发改 http://localhost:8787
+BACKEND_BASE_URL=https://j-nify.williamhvollita.dpdns.org   # 生产默认（代码内置）；本地开发改 http://localhost:8787
 SUPABASE_URL=                                             # 生产 release 由 CI dart-define 注入
 SUPABASE_ANON_KEY=
 APP_ENV=development

@@ -19,7 +19,7 @@ J-nify 采用「Flutter 客户端 + Cloudflare Worker 后端 + Supabase（Postgr
 [ 用户邮箱 ]
 ```
 
-- **前端**：Flutter（`frontend/`），supabase_flutter 认证；生产后端默认 `https://jnify.williamhvollita.dpdns.org`。
+- **前端**：Flutter（`frontend/`），supabase_flutter 认证；生产后端默认 `https://j-nify.williamhvollita.dpdns.org`。
 - **后端**：Cloudflare Worker（`backend/`），TypeScript + Hono。部署 = GitHub Actions `wrangler deploy`（push main 自动）。
 - **数据层**：Supabase Postgres。**Worker 内不使用 postgres.js 直连**（Supavisor 私有根 CA 不被 workerd 信任，ca 注入无效、Hyperdrive 未开通）→ 全部经 **PostgREST (HTTPS)** + **事务性 RPC**；详情与踩坑见 §「数据访问层」。
 
@@ -75,6 +75,6 @@ J-nify 采用「Flutter 客户端 + Cloudflare Worker 后端 + Supabase（Postgr
 ## 配置与部署
 
 - **后端**：CF Worker secrets：`SUPABASE_URL`、`SUPABASE_SERVICE_KEY`；本地 `.dev.vars`（gitignored）；迁移用 `supabase/migrations/*.sql` + `npm run db:migrate`（golden rule：禁 Dashboard 直改结构）。
-- **部署**：push main（backend/**）→ Actions `wrangler deploy` → 生产 URL `https://jnify.williamhvollita.dpdns.org`；CI 门禁另跑 test/typecheck。
+- **部署**：push main（backend/**）→ Actions `wrangler deploy` → 生产 URL `https://j-nify.williamhvollita.dpdns.org`；CI 门禁另跑 test/typecheck。
 - **发布**：tag `vX.Y.Z` → Actions 构建 APK/AAB/iOS 归档并发布 GitHub Release（详见 `docs/devops/release.md`）。Android **固定 release keystore 签名**（v0.1.2 起，keystore/口令走 GH Secrets，不入库；保证版本间签名一致、支持覆盖安装更新）。
 - **前端**：生产构建无需 `.env`（`AppConfig.load` 用 `isOptional` 回退内置生产 Base URL + CI 注入的 SUPABASE dart-define）；**主 `AndroidManifest.xml` 声明 `INTERNET` 权限**（release 网络必需，Flutter 默认只在 debug/profile manifest 带）。

@@ -5,7 +5,7 @@
 ## 分层
 
 - **认证层** `auth/`：`AuthGate`（`onAuthStateChange` → 未登录 LoginScreen / 已登录 HomeShell）；登录/注册页（邮箱+密码、确认邮件提示）；登出在「我的」页。
-- **配置层** `core/config/`：`AppConfig`（`flutter_dotenv` 读 `.env`）：`backendBaseUrl`（**生产默认 `https://jnify.williamhvollita.dpdns.org`**）、`supabaseUrl`、`supabaseAnonKey`；另含 `appLinkHost`=`j-nify.arr2018.dpdns.org`、`appLinkVerify`（邮件确认/重置回调 App Link 入口）；`Env` 常量（`String.fromEnvironment` 支持 dart-define）。
+- **配置层** `core/config/`：`AppConfig`（`flutter_dotenv` 读 `.env`）：`backendBaseUrl`（**生产默认 `https://j-nify.williamhvollita.dpdns.org`**）、`supabaseUrl`、`supabaseAnonKey`；另含 `appLinkHost`=`j-nify.arr2018.dpdns.org`、`appLinkVerify`（邮件确认/重置回调 App Link 入口）；`Env` 常量（`String.fromEnvironment` 支持 dart-define）。
 - **auth/ 深链与会话**：`main.dart` 用 `app_links` 订阅深链 → `auth.verifyOTP`（token_hash）+ `auth.getSessionFromUrl`（code/access_token）；`Supabase.initialize` 显式 `autoRefreshToken/persistSession`；`AuthGate` 启动 `refreshSession()` 滑动重置未活动时钟。
 - **网络层** `core/api/`：`ApiClient` 自动附 `Authorization: Bearer <Supabase JWT>`（401 → 静默登出回登录页；未初始化 guard）。
 - **服务层** `services/`：`ApiService` 封装 `/v1/...`（capture/now/items/decision/guardrails/profile/chat/metrics）；`NotificationsService`（本地通知 + 别再提 action）；`SignalCollectors`（usage/日历/天气/位置，仅本地）；`LocalWindowEngine`（Dart 窗口规则）；`OfflineQueue`（sqflite 离线暂存）；`TourRegistry`（通用引导框架）；`TimezoneService`（时区检测/提示）；`JenniferLocalEngine`（本地评估 + 通知 + 静默）。
@@ -24,7 +24,7 @@
 `.env`（不入库，模板见 `.env.example`）：
 
 ```
-BACKEND_BASE_URL=https://jnify.williamhvollita.dpdns.org   # 生产默认（代码内置）；本地开发改为 http://localhost:8787
+BACKEND_BASE_URL=https://j-nify.williamhvollita.dpdns.org   # 生产默认（代码内置）；本地开发改为 http://localhost:8787
 SUPABASE_URL=
 SUPABASE_ANON_KEY=        # publishable key（仅 Auth；绝不填 service role key）
 APP_ENV=development

@@ -1,6 +1,6 @@
 # J-nify Frontend
 
-Flutter（Dart）客户端，**无 Docker**。认证用 supabase_flutter（Supabase Auth）；业务 REST 调 Cloudflare Worker 后端（生产 `https://jnify.williamhvollita.dpdns.org`，代码内置默认；`.env` 可覆盖）。
+Flutter（Dart）客户端，**无 Docker**。认证用 supabase_flutter（Supabase Auth）；业务 REST 调 Cloudflare Worker 后端（生产 `https://j-nify.williamhvollita.dpdns.org`，代码内置默认；`.env` 可覆盖）。
 
 结构：
 

@@ -14,7 +14,7 @@ class AppConfig {
 
   /// 生产上线环境唯一后端 Base URL（Cloudflare Worker，用户 2026-08-27 定案）。
   /// 开发环境通过 `.env` 的 `BACKEND_BASE_URL` 覆盖（见 `.env.example`）。
-  static const prodBackendBaseUrl = 'https://jnify.williamhvollita.dpdns.org';
+  static const prodBackendBaseUrl = 'https://j-nify.williamhvollita.dpdns.org';
 
   /// 官网生产域名（landing page，Cloudflare Pages）。
   static const websiteUrl = 'https://j-nify.arr2018.dpdns.org';

@@ -1,6 +1,6 @@
 # API 文档
 
-基于 SPEC §7.2 的 API 草案实现于 Cloudflare Worker 后端。生产 Base URL：**`https://jnify.williamhvollita.dpdns.org`**（本地开发 `http://localhost:8787`，`wrangler dev`）。
+基于 SPEC §7.2 的 API 草案实现于 Cloudflare Worker 后端。生产 Base URL：**`https://j-nify.williamhvollita.dpdns.org`**（本地开发 `http://localhost:8787`，`wrangler dev`）。
 
 所有接口 base path 为 `/v1`。**鉴权**：`Authorization: Bearer <Supabase Auth JWT>`（邮箱注册/登录后由 supabase_flutter 取得）；缺失/无效 → `401 {"detail":"unauthorized"}`。错误统一 `{"detail":"<msg>"}`。
 
@@ -46,7 +46,7 @@
 ### 录入
 
 ```sh
-curl -X POST https://jnify.williamhvollita.dpdns.org/v1/items/capture \
+curl -X POST https://j-nify.williamhvollita.dpdns.org/v1/items/capture \
   -H "Authorization: Bearer <JWT>" -H 'Content-Type: application/json' \
   -d '{"raw_text":"月底还信用卡账单","category":"bill","due_at":"2026-09-25T00:00:00"}'
 ```
@@ -54,13 +54,13 @@ curl -X POST https://jnify.williamhvollita.dpdns.org/v1/items/capture \
 ### 获取当前最佳窗口
 
 ```sh
-curl https://jnify.williamhvollita.dpdns.org/v1/now -H "Authorization: Bearer <JWT>"
+curl https://j-nify.williamhvollita.dpdns.org/v1/now -H "Authorization: Bearer <JWT>"
 ```
 
 ### 决策（三选项 + 兜底）
 
 ```sh
-curl -X POST https://jnify.williamhvollita.dpdns.org/v1/items/<id>/decision \
+curl -X POST https://j-nify.williamhvollita.dpdns.org/v1/items/<id>/decision \
   -H "Authorization: Bearer <JWT>" -H 'Content-Type: application/json' \
   -d '{"decision":"later"}'
 ```
