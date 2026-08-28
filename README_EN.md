@@ -4,7 +4,7 @@
 
 [[README.md]]
 
-**Jennifer — Your low-key action secretary**
+**Jennifer — a J-person assistant who understands P people**
 
 > Not urgent — but I'll keep an eye on it.
 

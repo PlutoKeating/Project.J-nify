@@ -4,7 +4,7 @@
 
 [[README_EN.md]]
 
-**Jennifer — 你的低打扰行动秘书**
+**Jennifer — 懂 P 人的 J 人助理**
 
 > 不急，但我帮您盯着。
 

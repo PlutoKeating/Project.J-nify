@@ -6,7 +6,7 @@ export const messages: Messages = {
   // 全局
   'brand.name': { zh: 'J-nify', en: 'J-nify' },
   'brand.jennifer': { zh: 'Jennifer', en: 'Jennifer' },
-  'brand.tag': { zh: '你的低打扰行动秘书', en: 'Your low-key action secretary' },
+  'brand.tag': { zh: '懂 P 人的 J 人助理', en: 'a J-person assistant who understands P people' },
   'brand.slogan': { zh: '不急，但我帮您盯着。', en: 'Not urgent — but I’ll keep an eye on it.' },
 
   // 导航
@@ -137,7 +137,7 @@ export const messages: Messages = {
   'footer.domain': { zh: '官网', en: 'Website' },
   'footer.opensource': { zh: '开源 · AGPL-3.0', en: 'Open source · AGPL-3.0' },
   'footer.slogan': { zh: '不急，但我帮您盯着。', en: 'Not urgent — but I’ll keep an eye on it.' },
-  'footer.rights': { zh: 'J-nify · Jennifer 低打扰行动秘书', en: 'J-nify · Jennifer low-key action secretary' },
+  'footer.rights': { zh: 'J-nify · Jennifer 懂 P 人的 J 人助理', en: 'J-nify · Jennifer — a J-person assistant who understands P people' },
 
   // 功能详解页
   'features.hero.eyebrow': { zh: '功能详解', en: 'Features' },
