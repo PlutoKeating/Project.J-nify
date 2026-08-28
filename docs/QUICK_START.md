@@ -37,6 +37,13 @@ flutter run
 > 提示：iOS 需 macOS（`flutter build ipa --no-codesign` 仅产 xcarchive）；Android `flutter build apk --release` 侧载安装；
 > 正式安装包从 GitHub Releases 下载（不是从仓库 build 目录分发）。
 
+## 官网（React 落地页）
+
+- 源码：`website/`
+- 本地预览：`cd website && npm ci && npm run dev`
+- 构建：`cd website && npm run build`（产物 `website/dist/`）
+- 生产域名：**https://j-nify.arr2018.dpdns.org**（Cloudflare Pages，push `main` 自动发布）；部署说明见 `docs/devops/website-deploy.md`。
+
 ## 验证清单
 
 - 注册 → 邮箱确认（生产 SMTP 已接，j_nify@yeah.net）→ 登录 → 录入 → 决策 → 登出。

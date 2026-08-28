@@ -113,6 +113,16 @@ LICENSE        AGPL-3.0
 - 🚀 [`docs/QUICK_START.md`](docs/QUICK_START.md) —— 快速开始
 - 🗂️ [`docs/HANDOVER.md`](docs/HANDOVER.md) —— 项目状态交接（本仓库最新实现/部署/运维要点）
 
+## 官网
+
+产品落地官网：[https://j-nify.arr2018.dpdns.org](https://j-nify.arr2018.dpdns.org)
+
+- 源码：`website/`（Vite + React + TypeScript + React Router + Tailwind CSS 4）
+- 内容：首页（营销）/ 功能详解 / 下载页（实时从 GitHub Release 读取最新版本，无需跳转）
+- 部署：Cloudflare Pages（git 集成，push `main` 自动发布）；自定义域名 `https://j-nify.arr2018.dpdns.org`
+- 本地预览：`cd website && npm ci && npm run dev`
+- 详细部署与自定义域名配置：[`docs/devops/website-deploy.md`](docs/devops/website-deploy.md)
+
 ## CI/CD 与发布
 
 - ✅ **CI 门禁**（`.github/workflows/ci.yml`）：push / PR 自动并行校验 —— 后端 `npm test` + typecheck，前端 `flutter analyze` + `flutter test`。
