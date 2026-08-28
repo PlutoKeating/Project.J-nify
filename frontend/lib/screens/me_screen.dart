@@ -133,6 +133,8 @@ class _MeScreenState extends State<MeScreen> {
                       SizedBox(height: 8),
                       Text('Jennifer 是这款 App 里的智能体，也是品牌吉祥物，名字取自 J-nify 对应的「J-nifier」（把 P 人变成 J 的那个人）的谐音，是一位懂 P 人的 J 人助理。'),
                       SizedBox(height: 12),
+                      Text('“不急，但我帮您盯着。”'),
+                      SizedBox(height: 12),
                       Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [

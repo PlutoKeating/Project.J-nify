@@ -72,6 +72,12 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 const SizedBox(height: 8),
                 Text(
+                  '懂 P 人的 J 人助理',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+                const SizedBox(height: 4),
+                Text(
                   '不急，但我帮您盯着。',
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.bodyMedium,
