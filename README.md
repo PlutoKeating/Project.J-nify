@@ -2,6 +2,8 @@
 
 # 🟠 J-nify
 
+[[README_EN.md]]
+
 **Jennifer — 你的低打扰行动秘书**
 
 > 不急，但我帮您盯着。
