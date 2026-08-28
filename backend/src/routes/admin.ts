@@ -10,6 +10,8 @@ export const admin = new Hono<AppEnv>();
 
 // ---- 鉴权中间件（/admin/api/*） ----
 admin.use('/api/*', async (c, next) => {
+  // 登录/登出放行（登录无 cookie 必然 401；登出仅需清 cookie）
+  if (c.req.path.endsWith('/api/login') || c.req.path.endsWith('/api/logout')) return next();
   const okAdmin = await requireAdmin(c);
   if (!okAdmin) return c.json({ detail: 'unauthorized' }, 401);
   await next();
