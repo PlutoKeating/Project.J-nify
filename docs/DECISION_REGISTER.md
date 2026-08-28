@@ -179,12 +179,12 @@
 1. GitHub → Settings → Developer settings → **Fine-grained personal access tokens** → Generate new token。
 2. Repository access：**Only select repositories** → 只选 `PlutoKeating/Project.J-nify`。
 3. Permissions：只开 **Issues → Read and write**（不要授 repo contents/admin 等其他权限）。
-4. 生成后复制 token → **存为 GH Actions Secret `GH_PAT`**，再运行 `sync-worker-secrets` 工作流同步到 CF Worker（当前工作流已预留该步骤，GH 中未配置时自动跳过）。
+4. 生成后复制 token → **存为 GH Actions Secret `GH_PAT`**，再运行 `configure-worker-secrets` 工作流（main 上的权威同步工作流，confirm=YES 门控）同步到 CF Worker（工作流已预留该步骤，GH 中未配置时自动跳过）。
 
 ### 5.3 管理员账号（admin 面板）
 1. 生成强随机口令（建议 20+ 位，大小写+数字+符号）。
-2. **状态：`SESSION_SECRET` 已配置（2026-08-29，随机 64 位 hex，GH Secret + CF Worker Secret 同步）**；`ADMIN_USERNAME` / `ADMIN_PASSWORD` 待用户创建后存入 GH Secrets，再运行 `sync-worker-secrets` 工作流同步。
-3. 存法：`gh secret set ADMIN_USERNAME` / `gh secret set ADMIN_PASSWORD`，然后 GitHub Actions 手动运行 `sync-worker-secrets`。
+2. **状态：`SESSION_SECRET` 已配置（2026-08-29，随机 64 位 hex，GH Secret + CF Worker Secret 同步）**；`ADMIN_USERNAME` / `ADMIN_PASSWORD` 待用户创建后存入 GH Secrets，再运行 `configure-worker-secrets` 工作流同步。
+3. 存法：`gh secret set ADMIN_USERNAME` / `gh secret set ADMIN_PASSWORD`，然后 GitHub Actions 手动运行 `configure-worker-secrets`（confirm 填 YES）。
 
 ### 5.4 SMTP 告警（复用现有邮箱）
 1. **状态：已全部配置到 CF Worker（2026-08-29）**：`SMTP_HOST=smtp.yeah.net`、`SMTP_PORT=465`、`SMTP_USER=j_nify@yeah.net`、`SMTP_AUTH=<yeah.net 客户端授权码>`，经 `sync-worker-secrets` 工作流从 GH Secrets 同步，已 `wrangler secret list` 验证。
@@ -193,8 +193,9 @@
 ### 5.5 提交到台账
 上述新增 secret 名称统一登记到 `docs/devops/SECRETS_REGISTRY.md`（已完成 2026-08-29），真值不落库。
 
-### 5.6 凭据同步工作流（新增）
-`.github/workflows/sync-worker-secrets.yml`（2026-08-29 新增，当前在特性分支 `chore/sync-worker-secrets`，待用户批准合入 main）：手动触发，把 GH Actions Secrets 中的 `SMTP_HOST/PORT/USER/AUTH_PROD`、`SESSION_SECRET`、以及（若配置）`ADMIN_USERNAME/ADMIN_PASSWORD/GH_PAT` 同步为 CF Worker secrets，并以 `wrangler secret list` 验证。真值不落库、不写入日志（GitHub 自动掩码）。
+### 5.6 凭据同步工作流（权威）
+`.github/workflows/configure-worker-secrets.yml`（main，2026-08-29 已执行成功）：手动触发（confirm 填 YES），把 GH Actions Secrets 中的 `SMTP_HOST/PORT/USER/AUTH`、`SESSION_SECRET`、以及（若已配置）`ADMIN_USERNAME/ADMIN_PASSWORD/GH_PAT` 同步为 CF Worker secrets，并以 `wrangler secret list` 验证。真值不落库、不写入日志（GitHub 自动掩码）。
+> 注：早期特性分支 `chore/sync-worker-secrets` 上的同名工作流已废弃（功能并入 main 的 `configure-worker-secrets.yml`）。
 
 ---
 
