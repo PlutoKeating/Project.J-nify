@@ -15,6 +15,8 @@
 | PUT | `/v1/guardrails` | 更新护栏（持久化到 user_preferences） |
 | DELETE | `/v1/me/data` | 可验证删除（级联清空业务数据） |
 | POST | `/v1/llm/draft` | 草稿生成（当前模板降级 stub） |
+| GET | `/v1/me/profile` | 当前用户资料（`{ id, nickname }`；昵称来自 `users` 表，可空） |
+| PUT | `/v1/me/profile` | 更新昵称（用户名，**非唯一**）：`{ nickname }`，空/超 64 字符 → 400 |
 | GET | `/health` | 健康检查 |
 
 ## 示例（生产 URL）
