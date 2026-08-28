@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import type { AppEnv } from '../app';
-import { restGet } from '../db';
+import { restGet, makeDb } from '../db';
 import { getConfig, putConfig, invalidateConfig } from '../lib/config-store';
 import { constantTimeEq, createSessionToken, verifySessionToken, setAdminCookie, clearAdminCookie, requireAdmin } from '../lib/admin-auth';
 import { listModelProviders } from '../lib/llm';
@@ -14,6 +14,8 @@ admin.use('/api/*', async (c, next) => {
   if (c.req.path.endsWith('/api/login') || c.req.path.endsWith('/api/logout')) return next();
   const okAdmin = await requireAdmin(c);
   if (!okAdmin) return c.json({ detail: 'unauthorized' }, 401);
+  // /admin 不在 /v1/* 的 db 注入中间件内，此处自行注入（admin 路由不触网 DB 时无需）
+  c.set('db', makeDb(c.env.SUPABASE_URL, c.env.SUPABASE_SERVICE_KEY));
   await next();
 });
 
