@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../core/api/api_client.dart';
+import '../core/config/app_config.dart';
 import '../services/api_service.dart';
 
 /// 「我的」页：护栏（安静时段 / 最小授权 / 提醒上限）+ 隐私说明
@@ -71,7 +72,7 @@ class _MeScreenState extends State<MeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
+    return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -120,6 +121,29 @@ class _MeScreenState extends State<MeScreen> {
                 const ListTile(
                   title: Text('隐私说明'),
                   subtitle: Text('数据仅本地缓存；位置仅粗粒度；不采集精确轨迹。'),
+                ),
+                const Divider(),
+                const ListTile(title: Text('关于 J-nify')),
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('J-nify 是产品的名字——英文直白意为「P 人变 J」：把计划感偏弱、容易拖延的人，变成更有秩序感的人。'),
+                      SizedBox(height: 8),
+                      Text('Jennifer 是这款 App 里的智能体，也是品牌吉祥物，名字取自 J-nify 对应的「J-nifier」（把 P 人变成 J 的那个人）的谐音，是一位懂 P 人的 J 人助理。'),
+                      SizedBox(height: 12),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('官方网站：'),
+                          Flexible(child: SelectableText('https://j-nify.arr2018.dpdns.org')),
+                        ],
+                      ),
+                      SizedBox(height: 4),
+                      Text('版本：${AppConfig.appVersion}'),
+                    ],
+                  ),
                 ),
               ],
             ),
