@@ -20,6 +20,11 @@ describe('App routing', () => {
     expect(screen.getByLabelText('J-nify')).toBeInTheDocument();
   });
 
+  it('renders home hero on /', () => {
+    renderApp('/');
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(/不急，但我帮您盯着/);
+  });
+
   it('resolves the features route', () => {
     renderApp('/features');
     expect(screen.getByText(/TODO features/)).toBeInTheDocument();
