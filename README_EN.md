@@ -2,17 +2,11 @@
 
 # 🟠 J-nify
 
-[[README.md]]
+**Jennifer — a J-person assistant who understands P people** — Not urgent, but I'll keep an eye on it.
 
-**Jennifer — a J-person assistant who understands P people**
+Hand the small things that aren't urgent but easy to forget to Jennifer — she'll wait for the moment that truly fits, then show up with a reason and a way out.
 
-> Not urgent — but I'll keep an eye on it.
-
-Hand the things that aren't urgent but easy to forget to Jennifer. She won't nag you — she only shows up at the moment that *truly fits*, and slides it gently to you.
-
-**Do it now · Do it later · Forget it · Cover for me** — you always have a graceful way out.
-
-[AGPL-3.0](LICENSE) · Flutter · Cloudflare Workers · Supabase
+[中文](README.md) · [Website](https://j-nify.arr2018.dpdns.org) · [AGPL-3.0](LICENSE)
 
 </div>
 

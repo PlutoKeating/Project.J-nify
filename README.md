@@ -2,17 +2,11 @@
 
 # 🟠 J-nify
 
-[[README_EN.md]]
+**Jennifer — 懂 P 人的 J 人助理** —— 不急，但我帮您盯着。
 
-**Jennifer — 懂 P 人的 J 人助理**
+把「不急、但会忘」的小事交给 Jennifer，她会等到真正顺手的那一刻，再带着理由和退路出现。
 
-> 不急，但我帮您盯着。
-
-把「不急、但会忘」的事交给 Jennifer，她不会催你，只会在*真正顺手*的那一刻，轻轻递到你面前。
-
-**现在做 · 晚点做 · 算了 · 帮我兜底** —— 你永远有体面的退路。
-
-[AGPL-3.0](LICENSE) · Flutter · Cloudflare Workers · Supabase
+[English](README_EN.md) · [官网](https://j-nify.arr2018.dpdns.org) · [AGPL-3.0](LICENSE)
 
 </div>
 
