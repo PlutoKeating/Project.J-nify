@@ -20,4 +20,14 @@ describe('app assembly', () => {
     const res = await makeApp(env).request('/health');
     expect(res.status).toBe(200);
   });
+
+  it('admin SPA contains models.dev provider pick + provider-filtered model pick', async () => {
+    const res = await makeApp(env).request('/admin');
+    expect(res.status).toBe(200);
+    const html = await res.text();
+    expect(html).toContain('选择 models.dev 供应商');
+    expect(html).toContain('pickProvider');
+    expect(html).toContain('mdModelsOf(p.id)');
+    expect(html).toContain('可手填逗号分隔');
+  });
 });

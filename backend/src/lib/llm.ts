@@ -137,7 +137,28 @@ export async function callLlm(db: Db, messages: ChatMessage[], tools: ToolDef[])
 // ---- models.dev 公开模型列表（动态加载，1h 缓存） ----
 let modelsDevCache: { at: number; data: unknown } | null = null;
 
-export async function listModelProviders(): Promise<{ id: string; name: string; models: { id: string; name: string }[] }[]> {
+/** 仅测试用：清空 models.dev 内存缓存。 */
+export function resetModelsDevCacheForTests(): void {
+  modelsDevCache = null;
+}
+
+export interface ModelsDevProvider {
+  id: string;
+  name: string;
+  /** 由 models.dev 的 api 字段推导的 OpenAI 兼容 Base URL；无法推导时为 null */
+  baseUrl: string | null;
+  models: { id: string; name: string }[];
+}
+
+/** models.dev 的 api 字段对多数 OpenAI 兼容供应商就是 Base URL；占位符/缺失/非 http(s) 视为不可推导。 */
+function deriveBaseUrl(api: unknown): string | null {
+  if (typeof api !== 'string') return null;
+  const trimmed = api.trim();
+  if (!trimmed || !/^https?:\/\//i.test(trimmed) || trimmed.includes('${')) return null;
+  return trimmed.replace(/\/+$/, '');
+}
+
+export async function listModelProviders(): Promise<ModelsDevProvider[]> {
   if (modelsDevCache && Date.now() - modelsDevCache.at < 3600_000) return toProviders(modelsDevCache.data);
   const res = await fetch('https://models.dev/api.json', { signal: AbortSignal.timeout(20_000) });
   if (!res.ok) throw new Error(`models.dev HTTP ${res.status}`);
@@ -146,12 +167,13 @@ export async function listModelProviders(): Promise<{ id: string; name: string; 
   return toProviders(data);
 }
 
-function toProviders(data: unknown): { id: string; name: string; models: { id: string; name: string }[] }[] {
-  const obj = (data ?? {}) as Record<string, { id?: string; name?: string; models?: Record<string, { id?: string; name?: string }> }>;
+function toProviders(data: unknown): ModelsDevProvider[] {
+  const obj = (data ?? {}) as Record<string, { id?: string; name?: string; api?: unknown; models?: Record<string, { id?: string; name?: string }> }>;
   return Object.values(obj)
     .map((p) => ({
       id: p.id ?? '',
       name: p.name ?? p.id ?? '',
+      baseUrl: deriveBaseUrl(p.api),
       models: Object.values(p.models ?? {}).map((m) => ({ id: m.id ?? '', name: m.name ?? m.id ?? '' })),
     }))
     .filter((p) => p.id);

@@ -160,7 +160,7 @@ pre{background:#17171A;color:#cfc;padding:12px;border-radius:8px;overflow:auto;f
 <div id="app" style="display:none">
   <div class="card"><h2>LLM 配置（多 provider · 热加载）</h2>
     <div id="providers"></div>
-    <button class="ghost" onclick="addProvider()">+ 添加 provider</button>
+    <button class="ghost" onclick="addProvider()">+ 添加 provider</button><span id="mdStatus" class="muted"></span>
     <label>模型尝试顺序（逗号分隔 provider id，按序故障切换）</label><input id="order">
     <label>超时（ms）</label><input id="timeoutMs" type="number">
     <label>最大工具迭代数</label><input id="maxIters" type="number">
@@ -186,32 +186,37 @@ async function j(url,opt={}){const r=await fetch(url,{headers:{'Content-Type':'a
 async function login(){try{await j('/admin/api/login',{method:'POST',body:JSON.stringify({username:$('u').value,password:$('p').value})});$('err').textContent='';init()}catch(e){$('err').textContent=e.message}}
 async function logout(){await j('/admin/api/logout',{method:'POST'});location.reload()}
 let providers=[];
+let mdList=[];let mdLoaded=false;let mdError='';
+function mdModelsOf(pid){const p=mdList.find(x=>x.id===pid);return p?p.models:[]}
 function renderProviders(){const el=$('providers');el.innerHTML='';providers.forEach((p,idx)=>{const d=document.createElement('div');d.className='card';d.innerHTML=\`
+  <div class="row"><select id="md-\${idx}" onchange="pickProvider(\${idx})"><option value="">— 选择 models.dev 供应商（点选录入 id/名称/Base URL） —</option>\${mdList.map(x=>\`<option value="\${x.id}" \${x.id===p.id?'selected':''}>\${x.name}（\${x.id}）</option>\`).join('')}</select></div>
   <div class="row"><input placeholder="provider id" value="\${p.id}" oninput="providers[\${idx}].id=this.value">
   <input placeholder="名称" value="\${p.name}" oninput="providers[\${idx}].name=this.value">
   <select onchange="providers[\${idx}].type=this.value"><option value="openai-compatible" \${p.type==='openai-compatible'?'selected':''}>OpenAI 兼容</option><option value="anthropic" \${p.type==='anthropic'?'selected':''}>Anthropic(预留)</option></select></div>
-  <label>Base URL</label><input placeholder="https://api.openai.com/v1" value="\${p.baseUrl||''}" oninput="providers[\${idx}].baseUrl=this.value">
+  <label>Base URL（点选供应商后自动带出，可手改）</label><input placeholder="https://api.openai.com/v1" value="\${p.baseUrl||''}" oninput="providers[\${idx}].baseUrl=this.value">
   <label>API Keys（逗号分隔，多 key 轮换）</label><input type="password" value="\${(p.apiKeys||[]).join(',')}" oninput="providers[\${idx}].apiKeys=this.value.split(',').map(s=>s.trim()).filter(Boolean)">
-  <label>模型（可手填；也可从 models.dev 选择）</label>
+  <label>模型（可手填逗号分隔；也可从下方该供应商模型列表点选添加）</label>
   <div class="row"><input value="\${(p.models||[]).join(',')}" oninput="providers[\${idx}].models=this.value.split(',').map(s=>s.trim()).filter(Boolean)">
-  <select id="md-\${idx}" onchange="pickModel(\${idx})"><option value="">— 从 models.dev 选择 —</option></select></div>
+  <select id="mdm-\${idx}" onchange="pickModel(\${idx})"><option value="">— 点选添加该供应商模型 —</option>\${mdModelsOf(p.id).map(m=>\`<option value="\${m.id}">\${m.name}（\${m.id}）</option>\`).join('')}</select></div>
   <label><input type="checkbox" \${p.enabled!==false?'checked':''} onchange="providers[\${idx}].enabled=this.checked"> 启用</label>
   <button class="ghost" onclick="providers.splice(\${idx},1);renderProviders()">删除</button>\`;
-  el.appendChild(d);loadModelsInto(idx);});
+  el.appendChild(d);});
   $('order').value=(window.llmCfg.order||[]).join(',');
   $('timeoutMs').value=window.llmCfg.timeoutMs||30000;
   $('maxIters').value=window.llmCfg.maxToolIterations||6;
+  if(mdError)$('mdStatus').textContent=mdError;
 }
 function addProvider(){providers.push({id:'p'+Date.now().toString(36),name:'',type:'openai-compatible',baseUrl:'https://api.openai.com/v1',apiKeys:[],models:[],enabled:true});renderProviders()}
-async function loadModelsInto(idx){const sel=$('md-'+idx);try{const list=await j('/admin/api/models/providers');window.mdList=list;sel.innerHTML='<option value="">— 从 models.dev 选择 —</option>'+list.map(p=>\`<optgroup label="\${p.name}">\${p.models.map(m=>\`<option value="\${p.id}/\${m.id}">\${m.id}</option>\`).join('')}</optgroup>\`).join('')}catch(e){sel.innerHTML='<option value="">models.dev 不可用：'+e.message+'</option>'}}
-function pickModel(idx){const v=$('md-'+idx).value;if(!v)return;const [p,m]=v.split('/');const prov=window.mdList.find(x=>x.id===p);const mdl=prov&&prov.models.find(x=>x.id===m);providers[idx].models=providers[idx].models||[];if(mdl&&!providers[idx].models.includes(mdl.id)){providers[idx].models.push(mdl.id);renderProviders()}}
+async function loadCatalog(){if(mdLoaded)return;try{mdList=await j('/admin/api/models/providers');mdLoaded=true}catch(e){mdError='models.dev 不可用（仍可手填）：'+e.message}}
+function pickProvider(idx){const v=$('md-'+idx).value;if(!v)return;const p=mdList.find(x=>x.id===v);if(!p)return;providers[idx].id=p.id;providers[idx].name=p.name||p.id;providers[idx].type='openai-compatible';providers[idx].baseUrl=p.baseUrl||(p.id==='openai'?'https://api.openai.com/v1':'');renderProviders()}
+function pickModel(idx){const v=$('mdm-'+idx).value;if(!v)return;const list=providers[idx].models=providers[idx].models||[];if(!list.includes(v))list.push(v);renderProviders()}
 async function saveLlm(){try{const cfg={providers,order:$('order').value.split(',').map(s=>s.trim()).filter(Boolean),timeoutMs:+$('timeoutMs').value,maxToolIterations:+$('maxIters').value};await j('/admin/api/config/llm',{method:'PUT',body:JSON.stringify(cfg)});$('llmMsg').textContent='已保存（立即生效）'}catch(e){$('llmMsg').textContent=e.message}}
 async function loadAlerts(){try{const a=await j('/admin/api/config/alerts');$('alertsEnabled').checked=!!a.enabled;$('complaintRate').value=a.complaintRateThreshold;$('degradationRate').value=a.degradationRateThreshold;$('toEmail').value=a.toEmail||''}catch(e){}}
 async function saveAlerts(){try{await j('/admin/api/config/alerts',{method:'PUT',body:JSON.stringify({enabled:$('alertsEnabled').checked,complaintRateThreshold:+$('complaintRate').value,degradationRateThreshold:+$('degradationRate').value,toEmail:$('toEmail').value})});$('alertMsg').textContent='已保存'}catch(e){$('alertMsg').textContent=e.message}}
 async function testAlerts(){try{const r=await j('/admin/api/alerts/test',{method:'POST',body:JSON.stringify({channel:'both'})});$('alertMsg').textContent='github='+r.results.github+' email='+r.results.email}catch(e){$('alertMsg').textContent=e.message}}
 async function loadMetrics(){try{const rows=await j('/admin/api/metrics/closure?days='+$('days').value);$('metrics').innerHTML='<table><tr><th>日期</th><th>72h内闭环</th><th>完成</th><th>延期</th><th>放弃</th><th>兜底</th><th>总数</th><th>闭环率</th></tr>'+rows.map(r=>\`<tr><td>\${r.day}</td><td>\${r.closed_within_72h}</td><td>\${r.done}</td><td>\${r.deferred}</td><td>\${r.abandoned}</td><td>\${r.rescued}</td><td>\${r.total}</td><td>\${r.total?((r.closed_within_72h/r.total)*100).toFixed(1)+'%':'-'}</td></tr>\`).join('')+'</table>'}catch(e){$('metrics').innerHTML='<span class="muted">'+e.message+'</span>'}}
 async function init(){try{const s=await j('/admin/api/session');if(!s.authenticated){$('login').style.display='block';return}$('login').style.display='none';$('app').style.display='block';
-const cfg=await j('/admin/api/config/llm');providers=cfg.providers||[];window.llmCfg=cfg;renderProviders();loadAlerts();loadMetrics();}catch(e){$('login').style.display='block'}}
+const cfg=await j('/admin/api/config/llm');providers=cfg.providers||[];window.llmCfg=cfg;await loadCatalog();renderProviders();loadAlerts();loadMetrics();}catch(e){$('login').style.display='block'}}
 init();
 </script></body></html>`;
 

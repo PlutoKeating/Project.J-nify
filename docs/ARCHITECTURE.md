@@ -47,7 +47,7 @@ J-nify 采用「Flutter 客户端 + Cloudflare Worker 后端 + Supabase（Postgr
 
 ### v0.2.0 新增：admin 管理面 / Jennifer agent / 执行层本地优先
 
-- **admin 面板**：同域 `/admin` 单页应用 + `/admin/api/*`。登录凭据来自 CF 环境变量（`ADMIN_USERNAME`/`ADMIN_PASSWORD`/`SESSION_SECRET`），HMAC 签名 session cookie。LLM 配置（多 provider / 多 key / 多模型 / 优先级排序）存 `system_config` 表（JSON + version），Worker 内 TTL 缓存 + PUT 主动失效 → **保存即热加载**；models.dev 公开 API 提供动态模型下拉。指标看板（闭环率 SQL 视图 `v_closure_rate`）与告警阈值配置同面板。
+- **admin 面板**：同域 `/admin` 单页应用 + `/admin/api/*`。登录凭据来自 CF 环境变量（`ADMIN_USERNAME`/`ADMIN_PASSWORD`/`SESSION_SECRET`），HMAC 签名 session cookie。LLM 配置（多 provider / 多 key / 多模型 / 优先级排序）存 `system_config` 表（JSON + version），Worker 内 TTL 缓存 + PUT 主动失效 → **保存即热加载**；models.dev 公开 API 提供**供应商下拉点选录入（自动带出 id/名称/Base URL）与按供应商过滤的模型点选添加**（同时保留手填）。指标看板（闭环率 SQL 视图 `v_closure_rate`）与告警阈值配置同面板。
 - **Jennifer agent**：`POST /v1/jennifer/chat` 工具调用循环。工具集按 MCP 风格 JSON Schema 定义：事项 CRUD、节奏策略读写（`rhythm_policies`）、护栏读写、话术/兜底草稿、静默。LLM 调用按 admin 配置的 provider/key/model 优先级依次尝试，失败自动切换；无可用 LLM 时诚实报错，不做硬编码兜底话术。system prompt 含品牌人设与**参考话术列表（仅参考、非强制）**、真实性红线（无信号不得编造理由）、真实动作二次确认。
 - **执行层本地优先**（Q3/Q8 定案）：原始信号（屏幕使用/日历/天气/位置）只在 App 本地处理，不上传；App 本地窗口引擎驱动本地通知；云端仅存事项/决策/策略与匿名指标。`/v1/signals` 保留但 App 不再调用。
 - **频控（Q1 定案）**：移除 `max_nudge_budget` 硬门；保留安静时段（按 `users.timezone` 本地时间）与窗口级 nudge 去重（同 `window_id` 已有 nudge 则复用）；冷却/节奏由 Jennifer 通过 `rhythm_policies` 管理（初始默认：账单 10/3 天、退货 3/5/1 天、作业 10/5/3 天、无死线同理由冷却 72h）。
