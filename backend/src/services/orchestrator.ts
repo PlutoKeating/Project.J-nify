@@ -1,6 +1,6 @@
 import type { Db } from '../db';
 import { restGet, restInsert, restRpc } from '../db';
-import { computeWindow, type WindowResult } from './window-engine';
+import { computeWindow, type WindowResult, type RhythmLike } from './window-engine';
 import { shouldNudge, type GuardrailsLike } from './escalation';
 import { draft } from './brain';
 
@@ -25,7 +25,7 @@ interface WindowRow {
 export async function freshOrReuseWindow(
   db: Db,
   item: ItemRowLike,
-  opts: { contextFeatures?: Record<string, unknown>; now?: Date } = {},
+  opts: { contextFeatures?: Record<string, unknown>; now?: Date; rhythm?: RhythmLike } = {},
 ): Promise<{ windowId: string; result: WindowResult }> {
   const now = opts.now ?? new Date();
   const existing = await restGet<WindowRow>(db, 'opportunity_windows', {
@@ -46,7 +46,7 @@ export async function freshOrReuseWindow(
       },
     };
   }
-  const result = computeWindow(item, { contextFeatures: opts.contextFeatures, now });
+  const result = computeWindow(item, { contextFeatures: opts.contextFeatures, now, rhythm: opts.rhythm });
   const [row] = await restInsert<{ id: string }>(db, 'opportunity_windows', {
     item_id: item.id,
     window_start: result.windowStart.toISOString(),
@@ -59,23 +59,29 @@ export async function freshOrReuseWindow(
   return { windowId: row.id, result };
 }
 
-// policy 携带当前 nudgeCount 仅用于 GATE 判断；nudge 落库与 nudge_count+1 自增由 RPC 事务完成。
+// 窗口级去重 + 安静时段硬护栏；nudge 落库与 nudge_count+1 自增由 RPC 事务完成。
 export async function buildNudge(
   db: Db,
   item: ItemRowLike,
-  policy: { maxNudges: number; nudgeCount: number },
   guardrails: GuardrailsLike,
   windowId: string,
   result: WindowResult,
   now: Date = new Date(),
+  tz = 'UTC',
 ): Promise<string | null> {
-  if (!shouldNudge(policy, guardrails, now).allowed) return null;
+  if (!shouldNudge(guardrails, now, tz).allowed) return null;
   if (!result.reasonText) return null; // 没有理由不通知
+  const existing = await restGet<{ id: string }>(db, 'nudges', {
+    select: 'id',
+    params: { window_id: windowId },
+    limit: 1,
+  });
+  if (existing[0]) return existing[0].id; // 同一窗口只 nudge 一次（B11）
   const { title, body, options } = draft(item, result);
   const out = await restRpc<{ nudgeId: string }>(db, 'fn_create_nudge', {
     p_item_id: item.id,
     p_window_id: windowId,
-    p_intensity: shouldNudge(policy, guardrails, now).intensity,
+    p_intensity: shouldNudge(guardrails, now, tz).intensity,
     p_channel: 'push',
     p_title: title,
     p_body: body,

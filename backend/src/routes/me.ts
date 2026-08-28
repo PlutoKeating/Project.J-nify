@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import type { AppEnv } from '../app';
-import { restDelete, restGet, restUpdate } from '../db';
+import { restDelete, restGet, restUpdate, adminDeleteAuthUser } from '../db';
 
 export const me = new Hono<AppEnv>();
 
@@ -13,7 +13,14 @@ me.delete('/data', async (c) => {
   const signals = await restGet<{ id: string }>(db, 'signal_events', { select: 'id', params: { user_id: userId }, limit: 1 });
   // 删除 users 行 → FK ON DELETE CASCADE 清空全部业务表
   await restDelete(db, 'users', { id: userId });
-  return c.json({ deleted_commitments: commitments.length ? 1 : 0, deleted_signals: signals.length ? 1 : 0, message: '已删除全部数据' });
+  // Q17：彻底注销——同时删除 Supabase Auth 账户
+  const authDeleted = await adminDeleteAuthUser(db, userId);
+  return c.json({
+    deleted_commitments: commitments.length ? 1 : 0,
+    deleted_signals: signals.length ? 1 : 0,
+    auth_deleted: authDeleted,
+    message: '已删除全部数据并注销账户',
+  });
 });
 
 // 资料：昵称（用户名，非唯一）。邮箱来自 Supabase Auth（auth.users），
@@ -38,4 +45,20 @@ me.put('/profile', async (c) => {
   if (nickname.length > MAX_NICK) return c.json({ detail: `昵称最长 ${MAX_NICK} 个字符` }, 400);
   await restUpdate(db, 'users', { id: userId }, { nickname });
   return c.json({ id: userId, nickname });
+});
+
+// B9：时区（每次启动采集，变化时 App 内显式询问）
+me.put('/timezone', async (c) => {
+  const db = c.get('db');
+  const userId = c.get('userId');
+  const body = await c.req.json<{ timezone?: string }>();
+  const tz = (body.timezone ?? '').trim();
+  if (!tz) return c.json({ detail: 'timezone is required' }, 422);
+  try {
+    new Intl.DateTimeFormat('en-US', { timeZone: tz });
+  } catch {
+    return c.json({ detail: 'invalid timezone' }, 422);
+  }
+  await restUpdate(db, 'users', { id: userId }, { timezone: tz });
+  return c.json({ timezone: tz });
 });

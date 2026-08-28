@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import type { AppEnv } from '../app';
-import { restGet, restInsert, restRpc, restUpdate } from '../db';
+import { restGet, restInsert, restRpc, restUpdate, restDelete } from '../db';
 import { CAPTURE_MESSAGE, captureValues } from '../services/capture';
 import { decisionMessage } from '../services/decision-feedback';
 
@@ -59,7 +59,48 @@ items.get('/', async (c) => {
     params: status ? { user_id: userId, status } : { user_id: userId },
     order: 'created_at.desc',
   });
-  return c.json(rows.map(itemRowToOut));
+  // E2：列表每行附带最新窗口理由
+  const withReason = await Promise.all(
+    rows.map(async (r) => {
+      const windows = await restGet<{ reason_text: string }>(db, 'opportunity_windows', {
+        select: 'reason_text',
+        params: { item_id: r.id },
+        order: 'created_at.desc',
+        limit: 1,
+      });
+      return { ...itemRowToOut(r), reason_text: windows[0]?.reason_text ?? null };
+    }),
+  );
+  return c.json(withReason);
+});
+
+const ALLOWED_CATEGORIES = ['life', 'chore', 'bill', 'return', 'study', 'social'];
+
+items.patch('/:itemId', async (c) => {
+  const db = c.get('db');
+  const userId = c.get('userId');
+  const itemId = c.req.param('itemId');
+  const body = await c.req.json<{ title?: string; category?: string; due_at?: string | null; est_minutes?: number; muted?: boolean }>();
+  const patch: Record<string, unknown> = {};
+  if (typeof body.title === 'string' && body.title.trim()) patch.title = body.title.trim();
+  if (typeof body.category === 'string' && ALLOWED_CATEGORIES.includes(body.category)) patch.category = body.category;
+  if (body.due_at !== undefined) patch.due_at = body.due_at === null ? null : new Date(body.due_at).toISOString();
+  if (Number.isFinite(Number(body.est_minutes))) patch.est_minutes = Math.max(1, Number(body.est_minutes));
+  if (typeof body.muted === 'boolean') patch.muted_at = body.muted ? new Date().toISOString() : null;
+  if (!Object.keys(patch).length) return c.json({ detail: 'nothing to update' }, 422);
+  const rows = await restUpdate<ItemRow>(db, 'item_commitments', { id: itemId, user_id: userId }, patch);
+  if (!rows[0]) return c.json({ detail: 'item not found' }, 404);
+  return c.json({ item: itemRowToOut(rows[0]) });
+});
+
+items.delete('/:itemId', async (c) => {
+  const db = c.get('db');
+  const userId = c.get('userId');
+  const itemId = c.req.param('itemId');
+  const rows = await restGet<{ id: string }>(db, 'item_commitments', { select: 'id', params: { id: itemId, user_id: userId }, limit: 1 });
+  if (!rows[0]) return c.json({ detail: 'item not found' }, 404);
+  await restDelete(db, 'item_commitments', { id: itemId, user_id: userId });
+  return c.json({ deleted: true });
 });
 
 items.post('/:itemId/decision', async (c) => {

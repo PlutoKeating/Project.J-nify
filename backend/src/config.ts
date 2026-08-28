@@ -15,6 +15,14 @@ export interface Env {
   LLM_API_BASE?: string;
   LLM_API_KEY?: string;
   LLM_MODEL?: string;
+  SESSION_SECRET?: string;
+  ADMIN_USERNAME?: string;
+  ADMIN_PASSWORD?: string;
+  GH_PAT?: string;
+  SMTP_HOST?: string;
+  SMTP_PORT?: string;
+  SMTP_USER?: string;
+  SMTP_AUTH?: string;
   DEBUG?: string;
   HYPERDRIVE?: { connectionString: string };
 }

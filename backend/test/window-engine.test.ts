@@ -31,6 +31,20 @@ describe('computeWindow', () => {
     expect(w.fitScore).toBe(0.5);
   });
 
+  it('overdue returns honest copy (B10)', () => {
+    const w = computeWindow(item({ dueAt: new Date('2026-08-20T00:00:00Z') }), { now: NOW });
+    expect(w.reasonCode).toBe('overdue');
+    expect(w.reasonText).toContain('已到期');
+  });
+
+  it('due_soon respects rhythm offsets (B6)', () => {
+    const rhythm = { dueOffsets: [{ days_before: 3, max_nudges: 1 }] };
+    const w1 = computeWindow(item({ category: 'bill', dueAt: new Date('2026-08-30T00:00:00Z') }), { now: NOW, rhythm });
+    expect(w1.reasonCode).toBe('due_soon'); // 距死线恰好 3 天
+    const w2 = computeWindow(item({ category: 'bill', dueAt: new Date('2026-09-01T00:00:00Z') }), { now: NOW, rhythm });
+    expect(w2.reasonCode).toBe('manual_window'); // 5 天不在节奏表
+  });
+
   it('windows span 8h from now', () => {
     const w = computeWindow(item(), { now: NOW });
     expect(w.windowStart.toISOString()).toBe(NOW.toISOString());

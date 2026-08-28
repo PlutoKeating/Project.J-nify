@@ -128,3 +128,21 @@ export async function latestContext(db: Db, userId: string): Promise<Record<stri
   });
   return rows[0]?.context_features ?? null;
 }
+
+export async function getTimezone(db: Db, userId: string): Promise<string> {
+  const rows = await restGet<{ timezone: string | null }>(db, 'users', {
+    select: 'timezone',
+    params: { id: userId },
+    limit: 1,
+  });
+  return rows[0]?.timezone || 'UTC';
+}
+
+/** 彻底注销：调用 Supabase Auth admin API 删除 auth 账户（service key）。 */
+export async function adminDeleteAuthUser(db: Db, userId: string): Promise<boolean> {
+  const r = await fetch(`${db.supabaseUrl}/auth/v1/admin/users/${userId}`, {
+    method: 'DELETE',
+    headers: { apikey: db.serviceKey, Authorization: `Bearer ${db.serviceKey}` },
+  });
+  return r.ok || r.status === 404;
+}

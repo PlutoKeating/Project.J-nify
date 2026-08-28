@@ -38,12 +38,20 @@ J-nify 采用「Flutter 客户端 + Cloudflare Worker 后端 + Supabase（Postgr
 
 | 模块 | 职责 |
 | --- | --- |
-| `src/db/` | PostgREST 客户端（restGet/restInsert/restUpdate/restDelete/restRpc）+ 护栏/上下文读取 |
-| `services/` | capture / window-engine / escalation（频控：预算+安静时段）/ brain（模板降级 stub）/ decision-feedback / context / orchestrator（晚点冷却 + 全 defer 抑制 nudge） |
-| `routes/` | 13 端点：capture / list / decision / now / signals / guardrails×2 / me.data / me.profile×2 / llm.draft / root / health |
-| `lib/` | auth（JWKS 验签 + ensureUser upsert）、privacy scope、rate-limit（进程内）、audit（日志） |
+| `src/db/` | PostgREST 客户端（restGet/restInsert/restUpdate/restDelete/restRpc）+ 护栏/上下文/时区读取 + auth admin 删除 |
+| `services/` | capture / window-engine / escalation（频控：安静时段+窗口去重）/ brain（模板降级 stub）/ decision-feedback / context / orchestrator（晚点冷却 + 全 defer 抑制 nudge）/ **rhythm（节奏策略，agent 可写）** / **agent（Jennifer harness + MCP 风格工具集）** |
+| `routes/` | 业务端点 + **`/admin`（管理面板 SPA + API）** + **`/v1/jennifer/chat`** + **`/v1/metrics/events`** |
+| `lib/` | auth（JWKS 验签 + ensureUser upsert）、privacy scope、rate-limit（进程内）、audit（日志）、**admin-auth（会话）**、**llm（多 provider 网关 + models.dev）**、**alerts（GitHub Issues + SMTP）**、**config-store（system_config 热加载）** |
 
 **身份与授权**：Supabase Auth 签发 JWT → Worker `jose` 从 `{SUPABASE_URL}/auth/v1/.well-known/jwks.json` 验签（模块级缓存），`sub`=user_id；任何客户端凭据不能读写数据表（RLS 全拒，见下）。
+
+### v0.2.0 新增：admin 管理面 / Jennifer agent / 执行层本地优先
+
+- **admin 面板**：同域 `/admin` 单页应用 + `/admin/api/*`。登录凭据来自 CF 环境变量（`ADMIN_USERNAME`/`ADMIN_PASSWORD`/`SESSION_SECRET`），HMAC 签名 session cookie。LLM 配置（多 provider / 多 key / 多模型 / 优先级排序）存 `system_config` 表（JSON + version），Worker 内 TTL 缓存 + PUT 主动失效 → **保存即热加载**；models.dev 公开 API 提供动态模型下拉。指标看板（闭环率 SQL 视图 `v_closure_rate`）与告警阈值配置同面板。
+- **Jennifer agent**：`POST /v1/jennifer/chat` 工具调用循环。工具集按 MCP 风格 JSON Schema 定义：事项 CRUD、节奏策略读写（`rhythm_policies`）、护栏读写、话术/兜底草稿、静默。LLM 调用按 admin 配置的 provider/key/model 优先级依次尝试，失败自动切换；无可用 LLM 时诚实报错，不做硬编码兜底话术。system prompt 含品牌人设与**参考话术列表（仅参考、非强制）**、真实性红线（无信号不得编造理由）、真实动作二次确认。
+- **执行层本地优先**（Q3/Q8 定案）：原始信号（屏幕使用/日历/天气/位置）只在 App 本地处理，不上传；App 本地窗口引擎驱动本地通知；云端仅存事项/决策/策略与匿名指标。`/v1/signals` 保留但 App 不再调用。
+- **频控（Q1 定案）**：移除 `max_nudge_budget` 硬门；保留安静时段（按 `users.timezone` 本地时间）与窗口级 nudge 去重（同 `window_id` 已有 nudge 则复用）；冷却/节奏由 Jennifer 通过 `rhythm_policies` 管理（初始默认：账单 10/3 天、退货 3/5/1 天、作业 10/5/3 天、无死线同理由冷却 72h）。
+- **指标与告警**：`metrics_events` 匿名事件（不含内容）+ `v_closure_rate` 视图；告警双通道 = GitHub Issues（`GH_PAT`，最小权限）+ SMTP 邮件（`SMTP_HOST/PORT/USER/AUTH`），阈值经 admin 配置。
 
 ## 数据访问层（PostgREST + RPC，含踩坑）
 

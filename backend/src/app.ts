@@ -13,6 +13,9 @@ import { signals } from './routes/signals';
 import { guardrails } from './routes/guardrails';
 import { me } from './routes/me';
 import { llm } from './routes/llm';
+import { admin } from './routes/admin';
+import { jennifer } from './routes/jennifer';
+import { metrics } from './routes/metrics';
 
 export type AppEnv = { Bindings: Env; Variables: { userId: string; db: Db } };
 
@@ -48,5 +51,8 @@ export function makeApp(env: Env): Hono<AppEnv> {
   app.route('/v1/guardrails', guardrails);
   app.route('/v1/me', me);
   app.route('/v1/llm', llm);
+  app.route('/admin', admin);
+  app.route('/v1/jennifer', jennifer);
+  app.route('/v1/metrics', metrics);
   return app;
 }

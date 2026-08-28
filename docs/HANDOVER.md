@@ -13,6 +13,10 @@
 > - **iOS Universal Link**：⏳ 暂缓（记录为待办，未做）；见 `docs/devops/email-callback.md §4.1`。
 > - **验证**：后端 `tsc + vitest` 全绿（52 通过）；前端 `flutter analyze` + `flutter test`（11 通过）；`website npm run build` 通过（`dist/.well-known/` + `_headers` 已产出）；v0.1.5 APK `versionCode='4'`、证书=指纹 `9d9018a5…369d6b3`。
 
+> 🚧 **v0.2.0（M0.5+M1）实施中（2026-08-29）**：决策定案见 `docs/DECISION_REGISTER.md`，实施计划见 `docs/compose/plans/2026-08-29-v020-m0.5-m1-implementation.md`。
+> 后端已交付：admin 面板（/admin + /admin/api/*，LLM 多 provider 热加载 + models.dev 动态模型 + 指标看板 + 告警配置）、Jennifer agent harness（/v1/jennifer/chat + MCP 风格工具集）、事项 PATCH/DELETE、列表理由、`/v1/me/timezone`、`DELETE /v1/me/data` 彻底注销（含 auth 账户）、频控重构（Q1：无硬上限，仅安静时段+窗口去重）、节奏策略（rhythm_policies）、匿名指标 `/v1/metrics/events` + `v_closure_rate` 视图、告警双通道（GH_PAT + SMTP）、迁移 `20260829000000_v020_admin_agent_metrics.sql`；`npm test` 55 通过 + typecheck 全绿。
+> CF Worker secrets 已配置：`SMTP_HOST/PORT/USER/AUTH`、`SESSION_SECRET`（经 `configure-worker-secrets.yml` 工作流同步）。待用户补充：`GH_PAT`、`ADMIN_USERNAME/ADMIN_PASSWORD`。
+
 ---
 
 ## 1. 项目定位与技术栈（定案版）
