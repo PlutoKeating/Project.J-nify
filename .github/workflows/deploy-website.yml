@@ -1,6 +1,7 @@
 # 官网部署（Cloudflare Pages，CI 直发，不依赖 git 集成）
-# 触发：push main（website/** 或本工作流变更）+ 手动。
-# 项目名：优先取仓库 Variables PAGES_PROJECT_NAME；未设置则调用 CF API 自动识别第一个 Pages 项目。
+# - 项目名：优先 vars.PAGES_PROJECT_NAME，否则 CF API 自动识别
+# - 分支：使用项目实际 production_branch（不再硬编码 main）
+# - 冒烟测试：部署后校验 pages.dev 子路由 SPA 回退（200）
 name: Deploy Website (Cloudflare Pages)
 
 on:
@@ -30,47 +31,71 @@ jobs:
           cache: npm
           cache-dependency-path: website/package-lock.json
 
-      - name: Install
-        run: npm ci
+      - name: Install & build
+        run: |
+          npm ci
+          npm run build
+          test -f dist/_redirects && echo "dist/_redirects OK"
 
-      - name: Build
-        run: npm run build
-
-      - name: Detect Pages project
-        id: pages
+      - name: Resolve Pages project
+        id: project
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           PAGES_PROJECT_NAME: ${{ vars.PAGES_PROJECT_NAME }}
         run: |
           if [ -n "$PAGES_PROJECT_NAME" ]; then
-            echo "project=$PAGES_PROJECT_NAME" >> "$GITHUB_OUTPUT"
+            echo "name=$PAGES_PROJECT_NAME" >> "$GITHUB_OUTPUT"
+            echo "detected=$PAGES_PROJECT_NAME"
             exit 0
           fi
           curl -sS -m 30 "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects" \
-            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" > /tmp/pages.json
+            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" > /tmp/projects.json
+          NAME="$(python3 -c 'import json;d=json.load(open("/tmp/projects.json"));r=d.get("result") or [];print(r[0]["name"] if r else "")')"
+          echo "name=$NAME" >> "$GITHUB_OUTPUT"
+          echo "detected=$NAME"
+
+      - name: Fetch project settings
+        id: settings
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          curl -sS -m 30 "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/${{ steps.project.outputs.name }}" \
+            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" > /tmp/project.json
           python3 - <<'PY'
-          import json
-          try:
-              d = json.load(open('/tmp/pages.json'))
-              names = [p.get('name') for p in (d.get('result') or []) if p.get('name')]
-          except Exception:
-              names = []
-          print('names=' + ','.join(names))
-          print('first=' + (names[0] if names else ''))
+          import json, os
+          d = json.load(open('/tmp/project.json'))
+          r = d.get('result') or {}
+          pb = str(r.get('production_branch') or 'main')
+          domains = ','.join(r.get('domains') or [])
+          dep = r.get('latest_deployment') or {}
+          out = os.environ.get('GITHUB_OUTPUT', '')
+          with open(out, 'a') as f:
+              f.write(f'production_branch={pb}\n')
+              f.write(f'domains={domains}\n')
+              f.write(f'latest_deployment_id={dep.get("id")}\n')
+              f.write(f'latest_deployment_url={dep.get("url")}\n')
+          print('production_branch=' + pb)
+          print('domains=' + domains)
+          print('latest_deployment_url=' + str(dep.get('url')))
           PY
 
       - name: Deploy to Pages
         run: |
-          PROJ="${{ steps.pages.outputs.project }}"
-          if [ -z "$PROJ" ] && [ -f /tmp/pages.json ]; then
-            PROJ="$(python3 -c 'import json;d=json.load(open("/tmp/pages.json"));r=d.get("result") or [];print(r[0]["name"] if r else "")')"
-          fi
-          if [ -z "$PROJ" ]; then
-            echo "::error::未能自动识别 Pages 项目名，请在仓库 Settings → Variables 配置 PAGES_PROJECT_NAME 后重试"
-            exit 1
-          fi
-          npx wrangler pages deploy dist --project-name "$PROJ" --branch main
+          PROJ="${{ steps.project.outputs.name }}"
+          BRANCH="${{ steps.settings.outputs.production_branch }}"
+          [ -n "$BRANCH" ] || BRANCH="main"
+          echo "project=$PROJ branch=$BRANCH"
+          npx wrangler pages deploy dist --project-name "$PROJ" --branch "$BRANCH"
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+      - name: Smoke test (SPA fallback)
+        run: |
+          URL="https://j-nify-website.pages.dev"
+          for p in features download privacy auth/verify; do
+            code=$(curl -sS -m 20 -o /dev/null -w '%{http_code}' "$URL/$p")
+            echo "pages.dev /$p -> $code"
+          done
