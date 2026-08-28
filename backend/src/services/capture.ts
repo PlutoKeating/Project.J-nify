@@ -23,6 +23,7 @@ export function captureValues(input: {
   sourceType?: string;
   category?: string;
   dueAt?: Date | null;
+  estMinutes?: number;
 }): NewCommitment {
   return {
     title: parseTitle(input.rawText),
@@ -34,6 +35,6 @@ export function captureValues(input: {
     importance: 1,
     urgency: 1,
     abandonCost: 1,
-    estMinutes: 5,
+    estMinutes: Number.isFinite(Number(input.estMinutes)) ? Math.max(1, Math.min(240, Number(input.estMinutes))) : 5,
   };
 }

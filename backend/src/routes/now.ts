@@ -18,6 +18,7 @@ interface CandidateRow {
   status: string;
   raw_text: string;
   due_at: string | null;
+  est_minutes: number | null;
   created_at: string;
   updated_at: string;
 }
@@ -54,7 +55,7 @@ now.get('/', async (c) => {
   const userId = c.get('userId');
   const tz = await getTimezone(db, userId);
   const candidates = await restGet<CandidateRow>(db, 'item_commitments', {
-    select: 'id,title,category,status,raw_text,due_at,created_at,updated_at',
+    select: 'id,title,category,status,raw_text,due_at,est_minutes,created_at,updated_at',
     params: { user_id: userId, status: `in.(${ACTIVE.join(',')})`, muted_at: 'is.null' },
     order: 'updated_at.asc',
     limit: MAX_CANDIDATES,
@@ -133,6 +134,7 @@ now.get('/', async (c) => {
       category: best.item.category,
       status: nudgeId ? 'nudged' : best.row.status,
       due_at: best.row.due_at,
+      est_minutes: best.row.est_minutes ?? 5,
       created_at: best.row.created_at,
       updated_at: best.row.updated_at,
       reason_code: best.result.reasonCode,

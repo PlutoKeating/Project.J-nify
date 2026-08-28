@@ -26,13 +26,14 @@ interface ItemRow {
 items.post('/capture', async (c) => {
   const db = c.get('db');
   const userId = c.get('userId');
-  const body = await c.req.json<{ raw_text?: string; source_type?: string; category?: string; due_at?: string }>();
+  const body = await c.req.json<{ raw_text?: string; source_type?: string; category?: string; due_at?: string; est_minutes?: number }>();
   if (!body.raw_text?.trim()) return c.json({ detail: 'raw_text is required' }, 422);
   const values = captureValues({
     rawText: body.raw_text,
     sourceType: body.source_type,
     category: body.category,
     dueAt: body.due_at ? new Date(body.due_at) : null,
+    estMinutes: body.est_minutes,
   });
   const [item] = await restInsert<ItemRow>(db, 'item_commitments', {
     user_id: userId,
