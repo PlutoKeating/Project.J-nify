@@ -12,7 +12,7 @@ Hand the things that aren't urgent but easy to forget to Jennifer. She won't nag
 
 **Do it now · Do it later · Forget it · Cover for me** — you always have a graceful way out.
 
-[AGPL-3.0](LICENSE) · Flutter · FastAPI · SQLite
+[AGPL-3.0](LICENSE) · Flutter · Cloudflare Workers · Supabase
 
 </div>
 
@@ -57,7 +57,9 @@ She notes it, then disappears. When the **truly fitting** moment comes, she retu
 
 ## Why "J-nify"?
 
-Because it's a tool born for **J-type order** — to look after those who plan **weakly but don't actually want chaos** (P people). Jennifer translates J-type discipline into "timing nudges" that a P person can comfortably accept.
+**J-nify is the product's name** — literally "make a P person into a J": turn someone who plans weakly and tends to procrastinate into someone with more order.
+
+**Jennifer** is the in-app agent, and the brand mascot. Her name is a near-homophone of "**J-nifier**" — the one who turns a P person into a J. She's a J-person assistant who truly understands P people: she doesn't force discipline on you, but translates J-type order into the "timing nudges" a P person can comfortably accept.
 
 ## Engineering implementation
 

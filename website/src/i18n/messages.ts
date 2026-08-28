@@ -122,8 +122,8 @@ export const messages: Messages = {
   // 为什么叫 J-nify
   'why.title': { zh: '为什么叫 J-nify？', en: 'Why “J-nify”?' },
   'why.body': {
-    zh: '这是一款为 J 型秩序感而生的工具——用来照顾那些计划感偏弱、但内心并不想乱的人（P 人）。Jennifer 把 J 人的纪律，翻译成 P 人也能舒服接受的「时机提醒」。',
-    en: 'It’s built for J-type order — to care for those with weaker planning instinct but who don’t want chaos (P people). Jennifer translates J-type discipline into “timing nudges” a P person can accept comfortably.',
+    zh: 'J-nify 是产品的名字，直白地说就是「P 人变 J」——把计划感偏弱、容易拖延的人，变成更有秩序感的人。而 Jennifer 是这款 App 里的智能体，也是品牌吉祥物，名字取自 J-nify 对应的「J-nifier」（把 P 人变成 J 的那个人）的谐音。她是一位真正懂 P 人的 J 人助理：不替你逼出纪律，而是把 J 人的秩序感，翻译成 P 人也能舒服接受的「时机提醒」。',
+    en: 'J-nify is the product’s name — literally “make a P person into a J”: turn someone who plans weakly and tends to procrastinate into someone with more order. Jennifer is the in-app agent and the brand mascot; her name is a near-homophone of “J-nifier,” the one who turns a P person into a J. She’s a J-person assistant who truly understands P people: she doesn’t force discipline on you, but translates J-type order into the “timing nudges” a P person can comfortably accept.',
   },
 
   // 最终 CTA
