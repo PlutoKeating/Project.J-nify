@@ -1,4 +1,4 @@
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import Layout from './components/Layout';
 import Home from './pages/Home';
 import Features from './pages/Features';
@@ -15,6 +15,7 @@ export default function App() {
         <Route path="download" element={<Download />} />
         <Route path="privacy" element={<Privacy />} />
         <Route path="auth/verify" element={<VerifyAuth />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>
   );

@@ -94,11 +94,12 @@ jobs:
 
       - name: Smoke test (SPA fallback)
         run: |
-          URL="https://j-nify-website.pages.dev"
           fail=0
-          for p in features download privacy auth/verify; do
-            code=$(curl -sS -m 20 -o /dev/null -w '%{http_code}' "$URL/$p")
-            echo "pages.dev /$p -> $code"
-            [ "$code" = "200" ] || fail=1
+          for URL in "https://j-nify-website.pages.dev" "https://j-nify.arr2018.dpdns.org"; do
+            for p in features download privacy auth/verify; do
+              code=$(curl -sS -m 20 -o /dev/null -w '%{http_code}' "$URL/$p")
+              echo "$URL /$p -> $code"
+              [ "$code" = "200" ] || fail=1
+            done
           done
           [ "$fail" = "0" ] || { echo "SMOKE TEST FAILED: expected 200 for all SPA routes"; exit 1; }

@@ -1,4 +1,8 @@
-/features /404.html 200
-/download /404.html 200
-/privacy /404.html 200
-/auth/verify /404.html 200
+# SPA 回退兜底规则（主路径由 functions/[[path]].js 处理）。
+# 注意：代理目标不能是 /index.html 或 /404.html——Pages 会把这些 .html 路径
+# 规范化 308 重定向（/index.html -> /、/404.html -> /404），导致规则失效。
+# /404 是 404.html 的无扩展名规范路径，实测可直接以 200 返回 SPA HTML。
+/features /404 200
+/download /404 200
+/privacy /404 200
+/auth/verify /404 200
