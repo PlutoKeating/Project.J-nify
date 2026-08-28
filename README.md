@@ -2,9 +2,9 @@
 
 # 🟠 J-nify
 
-**Jennifer — 懂 P 人的 J 人助理** —— 不急，但我帮您盯着。
+**Jennifer 说：「不急，但我帮您盯着。」**
 
-把「不急、但会忘」的小事交给 Jennifer，她会等到真正顺手的那一刻，再带着理由和退路出现。
+把「不急、但会忘」的小事交给她，她会在真正顺手的那一刻，轻轻提醒你。
 
 [English](README_EN.md) · [官网](https://j-nify.arr2018.dpdns.org) · [AGPL-3.0](LICENSE)
 

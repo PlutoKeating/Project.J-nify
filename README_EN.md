@@ -2,9 +2,9 @@
 
 # 🟠 J-nify
 
-**Jennifer — a J-person assistant who understands P people** — Not urgent, but I'll keep an eye on it.
+**Jennifer says: “Not urgent — but I’ll keep an eye on it.”**
 
-Hand the small things that aren't urgent but easy to forget to Jennifer — she'll wait for the moment that truly fits, then show up with a reason and a way out.
+Hand the small things that aren’t urgent but easy to forget to her — she’ll gently remind you at the moment that truly fits.
 
 [中文](README.md) · [Website](https://j-nify.arr2018.dpdns.org) · [AGPL-3.0](LICENSE)
 
