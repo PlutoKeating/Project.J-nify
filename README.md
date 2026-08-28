@@ -124,7 +124,7 @@ LICENSE        AGPL-3.0
 ## CI/CD 与发布
 
 - ✅ **CI 门禁**（`.github/workflows/ci.yml`）：push / PR 自动并行校验 —— 后端 `npm test` + typecheck，前端 `flutter analyze` + `flutter test`。
-- 📦 **前端自动打包发布**（`.github/workflows/release-frontend.yml`）：推送 tag `vX.Y.Z` 触发，校验 tag 与 `frontend/pubspec.yaml` 的 version 一致后，构建 Android APK/AAB（ubuntu）并发布 GitHub Release；iOS 归档（xcarchive，macos）。`SUPABASE_URL/SUPABASE_ANON_KEY` 经 GH Secrets 注入构建（dart-define）。流程详见 [`docs/devops/release.md`](docs/devops/release.md)。
+- 📦 **前端自动打包发布**（`.github/workflows/release-frontend.yml`）：推送 tag `vX.Y.Z` 触发，校验 tag 与 `frontend/pubspec.yaml` 的 version 一致后，构建 Android APK/AAB（ubuntu，**固定 release keystore 签名**）并发布 GitHub Release；iOS 归档（xcarchive，macos，未签名需 Apple 证书）。`SUPABASE_URL/SUPABASE_ANON_KEY` 经 GH Secrets 注入构建（dart-define）。⚠️ `pubspec.yaml` 的 `+N`（=`versionCode`）必须随发版单调递增（曾因降级致覆盖安装被拒），流程详见 [`docs/devops/release.md`](docs/devops/release.md)。
 - 🚢 **后端部署**（`.github/workflows/deploy-backend.yml`）：push main（backend/**）自动 `wrangler deploy`，生产后端唯一 Base URL = **`https://jnify.williamhvollita.dpdns.org`**。
 - 📧 **邮件与 SMTP**（Supabase 自定义 SMTP，j_nify@yeah.net）：已上线（confirm-email 开启），模板见 [`docs/devops/smtp.md`](docs/devops/smtp.md)。
 - 🔐 **密钥台账**：所有 prod 密钥以 GitHub Actions Secrets / Cloudflare Worker Secrets / Supabase 平台存储，仓库内无明文密钥，见 [`docs/devops/SECRETS_REGISTRY.md`](docs/devops/SECRETS_REGISTRY.md)。
@@ -132,7 +132,7 @@ LICENSE        AGPL-3.0
 ## 路线图
 
 - ✅ **M0 骨架** — 录入 → 漂浮 → 手动窗口 → 三选项闭环（**v0.1.4 已发布**，Android 安装包见 GitHub Releases；v0.1.0 → v0.1.1 修复启动黑屏：`.env` 缺失时 `dotenv.load` 抛异常致 `main` 崩溃；v0.1.2 修复 release 缺 `INTERNET` 权限致注册失败 + 固定 release 签名支持覆盖安装更新；v0.1.3 品牌文案统一；v0.1.4 版本显示改为 `package_info_plus` 运行时读取）
-- 🧑‍🤝‍🧑 **账户与设置**（未发版） — 「我的」页资料卡 + 设置页（改昵称/邮箱/密码）；邮件确认/重置回调用 App Link 深链（修复 `localhost:3000` 回调）；登录会话 ≥30 天随登录滑动重置；`HomeShell` SafeArea 避开刘海/状态栏；「隐私说明」「关于」默认折叠。
+- 🧑‍🤝‍🧑 **账户与设置**（**v0.1.5 已发布**） — 「我的」页资料卡 + 设置页（改昵称/邮箱/密码）；邮件确认/重置回调用 App Link 深链（修复 `localhost:3000` 回调，App Link 校验指纹见官网 `/.well-known/assetlinks.json`）；登录会话 ≥30 天随登录滑动重置；`HomeShell` SafeArea 避开刘海/状态栏；「隐私说明」「关于」默认折叠；修复 versionCode 降级导致的覆盖安装被拒（详见 `docs/devops/release.md`「版本号规则」）。
 - ⏳ **M1 信号** — 日历 / 天气 / 粗粒度位置 / 使用状态 + 频控红线（信号摄入已可；真实数据源待接）
 - ⏳ **M2 Jennifer 大脑** — LLM 多供应商热重载模型管理组件（部署侧零硬编码要求）
 - ⏳ **M3 灰度** — 100–300 种子用户 + 指标看板

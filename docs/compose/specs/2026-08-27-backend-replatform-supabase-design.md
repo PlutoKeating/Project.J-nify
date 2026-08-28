@@ -4,6 +4,8 @@
 - 状态：已批准（用户拍板）
 - 关联：docs/SPEC.md（产品 Spec，业务契约不变）、docs/API.md（API 契约微调见 [S5]）、README.md（工程栈描述需更新）
 
+> ⚠️ **历史快照（2026-08-27）**：设计时后端端点为 **11**；现为 **13**（新增 `GET/PUT /v1/me/profile`，昵称/资料）。本文件仅作当时设计留档，当前契约以 `docs/ARCHITECTURE.md`、`docs/API.md`、`docs/HANDOVER.md` 为准。
+
 ---
 
 ## [S1] 背景与目标

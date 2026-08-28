@@ -42,6 +42,9 @@
 - 浏览器访问 **`https://j-nify.arr2018.dpdns.org`** 应显示官网首页。
 - `/features`、`/download` 直接刷新或直达可用（`_redirects` 提供 SPA 回退）。
 - 下载页应显示**真实最新版本**（来自 GitHub Release，非硬编码），点资产为直链下载、不跳转 GitHub。
+- **App Link 校验资产**（邮件确认/重置回调用）：`public/.well-known/assetlinks.json`（Android）与 `public/.well-known/apple-app-site-association`（iOS）随 `public/` 一起被 Vite 复制进 `dist/` 并由 CF Pages 直出（`_redirects` 只兜底未命中路径，不影响 `.well-known` 真实文件）。`/_headers` 为 AASA 强制 `Content-Type: application/json`。验证：
+  - `https://j-nify.arr2018.dpdns.org/.well-known/assetlinks.json` 返回**真实** release 证书 SHA-256（见 `docs/devops/email-callback.md`；Android 校验失败则 App Link 不会静默唤起 App，回落浏览器）。
+  - `https://j-nify.arr2018.dpdns.org/.well-known/apple-app-site-association` 返回 `Content-Type: application/json`。
 
 ## 五、发布节奏
 

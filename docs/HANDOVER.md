@@ -4,12 +4,14 @@
 > 权威信息源：`docs/compose/specs/2026-08-27-backend-replatform-supabase-design.md`、`docs/compose/plans/2026-08-27-backend-serverless-replatform.md`、`docs/devops/SECRETS_REGISTRY.md`（密钥台账）。
 > ⚠️ 仓库 **public**：本文不含任何密钥明文，只列「名称 + 存放位置」；真值在 GitHub Actions Secrets / CF Dashboard Worker secrets / 本机 `backend/.dev.vars`（gitignored）/ 密码管理器。
 
-> 📌 **未发版功能增量（2026-08-28 待发布）**：
+> 📌 **已发版功能增量（2026-08-28，v0.1.5 已发布）**：
 > - **资料/设置**：`我的` 页资料卡（昵称+邮箱）+ 齿轮进入 `SettingsScreen`（分组：改昵称 / 改邮箱 / 改密码）；后端新增 `GET/PUT /v1/me/profile`（昵称存 `users.nickname`，非唯一）；邮箱改经 `auth.updateUser` 触发确认邮件并回跳 App。
-> - **邮件回调（App Link）**：根因=Supabase **Site URL=`http://localhost:3000`**。改 Site URL 为 `https://j-nify.arr2018.dpdns.org` + 加 Additional Redirect URL；App 用 `app_links`+`verifyOTP` 接收；App Link 校验资产放 `website/public/.well-known/`（含占位值，需替换真实签名 SHA-256 / Apple Team ID）。详见 `docs/devops/email-callback.md`。
-> - **会话 30 天**：`main.dart` 显式 `autoRefreshToken/persistSession`；`AuthGate` 启动 `refreshSession()` 滑动重置；服务端 Inactivity timeout=720h / 关 time-box（后台人工步骤，Pro+）。
+> - **邮件回调（App Link）**：根因=Supabase **Site URL=`http://localhost:3000`**。Site URL 已改 `https://j-nify.arr2018.dpdns.org` + 加 Additional Redirect URL；App 用 `app_links`+`verifyOTP` 接收；App Link 校验指纹（真实值）在 `website/public/.well-known/assetlinks.json`（`9d9018a5…369d6b3`）。详见 `docs/devops/email-callback.md`。
+> - **会话 30 天**：`main.dart` 显式 `autoRefreshToken/persistSession`；`AuthGate` 启动 `refreshSession()` 滑动重置；服务端 Inactivity timeout=720h / 关 time-box（后台人工步骤，Pro+，已完成）。
 > - **SafeArea**：`HomeShell` body 包 `SafeArea` 避开刘海/状态栏。「隐私说明」「关于」改 `ExpansionTile` 默认折叠。登录/注册密码框加显示明文眼睛。
-> - **验证**：后端 `tsc + vitest` 全绿（52 通过）；前端 `flutter analyze` + `flutter test`（11 通过）；`website npm run build` 通过（`dist/.well-known/` + `_headers` 已产出）。
+> - ⚠️ **versionCode 降级坑点**：`pubspec.yaml` 的 `+N`=Android versionCode。v0.1.3/v0.1.4 误用 `+1`（versionCode=1）< v0.1.2 的 `+3`(3)，导致从 v0.1.2 覆盖安装 v0.1.4 被系统拒（`INSTALL_FAILED_VERSION_DOWNGRADE`）。本版升到 `0.1.5+4`(4)，已可覆盖安装 v0.1.2 及更早。**规则：`+N` 须单调递增且 > 历史最大值（当前=3，新版本须 ≥+4）**。见 `docs/devops/release.md`「版本号规则」。
+> - **iOS Universal Link**：⏳ 暂缓（记录为待办，未做）；见 `docs/devops/email-callback.md §4.1`。
+> - **验证**：后端 `tsc + vitest` 全绿（52 通过）；前端 `flutter analyze` + `flutter test`（11 通过）；`website npm run build` 通过（`dist/.well-known/` + `_headers` 已产出）；v0.1.5 APK `versionCode='4'`、证书=指纹 `9d9018a5…369d6b3`。
 
 ---
 
@@ -34,15 +36,15 @@
 
 | 能力 | 状态 | 说明 |
 |---|---|---|
-| 后端 11 端点 | ✅ 生产可用 | capture/list/decision/now/signals/guardrails/me.data/llm.draft + root/health；全链路真实探测 200 |
+| 后端 13 端点 | ✅ 生产可用 | capture/list/decision/now/signals/guardrails×2/me.data/me.profile×2/llm.draft + root/health；全链路真实探测 200 |
 | 数据库 | ✅ | 15+1 表 + RPC，迁移 `0000..0004` 全应用（supabase/migrations/） |
 | **数据安全 RLS** | ✅ | 全表 RLS + anon/authenticated 权限回收；publishable key 直读数据 → 401（解包攻击路径封死） |
 | **生产邮件** | ✅ | SMTP live：`smtp.yeah.net:465`、`j_nify@yeah.net`、sender `J-nify Jennifer`、`mailer_autoconfirm=false`（确认开启） |
 | 前端认证 | ✅ | 注册→邮箱确认→登录→登出→401 自动重登（gotrue 源码级验证） |
 | 前端 M0 缺口 | ✅ | Toast 收口（顶部 pill 2.2s + 后端文案）、rescue 按钮（后端 options 驱动）、分类/期限录入、护栏真实读写 |
-| **安装包** | ✅ | v0.1.2 Release：`app-release.apk` + `app-release.aab`（52.9MB，**release keystore 签名**，内置生产 Supabase 配置 + INTERNET 权限） |
-| CI/CD+部署 | ✅ | 三工作流全绿；push main 自动上线；tag `v0.1.2` → Release（Android APK/AAB 固定签名 + iOS xcarchive） |
-| 密钥与文档 | ✅ | GH Secrets（9 项）/ CF Worker secrets（SUPABASE_URL/SERVICE_KEY）/ 台账 / 本 HANDOVER 同步 |
+| **安装包** | ✅ | 最新 **v0.1.5** Release：`app-release.apk` + `app-release.aab`（**release keystore 签名**，versionCode=4，内置生产 Supabase 配置 + INTERNET 权限）；v0.1.2 起签名一致可覆盖安装更新 |
+| CI/CD+部署 | ✅ | 三工作流全绿；push main 自动上线；tag `v0.1.5` → Release（Android APK/AAB 固定签名 + iOS xcarchive） |
+| 密钥与文档 | ✅ | GH Secrets（12 项）/ CF Worker secrets（SUPABASE_URL/SERVICE_KEY）/ 台账 / 本 HANDOVER 同步 |
 
 ---
 
@@ -75,7 +77,7 @@
 | `deploy-backend.yml` | push main（backend/**）+ workflow_dispatch | wrangler deploy（node 24；secrets: CLOUDFLARE_API_TOKEN + CLOUDFLARE_ACCOUNT_ID） |
 | `release-frontend.yml` | tag `v*` | 校验 tag=pubspec 版本 → Android APK+AAB（ubuntu）+ iOS ipa --no-codesign（macos）→ GitHub Release（secrets: SUPABASE_URL/SUPABASE_ANON_KEY dart-define） |
 
-**GH Secrets 清单（9 项已设）**：CLOUDFLARE_ACCOUNT_ID、CLOUDFLARE_API_TOKEN、SMTP_AUTH_PROD、SMTP_HOST、SMTP_PORT、SMTP_USER、SUPABASE_ANON_KEY、SUPABASE_URL。**CF Worker secrets**：SUPABASE_URL、SUPABASE_SERVICE_KEY（DEBUG 已删）。
+**GH Secrets 清单（12 项已设）**：`ANDROID_KEYSTORE_BASE64`、`ANDROID_KEYSTORE_PASSWORD`、`ANDROID_KEY_ALIAS`、`ANDROID_KEY_PASSWORD`、CLOUDFLARE_ACCOUNT_ID、CLOUDFLARE_API_TOKEN、SMTP_AUTH_PROD、SMTP_HOST、SMTP_PORT、SMTP_USER、SUPABASE_ANON_KEY、SUPABASE_URL。**CF Worker secrets**：SUPABASE_URL、SUPABASE_SERVICE_KEY（DEBUG 已删）。**App Link 校验指纹**（`assetlinks.json` 的 SHA-256）是**公开值非密钥**，不入 secrets，直接入仓库 `website/public/.well-known/assetlinks.json`。
 - 推送提示：gh token 已补 workflow scope → **所有推送（含 workflow 文件）直接 HTTPS**；SSH（ssh.github.com:443）在 Clash 环境下不通，勿再用。
 
 ---

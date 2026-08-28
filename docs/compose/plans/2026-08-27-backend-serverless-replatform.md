@@ -2,6 +2,8 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use compose:subagent (recommended) or compose:execute to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
+> ⚠️ **历史快照（2026-08-27）**：此计划记录的当时端点数为 **11**；现为 **13**（新增 `GET/PUT /v1/me/profile`，昵称/资料）。本文件仅作当时实现留档，当前架构以 `docs/ARCHITECTURE.md`、`docs/API.md`、`docs/HANDOVER.md` 为准。
+
 **Goal:** 将 `backend/` 从 FastAPI/SQLAlchemy/SQLite 完整替换为 TS + Hono + Drizzle 的 Cloudflare Worker，数据库迁移到 Supabase Postgres（Supabase Auth 邮箱账户体系），并同步补齐前端 M0 缺口与文档矛盾。
 
 **Architecture:** Flutter 前端（supabase_flutter 取 JWT）→ Cloudflare Worker（Hono 路由，jose JWKS 验签，Drizzle/postgres.js 直连 Supabase Postgres pooler 事务模式 :6543，prepare:false）→ Supabase（Postgres + Auth）。表结构由 `backend/supabase/migrations/*.sql` 管理（golden rule：远端库只经迁移文件变更）。部署：CF Dashboard git 集成（Root directory=backend，push main 自动部署）。

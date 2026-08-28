@@ -15,7 +15,7 @@ flutter run
 
 ```sh
 flutter analyze    # 0 issues
-flutter test       # 8 用例全绿（登录/注册表单、HomeShell、MeScreen 登出、焦点卡 options、AppConfig .env 缺失回退）
+flutter test       # 11 用例全绿（登录/注册表单、眼睛切换、HomeShell、MeScreen 资料卡+折叠、设置页、焦点卡 options、AppConfig .env 缺失回退）
 flutter build apk --release --dart-define=SUPABASE_URL=... --dart-define=SUPABASE_ANON_KEY=...   # 出手装包
 ```
 
@@ -23,6 +23,12 @@ flutter build apk --release --dart-define=SUPABASE_URL=... --dart-define=SUPABAS
 > - **主 `AndroidManifest.xml` 必须声明 `INTERNET` 权限**（Flutter 仅 debug/profile manifest 默认带，release 只合入 main 清单；缺失会导致 release 包任何网络请求立即失败——曾致注册报 `Failed host lookup (errno=7)`）。
 > - **release 签名固定 keystore**：CI 经 secrets `ANDROID_KEYSTORE_BASE64/PASSWORD/ALIAS/KEY_PASSWORD` 注入（`build.gradle.kts` 读环境变量，未配置回退 debug）。固定签名是 APK 覆盖安装更新的前提（曾因每次 CI runner 生成的 debug keystore 不同导致无法覆盖更新）。
 > - 本地构建验证签名：`apksigner verify --print-certs <apk>`；验证权限：`aapt dump permissions <apk>`。
+>
+> **功能/配置变更（v0.1.5 起）**：
+> - 「我的」页加资料卡（昵称+邮箱）+ 设置入口；新增 `SettingsScreen`（改昵称/邮箱/密码）。昵称经后端 `GET/PUT /v1/me/profile`；邮箱/密码经 Supabase Auth。
+> - 邮件确认/重置回调用 **App Link**：`main.dart` 用 `app_links` 订阅深链 → `auth.verifyOTP`/`getSessionFromUrl`；平台配置见根 `docs/devops/email-callback.md`（Android intent-filter 已在 `AndroidManifest.xml`；校验指纹在官网 `/.well-known/assetlinks.json`）。
+> - 登录会话：`Supabase.initialize` 显式 `autoRefreshToken/persistSession`；`AuthGate` 启动 `refreshSession()` 滑动重置（服务端 Inactivity timeout=30 天）。
+> - ⚠️ `pubspec.yaml` 的 `+N`（=Android versionCode）**必须随发版单调递增**（v0.1.3/v0.1.4 曾 `+1` 致 versionCode=1 < v0.1.2 的 3，覆盖安装被拒）。当前最大=3，新版本须 ≥+4（v0.1.5=+4）。
 
 ## 配置
 

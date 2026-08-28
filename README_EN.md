@@ -124,7 +124,7 @@ Product landing site: [https://j-nify.arr2018.dpdns.org](https://j-nify.arr2018.
 ## CI/CD & releases
 
 - ✅ **CI gate** (`.github/workflows/ci.yml`): on push / PR, parallel checks —— backend `npm test` + typecheck, frontend `flutter analyze` + `flutter test`.
-- 📦 **Frontend auto build & release** (`.github/workflows/release-frontend.yml`): trigger on tag `vX.Y.Z`, verify the tag matches `frontend/pubspec.yaml`'s version, build Android APK/AAB (ubuntu) and publish a GitHub Release; iOS archive (xcarchive, macos). `SUPABASE_URL/SUPABASE_ANON_KEY` injected into the build via GH Secrets (dart-define). See [`docs/devops/release.md`](docs/devops/release.md).
+- 📦 **Frontend auto build & release** (`.github/workflows/release-frontend.yml`): trigger on tag `vX.Y.Z`, verify the tag matches `frontend/pubspec.yaml`'s version, build Android APK/AAB (ubuntu, **fixed release-keystore signed**), and publish a GitHub Release; iOS archive (xcarchive, macos, unsigned — needs Apple cert). `SUPABASE_URL/SUPABASE_ANON_KEY` injected into the build via GH Secrets (dart-define). ⚠️ The `+N` in `pubspec.yaml` (= Android `versionCode`) must strictly increase per release (a decrease once blocked overlay installs); see [`docs/devops/release.md`](docs/devops/release.md).
 - 🚢 **Backend deploy** (`.github/workflows/deploy-backend.yml`): on push to main (backend/**) auto `wrangler deploy`; the single prod backend Base URL = **`https://jnify.williamhvollita.dpdns.org`**.
 - 📧 **Email & SMTP** (Supabase custom SMTP, j_nify@yeah.net): live (confirm-email on); templates in [`docs/devops/smtp.md`](docs/devops/smtp.md).
 - 🔐 **Secrets registry**: all prod secrets live in GitHub Actions Secrets / Cloudflare Worker Secrets / Supabase; no plaintext secrets in the repo; see [`docs/devops/SECRETS_REGISTRY.md`](docs/devops/SECRETS_REGISTRY.md).
@@ -132,6 +132,7 @@ Product landing site: [https://j-nify.arr2018.dpdns.org](https://j-nify.arr2018.
 ## Roadmap
 
 - ✅ **M0 Skeleton** — capture → drift → manual window → three-option loop (**v0.1.4 released**; Android packages in GitHub Releases; v0.1.0 → v0.1.1 fixed the black-screen startup: a missing `.env` caused `dotenv.load` to throw and `main` to crash; v0.1.2 fixed the missing `INTERNET` permission causing registration failure + fixed release signing for overlay updates; v0.1.3 brand copy unification; v0.1.4 the About version is now read at runtime via `package_info_plus`)
+- 🧑‍🤝‍🧑 **Accounts & Settings** (**v0.1.5 released**) — profile card on the "Me" page + a settings page (nickname/email/password); email confirmation/reset now calls back into the app via App Link (fixed the `localhost:3000` callback; App Link fingerprint is served at the site's `/.well-known/assetlinks.json`); login sessions last ≥30 days and slide-reset on each login; `HomeShell` wrapped in `SafeArea` to avoid the status bar/notch; "About"/"Privacy" sections are collapsed by default; fixed a versionCode downgrade that blocked overlay updates (see `docs/devops/release.md`「versionCode rule」).
 - ⏳ **M1 Signals** — calendar / weather / coarse location / usage + anti-nag red lines (signal ingestion ready; real data sources to be connected)
 - ⏳ **M2 Jennifer brain** — LLM multi-provider hot-reload model management (zero hardcoding on the deploy side)
 - ⏳ **M3 Gradual rollout** — 100–300 seed users + metrics dashboard

@@ -37,11 +37,15 @@ App Link / Universal Link 要「静默唤起 App」），必须让系统能从�
 - `website/public/.well-known/assetlinks.json`（Android）
 - `website/public/.well-known/apple-app-site-association`（iOS，无扩展名）
 
-两者目前是**占位值**，部署到 CF Pages 前必须替换为真实值：
+**当前状态（2026-08-28）**：
+- ✅ `assetlinks.json` 已填**真实** release 证书 SHA-256：`9d9018a5c2f5e2e64563ee3681a6b395f2e6ff9e387fda40172a0502a369d6b3`（取自已发布的固定签名包，与 v0.1.5 APK 证书一致）。**无需再改**，除非 release 签名证书轮换。
+- ⏳ `apple-app-site-association` 仍为**占位**（iOS 暂缓，待 Apple Team ID）；接入 iOS 时替换。
+
+下表为取值方法（证书轮换 / iOS 接入时用）：
 
 | 文件 | 占位 | 替换为 |
 | --- | --- | --- |
-| `assetlinks.json` | `REPLACE_WITH_RELEASE_SIGNING_CERT_SHA256` | release 签名证书的 SHA-256（见下「如何拿」） |
+| `assetlinks.json` | （已填，见上） | 证书轮换后才需改 |
 | `apple-app-site-association` | `REPLACE_WITH_APPLE_TEAM_ID` | Apple Developer Team ID |
 
 - **Android SHA-256**：release 用固定 keystore 签名（见 `docs/devops/release.md`）。在 CI/本机执行：

@@ -47,5 +47,6 @@ flutter run
 ## 验证清单
 
 - 注册 → 邮箱确认（生产 SMTP 已接，j_nify@yeah.net）→ 登录 → 录入 → 决策 → 登出。
+- 「我的」页改昵称走 `GET/PUT /v1/me/profile`（昵称非唯一）；邮箱/密码经 Supabase Auth，邮箱改需到新邮箱点确认链接（回调回 App，App Link，见 `docs/devops/email-callback.md`）。
 - 本地集成测试（可选）：`SUPABASE_URL/SUPABASE_ANON_KEY/SUPABASE_SERVICE_KEY/DATABASE_URL` 环境下
   `npx vitest run test/integration.test.ts`（5 用例：注册用 service key 建已确认用户再真实登录）。
