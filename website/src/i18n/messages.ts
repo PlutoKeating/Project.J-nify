@@ -16,11 +16,11 @@ export const messages: Messages = {
   'nav.lang': { zh: 'EN', en: '中' },
 
   // Hero
-  'hero.eyebrow': { zh: 'J-nify · Jennifer', en: 'J-nify · Jennifer' },
-  'hero.title': { zh: '不急，但我帮您盯着。', en: 'Not urgent — but I’ll keep an eye on it.' },
+  'hero.eyebrow': { zh: 'J-nify', en: 'J-nify' },
+  'hero.title': { zh: 'Jennifer 说：「不急，但我帮您盯着。」', en: 'Jennifer says: “Not urgent — but I’ll keep an eye on it.”' },
   'hero.sub': {
-    zh: '把「不急、但会忘」的小事交给 Jennifer。她不会催你，只会在真正顺手的那一刻，带着理由轻轻递到你面前。',
-    en: 'Hand the “not urgent, but easy to forget” things to Jennifer. She won’t nag — she only shows up at the moment that truly fits, with a reason.',
+    zh: '把「不急、但会忘」的小事交给她，她会在真正顺手的那一刻，轻轻提醒你。',
+    en: 'Hand the small things that aren’t urgent but easy to forget to her — she’ll gently remind you at the moment that truly fits.',
   },
   'hero.ctaPrimary': { zh: '把一件小事交给 Jennifer', en: 'Hand one small thing to Jennifer' },
   'hero.ctaSecondary': { zh: '了解怎么用', en: 'See how it works' },
