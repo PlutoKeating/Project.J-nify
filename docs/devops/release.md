@@ -22,8 +22,8 @@ git tag v0.1.0 && git push origin v0.1.0
 
 | 产物 | 用途 | Release 资产名 |
 | --- | --- | --- |
-| `app-release.apk` | Android 直接安装（未签名，侧载用） | `app-release.apk` |
-| `app-release.aab` | Google Play 上架（未签名 keystore，需先接入签名） | `app-release.aab` |
+| `app-release.apk` | Android 直接安装（**release keystore 签名**，v0.1.2 起；可覆盖更新） | `app-release.apk` |
+| `app-release.aab` | Google Play 上架（**release keystore 签名**） | `app-release.aab` |
 | `Runner.xcarchive` | iOS 归档（CI 运行内 Artifacts，**不挂 Release**；需 Apple 签名后分发） | — |
 
 > 前端构建在 `frontend/` 下运行；`upload-artifact@v4` 会自动**剥离共同根目录**——挂载到 Release 的通配须用被剥离后的相对结构（本次 v0.1.0 排坑后为 `android/flutter-apk/*.apk` 与 `android/bundle/release/*.aab`）。改路径前先 `unzip -l` 验证产物真实结构，避免反复重切 tag。
@@ -38,6 +38,9 @@ git tag v0.1.0 && git push origin v0.1.0
 6. **不要打断构建**：勿在 `flutter build`/gradle 运行中 kill 守护进程（会 assembleRelease 失败）；`/tmp FileAlreadyExistsException` 为良性告警；首次 release 构建较慢（R8）。
 7. **发布前确认 GH Secrets**：`SUPABASE_URL` / `SUPABASE_ANON_KEY` 缺失会让 release 包指向 localhost（登录必坏）。
 8. **`.env` 缺失导致启动黑屏（v0.1.1 修复）**：`main()` 里 `AppConfig.load()` → `dotenv.load('.env')` 默认 `isOptional: false`，而 release APK 无 `.env` 资产（pubspec 未声明 assets、`.env` 在 .gitignore）→ `load()` 抛 `FileNotFoundError` → `runApp` 未执行 → **完全黑屏**。修复：`dotenv.load(fileName: '.env', isOptional: true)` 静默回退到编译期默认值（`String.fromEnvironment` + 内置 prod Base URL）。回归测试：`frontend/test/app_config_test.dart`。
+9. **release 缺 `INTERNET` 权限致注册 DNS 失败（v0.1.2 修复）**：Flutter 默认模板只在 debug/profile manifest 声明 `INTERNET`，release 只合入 `src/main/AndroidManifest.xml` → release APK 无网络权限，任何网络请求（含 DNS 解析）立即失败（`Failed host lookup, errno=7`），与 WiFi/流量卡/代理无关、瞬间报错。修复=主清单声明 `<uses-permission android:name="android.permission.INTERNET"/>`；验证 `aapt dump permissions <apk>`。
+10. **release 必须固定签名 keystore（v0.1.2 修复）**：release 用 `signingConfigs.getByName("debug")` 时，CI 每次全新 runner 生成**不同** debug keystore → 相邻版本签名不一致 → Android 拒绝覆盖安装（提示"版本有问题无法更新"）。修复=固定 release keystore（secrets `ANDROID_KEYSTORE_BASE64/PASSWORD/ALIAS/KEY_PASSWORD`；`build.gradle.kts` 读环境变量，未配置回退 debug 保本地构建）。⚠️ 首次换签名版本需用户**卸载重装一次**，之后签名固定可覆盖更新。
+11. **GitHub Actions：`runner` 上下文不可用于 job 级 `env`（v0.1.2 踩坑）**：`jobs.<id>.env` 中写 `${{ runner.temp }}/...` 会致 workflow 解析失败（run 0s 失败、打 tag 不触发任何 run）。job 级 `env` 改用 `${{ github.workspace }}`（`runner` 仅 step 级可用）。改 workflow 后须重切 tag（见坑 5）。
 
 ## 当前签名状态（✅ 已接入固定 release 签名，v0.1.2 起）
 
@@ -64,7 +67,7 @@ git tag v0.1.0 && git push origin v0.1.0
 
 ## 回滚
 
-- GitHub Release 为不可变快照：删 tag → 修 → 打新 tag 重新发布（推荐升版本号 `v0.1.1`）。
+- GitHub Release 为不可变快照：删 tag → 修 → 打新 tag 重新发布（推荐升版本号，如 `v0.1.3`）。
 - 客户端回退：Release 页安装旧版；后端回滚 = 修复后 push main 重新部署（生产 URL 不变）。
 
 ## 相关文档

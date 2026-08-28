@@ -1,6 +1,6 @@
-# J-nify 项目交接文档（HANDOVER）— v0.1.0
+# J-nify 项目交接文档（HANDOVER）— v0.1.2
 
-> 更新：2026-08-27（v0.1.0 正式版发布日）。目的：让**新 session 可立即找回工作状态**。
+> 更新：2026-08-28（v0.1.2 发布日：修复 release 缺 INTERNET 权限 + 固定 release 签名）。目的：让**新 session 可立即找回工作状态**。
 > 权威信息源：`docs/compose/specs/2026-08-27-backend-replatform-supabase-design.md`、`docs/compose/plans/2026-08-27-backend-serverless-replatform.md`、`docs/devops/SECRETS_REGISTRY.md`（密钥台账）。
 > ⚠️ 仓库 **public**：本文不含任何密钥明文，只列「名称 + 存放位置」；真值在 GitHub Actions Secrets / CF Dashboard Worker secrets / 本机 `backend/.dev.vars`（gitignored）/ 密码管理器。
 
@@ -23,7 +23,7 @@
 
 ---
 
-## 2. 生产上线状态（v0.1.0）
+## 2. 生产上线状态（v0.1.2）
 
 | 能力 | 状态 | 说明 |
 |---|---|---|
@@ -33,8 +33,8 @@
 | **生产邮件** | ✅ | SMTP live：`smtp.yeah.net:465`、`j_nify@yeah.net`、sender `J-nify Jennifer`、`mailer_autoconfirm=false`（确认开启） |
 | 前端认证 | ✅ | 注册→邮箱确认→登录→登出→401 自动重登（gotrue 源码级验证） |
 | 前端 M0 缺口 | ✅ | Toast 收口（顶部 pill 2.2s + 后端文案）、rescue 按钮（后端 options 驱动）、分类/期限录入、护栏真实读写 |
-| **安装包** | ✅ | `frontend/build/app/outputs/flutter-apk/app-release.apk`（52.9MB，内置生产 Supabase 配置）；debug 包同目录 app-debug.apk |
-| CI/CD+部署 | ✅ | 三工作流全绿；push main 自动上线；**v0.1.0 正式发布流程运行中**（Release 将含 APK/AAB/ipa） |
+| **安装包** | ✅ | v0.1.2 Release：`app-release.apk` + `app-release.aab`（52.9MB，**release keystore 签名**，内置生产 Supabase 配置 + INTERNET 权限） |
+| CI/CD+部署 | ✅ | 三工作流全绿；push main 自动上线；tag `v0.1.2` → Release（Android APK/AAB 固定签名 + iOS xcarchive） |
 | 密钥与文档 | ✅ | GH Secrets（9 项）/ CF Worker secrets（SUPABASE_URL/SERVICE_KEY）/ 台账 / 本 HANDOVER 同步 |
 
 ---
@@ -103,12 +103,12 @@ git tag v<pubspec 版本> && git push origin v<tag>   # 触发 Release 工作流
 
 ---
 
-## 8. 剩余工作（均非 v0.1.0 阻塞）
+## 8. 剩余工作（均非 v0.1.2 阻塞）
 
-1. **真机冒烟**（用户）：侧载 `app-release.apk` → 注册（收确认邮件）→ 确认 → 登录 → 录入 → 决策 → 登出。
+1. **真机冒烟**（用户）：侧载 `app-release.apk`（**v0.1.2 起从旧版升级需先卸载**）→ 注册（收确认邮件）→ 确认 → 登录 → 录入 → 决策 → 登出。
 2. 邮件模板美化（可用 smtp.md 内 HTML）。
-3. Android 商店签名 keystore（侧载不需）；iOS 发布签名（需 macOS + 开发者账号）。
-4. 文档打磨：frontend/docs 同步认证/M0（此前评审 Minor）；`SPEC.md:674`/`API.md` 的 decision `do→now` 修正（T12 计划项）；app_config Supabase 配置 fail-fast（T12 计划项）。
+3. ~~Android 商店签名 keystore~~（✅ 已接入 v0.1.2：固定 release keystore，支持覆盖更新）；iOS 发布签名（需 macOS + 开发者账号，待接）。
+4. 文档打磨：`SPEC.md:674`/`API.md` 的 decision `do→now` 修正（T12 计划项）。（frontend/docs 已同步 v0.1.2 要点；app_config 采用 `isOptional` 回退方案，fail-fast 计划项取消）
 5. 质量硬化测试批次（T3.16）：audit 单测、rate-limit 过期测试、window-engine 边界、escalation 同日窗口/空回落、brain 空白标题、decision 精确文案+effectMetrics。
 6. 验收报告（T15，docs/compose/reports/）。
 7. M1 信号源（日历/天气/位置/使用状态真实采集）、真实推送通道（FCM/APNs，Nudge 已落库未推送）、M2 LLM 接线（当前 brain 恒模板降级；用户要求多供应商热重载模型管理组件，部署侧零硬编码）。
@@ -119,9 +119,11 @@ git tag v<pubspec 版本> && git push origin v<tag>   # 触发 Release 工作流
 
 - **不要在构建中 kill Gradle 守护进程**（曾致 assembleRelease 失败）；`/tmp FileAlreadyExistsException` 是良性警告。
 - 子代理环境多次崩溃/挂死：判定卡死先看进程级证据（ps 里 gradle/java/dart 是否在跑），再 cancel+重派；任务树记得清理重复项（曾有 T5/T8 重复）。
-- Clash 开启时 SSH（ssh.github.com:443）不通：一律用 HTTPS 推送（已配 workflow scope）。
+- Clash 开启时 SSH（ssh.github.com:443）不通：一律用 HTTPS 推送（已配 workflow scope）。本机 remote 仍为 SSH，可用 `TOKEN=$(gh auth token); git push "https://x-access-token:${TOKEN}@github.com/PlutoKeating/Project.J-nify.git" <ref>` 临时走 HTTPS（不改配置）。
+- 本机 Clash fake-ip 劫持全部 UDP:53（任意 DNS 服务器都返回 198.18.0.0/15 段）：「域名能否解析」诊断必须走 **DoH**（`https://cloudflare-dns.com/dns-query?name=X&type=A` / `https://dns.google/resolve?name=X` / `https://223.5.5.5/resolve?name=X`），本机 nslookup/dig/原生 UDP 查询结果不可信。
+- 排查移动端 DNS 类报错（`Failed host lookup, errno=7`）先排除 app 侧再谈网络：从 APK 提取 `lib/<abi>/libapp.so` → `strings | rg "supabase\.co"` 字节级确认注入 URL 无隐藏字符（尾随换行等）；再 DoH 公网解析 + 服务端 `curl -w "%{http_code}"` 健康检查。注意「同一 WiFi 电脑能访问 ≠ 手机能访问」：电脑可能走代理，需确认对比环境一致。
 - 沙箱直连 Supabase :5432 被黑洞：用 pooler `:6543`；本地 node postgres.js 正常。
-## 10. 发布与 CI/CD 已踩坑（补充记录，2026-08-27 v0.1.0）
+## 10. 发布与 CI/CD 已踩坑（补充记录，v0.1.0 起）
 
 - **upload-artifact@v4 会剥离共同根目录**：`frontend/build/app/outputs/...` 上传后内容为 `flutter-apk/...` + `bundle/release/...`；Release 挂载与下载解压后的结构必须按**真实产物结构**写（验 ZIP 再改，勿盲试）。
 - **`--no-codesign` 只产 xcarchive**（无 ipa）；Release 现只挂 Android 产物，iOS 归档留在 CI Artifacts。
@@ -135,3 +137,4 @@ git tag v<pubspec 版本> && git push origin v<tag>   # 触发 Release 工作流
   - **注册报 `Failed host lookup (errno=7)`**：根因=`src/main/AndroidManifest.xml` **缺 `INTERNET` 权限**（Flutter 仅 debug/profile manifest 默认带该权限，release 只合入 main 清单）→ release APK 无网络权限，任何网络请求（含 DNS）立即失败、与 WiFi/卡/代理无关、瞬间报错。修复=主清单加 `<uses-permission android:name="android.permission.INTERNET"/>`。
   - **APK 无法覆盖更新**：根因=v0.1.0 与 v0.1.1 由**不同的 debug keystore 签名**（CI 每次全新 runner 自动生成新 keystore）→ 签名不一致被 Android 拒绝。修复=固定 release keystore 签名（secrets `ANDROID_KEYSTORE_BASE64` 等 4 项，v0.1.2 起签名一致可覆盖更新）。⚠️ 从旧版（debug 签名）升级到首个签名版 v0.1.2 **仍须卸载重装一次**，后续版本正常覆盖。
   - **教训**：Flutter 网络 app 必须在**主** AndroidManifest 显式声明 `INTERNET`，不要依赖 debug/profile manifest；release 签名务必固定 keystore，且首次发布签名需长期保留/备份。
+  - **GitHub Actions job 级 `env` 不可用 `runner` 上下文（v0.1.2 踩坑）**：`jobs.<id>.env` 写 `${{ runner.temp }}/...` 致 workflow 解析失败（run 0s failure、tag 不触发任何 run）；job 级 env 改用 `${{ github.workspace }}`（`runner` 仅 step 级可用）。

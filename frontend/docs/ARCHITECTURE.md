@@ -30,4 +30,5 @@ APP_ENV=development
 API_TIMEOUT=15
 ```
 
-> 发布构建：`SUPABASE_URL/SUPABASE_ANON_KEY` 由 CI 以 dart-define 注入（GitHub Secrets），release 包开箱即用。
+> 发布构建：`SUPABASE_URL/SUPABASE_ANON_KEY` 由 CI 以 dart-define 注入（GitHub Secrets），release 包开箱即用（`AppConfig.load()` 用 `isOptional:true` 读 `.env`，缺失静默回退 dart-define/内置默认值——避免 release 无 `.env` 资产时抛异常黑屏）。
+> 平台层要求（v0.1.2 起）：主 `AndroidManifest.xml` 声明 `INTERNET` 权限（release 只合入 main 清单）；release 构建用**固定 keystore 签名**（环境变量注入，未配置回退 debug），保证版本间签名一致可覆盖安装更新。

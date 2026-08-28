@@ -15,9 +15,14 @@ flutter run
 
 ```sh
 flutter analyze    # 0 issues
-flutter test       # 7 用例全绿（登录/注册表单、HomeShell、MeScreen 登出、焦点卡 options）
+flutter test       # 8 用例全绿（登录/注册表单、HomeShell、MeScreen 登出、焦点卡 options、AppConfig .env 缺失回退）
 flutter build apk --release --dart-define=SUPABASE_URL=... --dart-define=SUPABASE_ANON_KEY=...   # 出手装包
 ```
+
+> 发布构建要点（v0.1.2 起）：
+> - **主 `AndroidManifest.xml` 必须声明 `INTERNET` 权限**（Flutter 仅 debug/profile manifest 默认带，release 只合入 main 清单；缺失会导致 release 包任何网络请求立即失败——曾致注册报 `Failed host lookup (errno=7)`）。
+> - **release 签名固定 keystore**：CI 经 secrets `ANDROID_KEYSTORE_BASE64/PASSWORD/ALIAS/KEY_PASSWORD` 注入（`build.gradle.kts` 读环境变量，未配置回退 debug）。固定签名是 APK 覆盖安装更新的前提（曾因每次 CI runner 生成的 debug keystore 不同导致无法覆盖更新）。
+> - 本地构建验证签名：`apksigner verify --print-certs <apk>`；验证权限：`aapt dump permissions <apk>`。
 
 ## 配置
 

@@ -21,3 +21,9 @@ frontend/
 ```
 
 相关文档：[ARCHITECTURE.md](ARCHITECTURE.md)、[QUICK_START.md](QUICK_START.md)；发布流程见 `docs/devops/release.md`。
+
+## 发布/打包要点（v0.1.2 起）
+
+- **主 `AndroidManifest.xml` 声明 `INTERNET` 权限**：Flutter 默认只在 debug/profile manifest 带该权限，release 只合入 main 清单；缺失 → release 包无网络（注册/登录报 `Failed host lookup`）。
+- **固定 release 签名**：`build.gradle.kts` 从环境变量读 keystore（`ANDROID_KEYSTORE_PATH/PASSWORD/ALIAS/KEY_PASSWORD`，CI 经 GH Secrets 注入；未配置回退 debug）。签名固定才支持 APK 覆盖安装更新。
+- `.env` 为可选（`isOptional:true`）：release 无 `.env` 资产时回退 dart-define/内置生产默认值。
