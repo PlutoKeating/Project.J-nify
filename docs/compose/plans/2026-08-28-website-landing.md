@@ -1,5 +1,10 @@
 # J-nify 官网落地页 Implementation Plan
 
+> [!NOTE]
+> This document may not reflect the current implementation.
+> See the final report for up-to-date state:
+> [Final Report](../reports/website-landing.md)
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use compose:subagent (recommended) or compose:execute to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** 在 `website/` 构建一个移动优先、中英双语、三页的 J-nify 官网（React Router + Tailwind v4），下载页实时从 GitHub Release 拉取最新版本，适配 Cloudflare Pages（主，域名 `https://j-nify.arr2018.dpdns.org`）与 GitHub Pages（备，不公开、域名不入文档）。

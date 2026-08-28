@@ -1,5 +1,10 @@
 # J-nify 官网落地页设计 Spec
 
+> [!NOTE]
+> This document may not reflect the current implementation.
+> See the final report for up-to-date state:
+> [Final Report](../reports/website-landing.md)
+
 ## [S1] 背景与目标
 
 为 **J-nify / Jennifer**（一款「把「不急但会忘」的事交给女秘书，等真正顺手的时机才出现」的低打扰行动秘书 App）构建完整官网落地页。
