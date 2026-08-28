@@ -1,0 +1,76 @@
+# 官网部署（Cloudflare Pages，CI 直发，不依赖 git 集成）
+# 触发：push main（website/** 或本工作流变更）+ 手动。
+# 项目名：优先取仓库 Variables PAGES_PROJECT_NAME；未设置则调用 CF API 自动识别第一个 Pages 项目。
+name: Deploy Website (Cloudflare Pages)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - website/**
+      - .github/workflows/deploy-website.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Build & deploy website to Pages
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: website
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: website/package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Detect Pages project
+        id: pages
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          PAGES_PROJECT_NAME: ${{ vars.PAGES_PROJECT_NAME }}
+        run: |
+          if [ -n "$PAGES_PROJECT_NAME" ]; then
+            echo "project=$PAGES_PROJECT_NAME" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          curl -sS -m 30 "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects" \
+            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" > /tmp/pages.json
+          python3 - <<'PY'
+          import json
+          try:
+              d = json.load(open('/tmp/pages.json'))
+              names = [p.get('name') for p in (d.get('result') or []) if p.get('name')]
+          except Exception:
+              names = []
+          print('names=' + ','.join(names))
+          print('first=' + (names[0] if names else ''))
+          PY
+
+      - name: Deploy to Pages
+        run: |
+          PROJ="${{ steps.pages.outputs.project }}"
+          if [ -z "$PROJ" ] && [ -f /tmp/pages.json ]; then
+            PROJ="$(python3 -c 'import json;d=json.load(open("/tmp/pages.json"));r=d.get("result") or [];print(r[0]["name"] if r else "")')"
+          fi
+          if [ -z "$PROJ" ]; then
+            echo "::error::未能自动识别 Pages 项目名，请在仓库 Settings → Variables 配置 PAGES_PROJECT_NAME 后重试"
+            exit 1
+          fi
+          npx wrangler pages deploy dist --project-name "$PROJ" --branch main
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
