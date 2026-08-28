@@ -1,0 +1,32 @@
+import { describe, it, expect } from 'vitest';
+import { render, screen } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
+import { LangProvider } from '../src/i18n';
+import App from '../src/App';
+
+function renderApp(path = '/') {
+  return render(
+    <MemoryRouter initialEntries={[path]}>
+      <LangProvider>
+        <App />
+      </LangProvider>
+    </MemoryRouter>,
+  );
+}
+
+describe('App routing', () => {
+  it('renders header wordmark on all routes', () => {
+    renderApp('/');
+    expect(screen.getByLabelText('J-nify')).toBeInTheDocument();
+  });
+
+  it('resolves the features route', () => {
+    renderApp('/features');
+    expect(screen.getByText(/TODO features/)).toBeInTheDocument();
+  });
+
+  it('resolves the download route', () => {
+    renderApp('/download');
+    expect(screen.getByText(/TODO download/)).toBeInTheDocument();
+  });
+});
