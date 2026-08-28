@@ -111,6 +111,9 @@ LICENSE        AGPL-3.0
 - 🚀 [`docs/QUICK_START.md`](docs/QUICK_START.md) —— 快速开始
 - 🗂️ [`docs/HANDOVER.md`](docs/HANDOVER.md) —— 项目状态交接（本仓库最新实现/部署/运维要点）
 - 📋 [`docs/DECISION_QUESTIONNAIRE.md`](docs/DECISION_QUESTIONNAIRE.md) —— 产品决策问卷（v0.1.5 全链路审视汇总，待人工逐条填写）
+- 📌 [`docs/DECISION_REGISTER.md`](docs/DECISION_REGISTER.md) —— 决策定案登记（权威定案 + 缺口登记 + 凭据指引）
+- 🗺️ [`docs/compose/plans/2026-08-29-v020-m0.5-m1-implementation.md`](docs/compose/plans/2026-08-29-v020-m0.5-m1-implementation.md) —— v0.2.0 实施计划
+- 🕳️ [`docs/GAPS.md`](docs/GAPS.md) —— 缺口登记（暂不实现，条件成熟时补齐）
 
 ## 官网
 
@@ -132,11 +135,12 @@ LICENSE        AGPL-3.0
 
 ## 路线图
 
-- ✅ **M0 骨架** — 录入 → 漂浮 → 手动窗口 → 三选项闭环（**v0.1.4 已发布**，Android 安装包见 GitHub Releases；v0.1.0 → v0.1.1 修复启动黑屏：`.env` 缺失时 `dotenv.load` 抛异常致 `main` 崩溃；v0.1.2 修复 release 缺 `INTERNET` 权限致注册失败 + 固定 release 签名支持覆盖安装更新；v0.1.3 品牌文案统一；v0.1.4 版本显示改为 `package_info_plus` 运行时读取）
-- 🧑‍🤝‍🧑 **账户与设置**（**v0.1.5 已发布**） — 「我的」页资料卡 + 设置页（改昵称/邮箱/密码）；邮件确认/重置回调用 App Link 深链（修复 `localhost:3000` 回调，App Link 校验指纹见官网 `/.well-known/assetlinks.json`）；登录会话 ≥30 天随登录滑动重置；`HomeShell` SafeArea 避开刘海/状态栏；「隐私说明」「关于」默认折叠；修复 versionCode 降级导致的覆盖安装被拒（详见 `docs/devops/release.md`「版本号规则」）。
-- ⏳ **M1 信号** — 日历 / 天气 / 粗粒度位置 / 使用状态 + 频控红线（信号摄入已可；真实数据源待接）
-- ⏳ **M2 Jennifer 大脑** — LLM 多供应商热重载模型管理组件（部署侧零硬编码要求）
-- ⏳ **M3 灰度** — 100–300 种子用户 + 指标看板
+- ✅ **M0 骨架**（**v0.1.x 已发布**） — 录入 → 漂浮 → 手动窗口 → 四选项闭环；账户/设置/邮件深链/会话 30 天（v0.1.5）。
+- 🚧 **M0.5 + M1（v0.2.0 实施中，2026-08-29）** — 本地提醒执行层（本地通知 + 别再提）、四信号源（屏幕使用/系统日历/天气/位置，本地处理）、本地窗口引擎、离线队列、自然语言对话（Jennifer agent harness）、admin 管理面板（LLM 多 provider 热加载 + 指标看板 + 告警）、提醒节奏策略、匿名指标与闭环率。
+- ⏳ **M2 Jennifer 大脑深化** — 多供应商热重载模型管理已具备（admin 面板）；话术/拆解/兜底草稿的深度编排与模型成本治理。
+- ⏳ **M3 灰度** — 指标看板已具备（admin 面板）；种子用户招募与分发后续进行。
+
+> **功能状态标注规范（H2）**：✅ 已发布 · 🚧 进行中 · ⏳ 规划中。只有已发布能力进入官网正文；规划中能力只进路线图。详见 [`docs/DECISION_REGISTER.md`](docs/DECISION_REGISTER.md)。
 
 ## 开源协议
 

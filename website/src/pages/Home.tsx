@@ -41,6 +41,7 @@ export default function Home() {
           </Link>
         </div>
         <p className="mt-5 text-xs text-mute">{t('hero.trust', lang)}</p>
+        <p className="mx-auto mt-4 max-w-xl text-xs leading-relaxed text-mute">{t('home.statusLine', lang)}</p>
 
         {/* 签名元素：Nudge 焦点卡 */}
         <div className="mt-14 text-left">

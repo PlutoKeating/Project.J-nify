@@ -131,11 +131,12 @@ Product landing site: [https://j-nify.arr2018.dpdns.org](https://j-nify.arr2018.
 
 ## Roadmap
 
-- ✅ **M0 Skeleton** — capture → drift → manual window → three-option loop (**v0.1.4 released**; Android packages in GitHub Releases; v0.1.0 → v0.1.1 fixed the black-screen startup: a missing `.env` caused `dotenv.load` to throw and `main` to crash; v0.1.2 fixed the missing `INTERNET` permission causing registration failure + fixed release signing for overlay updates; v0.1.3 brand copy unification; v0.1.4 the About version is now read at runtime via `package_info_plus`)
-- 🧑‍🤝‍🧑 **Accounts & Settings** (**v0.1.5 released**) — profile card on the "Me" page + a settings page (nickname/email/password); email confirmation/reset now calls back into the app via App Link (fixed the `localhost:3000` callback; App Link fingerprint is served at the site's `/.well-known/assetlinks.json`); login sessions last ≥30 days and slide-reset on each login; `HomeShell` wrapped in `SafeArea` to avoid the status bar/notch; "About"/"Privacy" sections are collapsed by default; fixed a versionCode downgrade that blocked overlay updates (see `docs/devops/release.md`「versionCode rule」).
-- ⏳ **M1 Signals** — calendar / weather / coarse location / usage + anti-nag red lines (signal ingestion ready; real data sources to be connected)
-- ⏳ **M2 Jennifer brain** — LLM multi-provider hot-reload model management (zero hardcoding on the deploy side)
-- ⏳ **M3 Gradual rollout** — 100–300 seed users + metrics dashboard
+- ✅ **M0 Skeleton** (**v0.1.x released**) — capture → drift → manual window → four-choice loop; accounts/settings, email deep links, 30-day sessions (v0.1.5).
+- 🚧 **M0.5 + M1 (v0.2.0, in progress, 2026-08-29)** — local execution layer (local notifications + "never again"), four signal sources (screen usage / system calendar / weather / location, processed locally), local window engine, offline queue, natural-language chat (Jennifer agent harness), admin panel (hot-reloadable multi-provider LLM + metrics dashboard + alerts), reminder rhythm policies, anonymous metrics & closure rate.
+- ⏳ **M2 Jennifer brain deepening** — multi-provider hot-reload model management is in place (admin panel); deeper orchestration for copy/decomposition/rescue drafts and model-cost governance.
+- ⏳ **M3 Gradual rollout** — metrics dashboard is in place (admin panel); seed-user recruiting and distribution later.
+
+> **Status badges (H2)**: ✅ shipped · 🚧 in progress · ⏳ planned. Only shipped capabilities appear in marketing copy; planned ones live on the roadmap. See [`docs/DECISION_REGISTER.md`](docs/DECISION_REGISTER.md).
 
 ## License
 

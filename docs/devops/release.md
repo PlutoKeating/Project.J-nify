@@ -53,7 +53,8 @@ git tag v0.1.0 && git push origin v0.1.0
 
 ## 当前签名状态（✅ 已接入固定 release 签名，v0.1.2 起）
 
-> 当前最新版本：**v0.1.5**（待发布；自 v0.1.2 起均为固定 release keystore 签名，可覆盖安装更新）。App Link 校验指纹（`website/public/.well-known/assetlinks.json`）取自该固定 release 证书：`9d9018a5…369d6b3`。
+> 当前最新版本：**v0.1.5**（已发布，2026-08-28；自 v0.1.2 起均为固定 release keystore 签名，可覆盖安装更新）。App Link 校验指纹（`website/public/.well-known/assetlinks.json`）取自该固定 release 证书：`9d9018a5…369d6b3`。
+> 下一版：**v0.2.0**（M0.5+M1，实施中，versionCode 须 ≥ `+5`）。
 
 - Android：**固定 release keystore 签名**（secrets：`ANDROID_KEYSTORE_BASE64` / `ANDROID_KEYSTORE_PASSWORD` / `ANDROID_KEY_ALIAS` / `ANDROID_KEY_PASSWORD`）。**从 v0.1.2 起所有版本签名一致，可覆盖安装更新**；⚠️ 但因 v0.1.0/v0.1.1 为 debug 签名（每次 CI runner 各不相同），**从旧版升级到首个签名版（v0.1.2）仍需卸载重装一次**。
 - iOS：无签名，不可装真机；需 Apple Developer 证书/公证（接入步骤见下）。

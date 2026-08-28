@@ -3,7 +3,13 @@ import Section from '../components/Section';
 import ScenarioCard from '../components/ScenarioCard';
 import { t, useLang } from '../i18n';
 
-const PILLARS = ['capture', 'window', 'decision', 'guardrail', 'memory'] as const;
+const PILLARS = [
+  { key: 'capture', status: 'status.live' },
+  { key: 'window', status: 'status.inprogress' },
+  { key: 'decision', status: 'status.live' },
+  { key: 'guardrail', status: 'status.live' },
+  { key: 'memory', status: 'status.planned' },
+] as const;
 const STEPS = [1, 2, 3, 4, 5] as const;
 
 const CASES = [
@@ -31,12 +37,18 @@ export default function Features() {
       <Section title={t('features.pillars.title', lang)}>
         <ul className="grid gap-4 sm:grid-cols-2">
           {PILLARS.map((p) => (
-            <li key={p} className="rounded-3xl border border-line bg-card p-6">
-              <h3 className="text-lg font-extrabold text-ink">{t(`features.pillar.${p}`, lang)}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-sub">{t(`features.pillar.${p}D`, lang)}</p>
+            <li key={p.key} className="rounded-3xl border border-line bg-card p-6">
+              <h3 className="flex flex-wrap items-center gap-2 text-lg font-extrabold text-ink">
+                {t(`features.pillar.${p.key}`, lang)}
+                <span className="rounded-full bg-accent-soft px-2 py-0.5 text-[10px] font-semibold text-accent">
+                  {t(p.status, lang)}
+                </span>
+              </h3>
+              <p className="mt-2 text-sm leading-relaxed text-sub">{t(`features.pillar.${p.key}D`, lang)}</p>
             </li>
           ))}
         </ul>
+        <p className="mt-4 text-xs text-mute">{t('features.cases.note', lang)}</p>
       </Section>
 
       {/* 怎么用 */}

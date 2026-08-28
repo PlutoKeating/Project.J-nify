@@ -21,10 +21,16 @@ export default function Footer() {
           <Link to="/download" className="hover:text-accent">
             {t('nav.download', lang)}
           </Link>
+          <Link to="/privacy" className="hover:text-accent">
+            {t('footer.privacy', lang)}
+          </Link>
           <a href={PROD_DOMAIN} className="hover:text-accent" translate="no">
             {PROD_DOMAIN}
           </a>
         </div>
+        <p className="mt-3 text-[11px] text-mute" translate="no">
+          {t('footer.attribution', lang)}
+        </p>
         <p className="mt-6 flex flex-wrap items-center gap-2 text-[11px] text-mute">
           <span>{t('footer.opensource', lang)}</span>
           <span aria-hidden="true">·</span>

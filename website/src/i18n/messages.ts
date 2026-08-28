@@ -138,6 +138,40 @@ export const messages: Messages = {
   'footer.opensource': { zh: '开源 · AGPL-3.0', en: 'Open source · AGPL-3.0' },
   'footer.slogan': { zh: '不急，但我帮您盯着。', en: 'Not urgent — but I’ll keep an eye on it.' },
   'footer.rights': { zh: 'J-nify · Jennifer 懂 P 人的 J 人助理', en: 'J-nify · Jennifer — a J-person assistant who understands P people' },
+  'footer.attribution': { zh: '天气数据：Weather by OpenWeather', en: 'Weather by OpenWeather' },
+  'footer.privacy': { zh: '隐私政策', en: 'Privacy' },
+
+  // v0.2.0 状态与合规
+  'status.live': { zh: '已发布', en: 'Live' },
+  'status.inprogress': { zh: '进行中', en: 'In progress' },
+  'status.planned': { zh: '规划中', en: 'Planned' },
+  'status.example': { zh: '示意，即将上线', en: 'Illustrative — coming soon' },
+  'home.statusLine': {
+    zh: '当前版本已提供：录入 → 漂浮 → 顺手窗口 → 四选一闭环；日历 / 天气 / 顺路 / 使用状态等信号与兜底动作正在规划中，将以路线图为准逐步上线。',
+    en: 'Available now: capture → drift → window → four-choice loop. Signal sources (calendar / weather / location / usage) and rescue actions are planned — see the roadmap.',
+  },
+
+  // 隐私政策页
+  'privacy.title': { zh: '隐私政策', en: 'Privacy Policy' },
+  'privacy.body1': {
+    zh: '原始信号（屏幕使用、日历内容、精确位置、天气上下文）只在您的设备本地处理，不上传。事项与决策记录加密传输并存储于云端，仅您本人可访问。',
+    en: 'Raw signals (screen usage, calendar content, precise location, weather context) are processed locally on your device and never uploaded. Items and decisions are encrypted in transit and stored in the cloud, accessible only to you.',
+  },
+  'privacy.body2': {
+    zh: '位置坐标在使用前会先模糊化（约 1 公里）；我们只使用城市/区域级信息。您可以在设置中随时删除全部数据并注销账户。',
+    en: 'Location coordinates are rounded (about 1 km) before use; only city/region-level info is used. You can delete all data and close your account anytime in Settings.',
+  },
+  'privacy.body3': {
+    zh: '天气数据由 OpenWeather 提供（免费商用许可，署名义务）。',
+    en: 'Weather data is provided by OpenWeather (free commercial license with attribution).',
+  },
+
+  // 深链回退页
+  'verify.title': { zh: '链接已失效', en: 'Link expired' },
+  'verify.body': {
+    zh: '该确认/重置链接已失效或过期。请回到 J-nify App 内重新发起（注册确认请重新注册，重置密码请在登录页重新发起）。',
+    en: 'This confirmation/reset link is invalid or expired. Please return to the J-nify app and start over.',
+  },
 
   // 功能详解页
   'features.hero.eyebrow': { zh: '功能详解', en: 'Features' },
@@ -171,6 +205,10 @@ export const messages: Messages = {
   'features.how.step5d': { zh: '现在做 / 晚点 / 算了 / 帮我兜底。', en: 'Do now / later / drop / cover.' },
 
   'features.cases.title': { zh: '完整用例：三个背景故事', en: 'Full use cases: three stories' },
+  'features.cases.note': {
+    zh: '场景卡片为示意：对应信号与兜底能力上线后逐步生效（见路线图）。',
+    en: 'Scenario cards are illustrative — the related signals and rescue actions go live progressively (see roadmap).',
+  },
 
   'features.roadmap.title': { zh: '路线图', en: 'Roadmap' },
   'features.m0': { zh: 'M0 骨架', en: 'M0 Skeleton' },
