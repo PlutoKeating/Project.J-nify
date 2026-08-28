@@ -51,6 +51,12 @@ jobs:
     defaults:
       run:
         working-directory: frontend
+    # 固定 release 签名：所有版本用同一 keystore，保证 APK 可覆盖安装更新。
+    env:
+      ANDROID_KEYSTORE_PATH: ${{ runner.temp }}/jnify-release.jks
+      ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+      ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+      ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -63,6 +69,11 @@ jobs:
 
       - name: Install dependencies
         run: flutter pub get
+
+      - name: Write release keystore
+        run: |
+          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > "$ANDROID_KEYSTORE_PATH"
+          test -s "$ANDROID_KEYSTORE_PATH" || { echo "::error::keystore 解出为空，请检查 ANDROID_KEYSTORE_BASE64"; exit 1; }
 
       - name: Build release APK
         run: flutter build apk --release --dart-define=SUPABASE_URL=${{ secrets.SUPABASE_URL }} --dart-define=SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}

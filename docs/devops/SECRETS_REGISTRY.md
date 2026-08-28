@@ -14,7 +14,7 @@
 | `SUPABASE_SERVICE_KEY` | **后端 DB 访问（PostgREST，2026-08-27 起）** | CF Dashboard secrets（已存）+ 本机 `backend/.dev.vars`；**只进后端** | Dashboard / `wrangler secret put` 维护 |
 | `DATABASE_URL`（pooler 事务模式 :6543） | 仅迁移脚本/集成测试（node 侧 postgres.js），**无需进 CF Worker** | 本机 `backend/.dev.vars` + GH Actions 集成测试 env | `.dev.vars` 维护 |
 | `LLM_API_BASE/LLM_API_KEY/LLM_MODEL` | 预留 LLM 网关（空则模板降级） | CF Dashboard secrets（同上，暂空） | Dashboard 维护 |
-| Android 签名 keystore 及口令 | 前端 release APK/AAB 签名（Task 16 引入） | GitHub Actions Secrets（届时添加） | `gh secret set` |
+| Android 签名 keystore 及口令 | 前端 release APK/AAB 签名（v0.1.2 起固定签名，支持覆盖更新） | GitHub Actions Secrets：`ANDROID_KEYSTORE_BASE64` / `ANDROID_KEYSTORE_PASSWORD` / `ANDROID_KEY_ALIAS` / `ANDROID_KEY_PASSWORD`（已存）+ 本机 `~/.android/jnify-release.jks`（**不入库，务必备份**） | `gh secret set` |
 | 本地开发配置（dev 项目 URL/anon/连接串） | 本地 `wrangler dev`/测试 | `backend/.dev.vars`（gitignored） | 本机维护 |
 
 ## 轮换与泄露处置

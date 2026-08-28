@@ -39,18 +39,22 @@ git tag v0.1.0 && git push origin v0.1.0
 7. **发布前确认 GH Secrets**：`SUPABASE_URL` / `SUPABASE_ANON_KEY` 缺失会让 release 包指向 localhost（登录必坏）。
 8. **`.env` 缺失导致启动黑屏（v0.1.1 修复）**：`main()` 里 `AppConfig.load()` → `dotenv.load('.env')` 默认 `isOptional: false`，而 release APK 无 `.env` 资产（pubspec 未声明 assets、`.env` 在 .gitignore）→ `load()` 抛 `FileNotFoundError` → `runApp` 未执行 → **完全黑屏**。修复：`dotenv.load(fileName: '.env', isOptional: true)` 静默回退到编译期默认值（`String.fromEnvironment` + 内置 prod Base URL）。回归测试：`frontend/test/app_config_test.dart`。
 
-## 当前签名状态（⚠️ 无签名）
+## 当前签名状态（✅ 已接入固定 release 签名，v0.1.2 起）
 
-- Android：调试签名占位，**不可上架**，可侧载内测。
+- Android：**固定 release keystore 签名**（secrets：`ANDROID_KEYSTORE_BASE64` / `ANDROID_KEYSTORE_PASSWORD` / `ANDROID_KEY_ALIAS` / `ANDROID_KEY_PASSWORD`）。**从 v0.1.2 起所有版本签名一致，可覆盖安装更新**；⚠️ 但因 v0.1.0/v0.1.1 为 debug 签名（每次 CI runner 各不相同），**从旧版升级到首个签名版（v0.1.2）仍需卸载重装一次**。
 - iOS：无签名，不可装真机；需 Apple Developer 证书/公证（接入步骤见下）。
 
-## 签名接入（后续）
+> keystore 与口令**不入库**：keystore/口令仅存 GH Secrets + 本机 `~/.android/jnify-release.jks`（`jnify-ks-pass.txt`）。**请务必备份**——丢失将无法再对已发布版本做覆盖更新（只能换新签名，用户需重装）。
 
-### Android
-1. `keytool -genkey -v -keystore jnify-release.jks -alias jnify -keyalg RSA -keysize 2048 -validity 10000`（keystore 与口令**不入库**）。
-2. GH Secrets：`ANDROID_KEYSTORE_BASE64` / `ANDROID_KEYSTORE_PASSWORD` / `ANDROID_KEY_ALIAS` / `ANDROID_KEY_PASSWORD`。
-3. `frontend/android/app/build.gradle.kts` release 类型读环境变量签名；`release-frontend.yml` android job 加写 keystore+签名步骤。
-4. 更新台账与本文档签名状态。
+## 签名接入（Android 已完成；iOS 待接）
+
+### Android（✅ 已完成，v0.1.2 起生效）
+1. 本机生成：`keytool -genkey -v -keystore ~/.android/jnify-release.jks -alias jnify -keyalg RSA -keysize 2048 -validity 10000`（keystore 与口令**不入库**，本机 `~/.android/jnify-ks-pass.txt`）。
+2. GH Secrets 已设：`ANDROID_KEYSTORE_BASE64` / `ANDROID_KEYSTORE_PASSWORD` / `ANDROID_KEY_ALIAS` / `ANDROID_KEY_PASSWORD`。
+3. `frontend/android/app/build.gradle.kts` release 读环境变量签名（未配置时回退 debug，保证本地构建）；`release-frontend.yml` android job 解 keystore + 注入签名 env。
+4. 台账已更新，本文档签名状态改为「已接入」。
+
+> ⚠️ **备份 keystore**：`~/.android/jnify-release.jks` + `jnify-ks-pass.txt` 是长期签名资产。请备份到安全处；丢失将无法对已发布版本做覆盖更新，只能换新签名（老用户需重装）。
 
 ### iOS
 1. Apple Developer 建 App ID/证书（Distribution）/描述文件。

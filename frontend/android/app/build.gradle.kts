@@ -28,11 +28,27 @@ android {
         versionName = flutter.versionName
     }
 
+    signingConfigs {
+        // release 签名密钥从环境变量读取（CI 经 GH Secrets 注入；本地未配置则回退 debug）。
+        // 固定同一 keystore 保证版本间签名一致，支持 Android APK 覆盖安装更新。
+        create("release") {
+            val keystorePath = System.getenv("ANDROID_KEYSTORE_PATH")
+            if (keystorePath != null) {
+                storeFile = file(keystorePath)
+                storePassword = System.getenv("ANDROID_KEYSTORE_PASSWORD")
+                keyAlias = System.getenv("ANDROID_KEY_ALIAS")
+                keyPassword = System.getenv("ANDROID_KEY_PASSWORD")
+            }
+        }
+    }
+
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            // 已配置 release keystore 时用 release 签名；否则回退 debug（保证本地构建不失败）。
+            signingConfig = if (System.getenv("ANDROID_KEYSTORE_PATH") != null)
+                signingConfigs.getByName("release")
+            else
+                signingConfigs.getByName("debug")
         }
     }
 }

@@ -131,3 +131,7 @@ git tag v<pubspec 版本> && git push origin v<tag>   # 触发 Release 工作流
 - 发布前确认 GH Secrets `SUPABASE_URL/SUPABASE_ANON_KEY` 已设（release 包否则会指向 localhost、无法登录）。
 - v0.1.0 正式发布：GitHub Releases「J-nify v0.1.0」（Latest），资产 `app-release.apk`（52.9MB）+ `app-release.aab`（51.5MB）。
 - **v0.1.1 热修复（启动黑屏）**：v0.1.0 APK 安装后完全黑屏。根因=`AppConfig.load()` 中 `dotenv.load('.env')` 默认 `isOptional:false`，release 包无 `.env` 资产 → 抛 `FileNotFoundError` → `runApp` 未执行。修复=改 `isOptional:true` 回退编译期默认值；回归测试 `frontend/test/app_config_test.dart`；本机验证 8/8 测试通过、release APK 构建成功（dart-define 注入正确、无 localhost）。
+- **v0.1.2 修复（注册 DNS 失败 + 升级签名）**：
+  - **注册报 `Failed host lookup (errno=7)`**：根因=`src/main/AndroidManifest.xml` **缺 `INTERNET` 权限**（Flutter 仅 debug/profile manifest 默认带该权限，release 只合入 main 清单）→ release APK 无网络权限，任何网络请求（含 DNS）立即失败、与 WiFi/卡/代理无关、瞬间报错。修复=主清单加 `<uses-permission android:name="android.permission.INTERNET"/>`。
+  - **APK 无法覆盖更新**：根因=v0.1.0 与 v0.1.1 由**不同的 debug keystore 签名**（CI 每次全新 runner 自动生成新 keystore）→ 签名不一致被 Android 拒绝。修复=固定 release keystore 签名（secrets `ANDROID_KEYSTORE_BASE64` 等 4 项，v0.1.2 起签名一致可覆盖更新）。⚠️ 从旧版（debug 签名）升级到首个签名版 v0.1.2 **仍须卸载重装一次**，后续版本正常覆盖。
+  - **教训**：Flutter 网络 app 必须在**主** AndroidManifest 显式声明 `INTERNET`，不要依赖 debug/profile manifest；release 签名务必固定 keystore，且首次发布签名需长期保留/备份。
