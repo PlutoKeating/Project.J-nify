@@ -23,6 +23,7 @@ export interface Env {
   SMTP_PORT?: string;
   SMTP_USER?: string;
   SMTP_AUTH?: string;
+  TIANDITU_KEY?: string;
   DEBUG?: string;
   HYPERDRIVE?: { connectionString: string };
 }

@@ -4,7 +4,9 @@ import 'package:flutter/services.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
 
+import '../core/api/api_client.dart';
 import '../core/config/app_config.dart';
+import 'api_service.dart';
 
 /// 本地信号上下文（D5 定案：全部本地处理，不上传云端）。
 class LocalContext {
@@ -111,17 +113,9 @@ class SignalCollectors {
   }
 
   Future<String> _reverseGeocode(double lat, double lon) async {
-    final key = AppConfig.instance.tiandituKey;
-    if (key.isEmpty) return '';
     try {
-      final postStr = jsonEncode({'lon': lon, 'lat': lat, 'ver': 1});
-      final res = await http
-          .get(Uri.parse('https://api.tianditu.gov.cn/geocoder?postStr=$postStr&type=geocode&tk=$key'))
-          .timeout(const Duration(seconds: 10));
-      if (res.statusCode != 200) return '';
-      final data = jsonDecode(res.body) as Map<String, dynamic>;
-      final result = data['result'] as Map<String, dynamic>?;
-      return (result?['address'] as String?) ?? '';
+      final data = await ApiService(ApiClient.instance).reverseGeocode(lat, lon);
+      return (data['address'] as String?) ?? '';
     } catch (_) {
       return '';
     }

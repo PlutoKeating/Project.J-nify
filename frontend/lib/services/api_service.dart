@@ -118,6 +118,12 @@ class ApiService {
     return data as Map<String, dynamic>;
   }
 
+  /// 天地图逆地理编码（服务端代理；坐标已模糊化，仅返回城市/地址）
+  Future<Map<String, dynamic>> reverseGeocode(double lat, double lon) async {
+    final data = await _client.post('/v1/geo/reverse', body: {'lat': lat, 'lon': lon});
+    return data as Map<String, dynamic>;
+  }
+
   /// 匿名指标事件（G1）
   Future<dynamic> reportEvent(
     String eventType, {

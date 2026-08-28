@@ -8,5 +8,4 @@ class Env {
   static const supabaseUrl = 'SUPABASE_URL';
   static const supabaseAnonKey = 'SUPABASE_ANON_KEY';
   static const openWeatherApiKey = 'OPENWEATHER_API_KEY';
-  static const tiandituKey = 'TIANDITU_KEY';
 }

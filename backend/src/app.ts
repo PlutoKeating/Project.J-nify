@@ -16,6 +16,7 @@ import { llm } from './routes/llm';
 import { admin } from './routes/admin';
 import { jennifer } from './routes/jennifer';
 import { metrics } from './routes/metrics';
+import { geo } from './routes/geo';
 
 export type AppEnv = { Bindings: Env; Variables: { userId: string; db: Db } };
 
@@ -54,5 +55,6 @@ export function makeApp(env: Env): Hono<AppEnv> {
   app.route('/admin', admin);
   app.route('/v1/jennifer', jennifer);
   app.route('/v1/metrics', metrics);
+  app.route('/v1/geo', geo);
   return app;
 }

@@ -44,17 +44,12 @@ class AppConfig {
   static const defaultOpenWeatherApiKey =
       String.fromEnvironment('OPENWEATHER_API_KEY', defaultValue: '');
 
-  /// 天地图 Web 服务 Key（逆地理编码；坐标先模糊化再调用）。
-  static const defaultTiandituKey =
-      String.fromEnvironment('TIANDITU_KEY', defaultValue: '');
-
   String backendBaseUrl = prodBackendBaseUrl;
   String appEnv = 'development';
   int apiTimeoutSeconds = 15;
   String supabaseUrl = defaultSupabaseUrl;
   String supabaseAnonKey = defaultSupabaseAnonKey;
   String openWeatherApiKey = defaultOpenWeatherApiKey;
-  String tiandituKey = defaultTiandituKey;
 
   Future<void> load() async {
     // isOptional：发布构建没有 .env 资产（pubspec 未声明、.env 被 gitignore），
@@ -67,6 +62,5 @@ class AppConfig {
     supabaseUrl = dotenv.env[Env.supabaseUrl] ?? supabaseUrl;
     supabaseAnonKey = dotenv.env[Env.supabaseAnonKey] ?? supabaseAnonKey;
     openWeatherApiKey = dotenv.env[Env.openWeatherApiKey] ?? openWeatherApiKey;
-    tiandituKey = dotenv.env[Env.tiandituKey] ?? tiandituKey;
   }
 }

@@ -46,5 +46,5 @@ API_TIMEOUT=15
 
 > v0.2.0 新增环境变量（release 用 `--dart-define` 注入，本地写 gitignored `.env`）：
 > - `OPENWEATHER_API_KEY`（天气，免费可商用需署名 "Weather by OpenWeather"）
-> - `TIANDITU_KEY`（天地图逆地理编码，坐标先模糊化）
+> - 天地图 Key 为**服务端配置**（CF Secret `TIANDITU_KEY`，App 经 `POST /v1/geo/reverse` 代理调用，坐标二次模糊化，key 不打包进 APK）
 > 新依赖：flutter_local_notifications / flutter_timezone / timezone / permission_handler / geolocator / sqflite / shared_preferences / path。

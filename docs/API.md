@@ -22,6 +22,7 @@
 | PUT | `/v1/me/timezone` | 更新用户时区（IANA，如 `Asia/Shanghai`）；静默时段按该时区计算 |
 | POST | `/v1/jennifer/chat` | 与 Jennifer 对话：`{ message, history? }` → 自然语言事项 CRUD / 节奏策略 / 草稿，返回 `{ reply, toolResults, degraded }` |
 | POST | `/v1/metrics/events` | 匿名指标事件：`event_type ∈ capture/nudge_sent/nudge_opened/decision/rescue_action/complaint`（不含事项内容） |
+| POST | `/v1/geo/reverse` | 天地图逆地理编码代理（服务端 `TIANDITU_KEY`，坐标二次模糊化，仅返回城市/地址文本） |
 | GET | `/health` | 健康检查 |
 
 ### Admin 面板（浏览器 `/admin`，管理员登录）
