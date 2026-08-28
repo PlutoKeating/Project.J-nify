@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { LangProvider } from '../src/i18n';
@@ -15,6 +15,11 @@ function renderApp(path = '/') {
 }
 
 describe('App routing', () => {
+  beforeEach(() => {
+    // 下载页会触发 GitHub fetch；jsdom/Node 下避免真实网络请求
+    vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('offline'));
+  });
+
   it('renders header wordmark on all routes', () => {
     renderApp('/');
     expect(screen.getByLabelText('J-nify')).toBeInTheDocument();
@@ -32,6 +37,6 @@ describe('App routing', () => {
 
   it('resolves the download route', () => {
     renderApp('/download');
-    expect(screen.getByText(/TODO download/)).toBeInTheDocument();
+    expect(screen.getByText(/下载 J-nify/)).toBeInTheDocument();
   });
 });
