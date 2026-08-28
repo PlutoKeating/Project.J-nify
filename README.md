@@ -110,6 +110,7 @@ LICENSE        AGPL-3.0
 - 🔌 [`docs/API.md`](docs/API.md) —— REST API
 - 🚀 [`docs/QUICK_START.md`](docs/QUICK_START.md) —— 快速开始
 - 🗂️ [`docs/HANDOVER.md`](docs/HANDOVER.md) —— 项目状态交接（本仓库最新实现/部署/运维要点）
+- 📋 [`docs/DECISION_QUESTIONNAIRE.md`](docs/DECISION_QUESTIONNAIRE.md) —— 产品决策问卷（v0.1.5 全链路审视汇总，待人工逐条填写）
 
 ## 官网
 
