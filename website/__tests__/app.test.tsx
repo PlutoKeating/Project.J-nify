@@ -27,7 +27,7 @@ describe('App routing', () => {
 
   it('resolves the features route', () => {
     renderApp('/features');
-    expect(screen.getByText(/TODO features/)).toBeInTheDocument();
+    expect(screen.getByText(/Jennifer 会做什么/)).toBeInTheDocument();
   });
 
   it('resolves the download route', () => {
