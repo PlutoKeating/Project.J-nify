@@ -131,7 +131,7 @@ Product landing site: [https://j-nify.arr2018.dpdns.org](https://j-nify.arr2018.
 
 ## Roadmap
 
-- ✅ **M0 Skeleton** — capture → drift → manual window → three-option loop (**v0.1.2 released**; Android packages in GitHub Releases; v0.1.0 → v0.1.1 fixed the black-screen startup: a missing `.env` caused `dotenv.load` to throw and `main` to crash; v0.1.2 fixed the missing `INTERNET` permission causing registration failure + fixed release signing for overlay updates)
+- ✅ **M0 Skeleton** — capture → drift → manual window → three-option loop (**v0.1.4 released**; Android packages in GitHub Releases; v0.1.0 → v0.1.1 fixed the black-screen startup: a missing `.env` caused `dotenv.load` to throw and `main` to crash; v0.1.2 fixed the missing `INTERNET` permission causing registration failure + fixed release signing for overlay updates; v0.1.3 brand copy unification; v0.1.4 the About version is now read at runtime via `package_info_plus`)
 - ⏳ **M1 Signals** — calendar / weather / coarse location / usage + anti-nag red lines (signal ingestion ready; real data sources to be connected)
 - ⏳ **M2 Jennifer brain** — LLM multi-provider hot-reload model management (zero hardcoding on the deploy side)
 - ⏳ **M3 Gradual rollout** — 100–300 seed users + metrics dashboard

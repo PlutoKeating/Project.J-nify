@@ -7,6 +7,7 @@
 - **唯一版本来源**：`frontend/pubspec.yaml` 的 `version`（如 `0.1.0+1`；`+1` 为 Android build number）。
 - 发布 tag = `v` + 去 build number：`0.1.0+1` → `v0.1.0`。
 - 流水线第一步校验 tag 与 pubspec version 一致，**不一致即失败**。
+- **About us 版本显示**：前端用 `package_info_plus` 从已安装包运行时读取 `version+buildNumber`，升版**只需改 pubspec**，无需手动同步显示；`AppConfig.appVersion` 仅作读取失败时的回退默认。
 
 ## 触发
 
@@ -44,6 +45,8 @@ git tag v0.1.0 && git push origin v0.1.0
 
 ## 当前签名状态（✅ 已接入固定 release 签名，v0.1.2 起）
 
+> 当前最新版本：**v0.1.4**（2026-08-28 发布；自 v0.1.2 起均为固定 release keystore 签名，可覆盖安装更新）。
+
 - Android：**固定 release keystore 签名**（secrets：`ANDROID_KEYSTORE_BASE64` / `ANDROID_KEYSTORE_PASSWORD` / `ANDROID_KEY_ALIAS` / `ANDROID_KEY_PASSWORD`）。**从 v0.1.2 起所有版本签名一致，可覆盖安装更新**；⚠️ 但因 v0.1.0/v0.1.1 为 debug 签名（每次 CI runner 各不相同），**从旧版升级到首个签名版（v0.1.2）仍需卸载重装一次**。
 - iOS：无签名，不可装真机；需 Apple Developer 证书/公证（接入步骤见下）。
 
@@ -67,7 +70,7 @@ git tag v0.1.0 && git push origin v0.1.0
 
 ## 回滚
 
-- GitHub Release 为不可变快照：删 tag → 修 → 打新 tag 重新发布（推荐升版本号，如 `v0.1.3`）。
+- GitHub Release 为不可变快照：删 tag → 修 → 打新 tag 重新发布（推荐升版本号，如 `v0.1.5`）。
 - 客户端回退：Release 页安装旧版；后端回滚 = 修复后 push main 重新部署（生产 URL 不变）。
 
 ## 相关文档
