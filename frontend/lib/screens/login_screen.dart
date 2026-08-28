@@ -14,6 +14,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _email = TextEditingController();
   final _password = TextEditingController();
   bool _isSignUp = false;
+  bool _obscurePassword = true;
   String? _error;
   bool _busy = false;
 
@@ -95,12 +96,23 @@ class _LoginScreenState extends State<LoginScreen> {
                 const SizedBox(height: 12),
                 TextField(
                   controller: _password,
-                  obscureText: true,
+                  obscureText: _obscurePassword,
                   autofillHints: const [AutofillHints.password],
                   onSubmitted: (_) => _submit(),
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     labelText: '密码',
-                    border: OutlineInputBorder(),
+                    border: const OutlineInputBorder(),
+                    // 显示/隐藏明文小眼睛。
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        _obscurePassword
+                            ? Icons.visibility_off_outlined
+                            : Icons.visibility_outlined,
+                      ),
+                      tooltip: _obscurePassword ? '显示密码' : '隐藏密码',
+                      onPressed: () => setState(
+                          () => _obscurePassword = !_obscurePassword),
+                    ),
                   ),
                 ),
                 if (_error != null) ...[

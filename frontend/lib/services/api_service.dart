@@ -57,6 +57,18 @@ class ApiService {
     return data as Map<String, dynamic>;
   }
 
+  /// 当前用户资料（昵称/邮箱 email 由 Supabase Auth 提供，这里取 users.nickname）。
+  Future<Map<String, dynamic>> getProfile() async {
+    final data = await _client.get('/v1/me/profile');
+    return data as Map<String, dynamic>;
+  }
+
+  /// 更新昵称（用户名，非唯一）。
+  Future<Map<String, dynamic>> updateNickname(String nickname) async {
+    final data = await _client.put('/v1/me/profile', body: {'nickname': nickname});
+    return data as Map<String, dynamic>;
+  }
+
   Future<dynamic> postSignal(String type, Map<String, dynamic> payload) async {
     return _client.post('/v1/signals', body: {
       'signal_type': type,

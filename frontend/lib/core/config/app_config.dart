@@ -19,6 +19,14 @@ class AppConfig {
   /// 官网生产域名（landing page，Cloudflare Pages）。
   static const websiteUrl = 'https://j-nify.arr2018.dpdns.org';
 
+  /// App Link 域名（与官网一致）：供邮件确认/重置回调与 Deep Link 使用。
+  /// 该域名需在网站侧托管 `/.well-known/assetlinks.json`（Android）与
+  /// `/.well-known/apple-app-site-association`（iOS）以通过 App Link 验证。
+  static const appLinkHost = 'j-nify.arr2018.dpdns.org';
+
+  /// App Link 校验回调路径（Supabase 确认/重置邮件跳转回 App 的入口）。
+  static const appLinkVerify = 'https://$appLinkHost/auth/verify';
+
   /// App 版本，与 `pubspec.yaml` 的 `version` 保持一致（About us 展示失败时的回退值）。
   static const appVersion = '0.1.4+1';
 

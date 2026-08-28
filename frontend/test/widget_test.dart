@@ -52,6 +52,32 @@ void main() {
 
       expect(find.text('请填写邮箱和密码'), findsOneWidget);
     });
+
+    testWidgets('password field toggles visibility via the eye icon',
+        (tester) async {
+      await pumpLogin(tester);
+
+      final passwordField = tester.widget<TextField>(
+        find.widgetWithText(TextField, '密码'),
+      );
+      expect(passwordField.obscureText, isTrue);
+
+      await tester.tap(find.byIcon(Icons.visibility_off_outlined));
+      await tester.pump();
+      expect(
+        tester.widget<TextField>(find.widgetWithText(TextField, '密码'))
+            .obscureText,
+        isFalse,
+      );
+
+      await tester.tap(find.byIcon(Icons.visibility_outlined));
+      await tester.pump();
+      expect(
+        tester.widget<TextField>(find.widgetWithText(TextField, '密码'))
+            .obscureText,
+        isTrue,
+      );
+    });
   });
 
   group('HomeShell', () {
@@ -87,6 +113,35 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('退出登录'), findsOneWidget);
+      // 资料卡 + 设置入口 + 可折叠区块（默认折叠）
+      expect(find.byIcon(Icons.settings_outlined), findsOneWidget);
+      expect(find.text('未设置昵称'), findsOneWidget);
+      expect(find.byKey(const ValueKey('privacy')), findsOneWidget);
+      expect(find.byKey(const ValueKey('about')), findsOneWidget);
+    });
+
+    testWidgets('隐私说明/关于 J-nify 默认折叠，点击后展开', (tester) async {
+      tester.view.physicalSize = const Size(800, 1800);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await tester
+          .pumpWidget(const MaterialApp(home: Scaffold(body: MeScreen())));
+      await tester.pumpAndSettle();
+
+      // 折叠：正文不可见
+      expect(find.textContaining('把计划感偏弱'), findsNothing);
+      expect(find.textContaining('数据仅本地缓存'), findsNothing);
+
+      await tester.ensureVisible(find.text('关于 J-nify'));
+      await tester.tap(find.text('关于 J-nify'));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('把计划感偏弱'), findsOneWidget);
+
+      await tester.ensureVisible(find.text('隐私说明'));
+      await tester.tap(find.text('隐私说明'));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('数据仅本地缓存'), findsOneWidget);
     });
   });
 }

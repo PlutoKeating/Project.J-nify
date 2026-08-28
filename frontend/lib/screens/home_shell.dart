@@ -21,7 +21,9 @@ class _HomeShellState extends State<HomeShell> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: _screens[_index],
+      // 避免刘海屏/顶部状态栏（时间、电量）遮挡标题；底部由 NavigationBar
+      // 自行处理安全区，故 body 不再叠加 bottom 内边距（bottom:false）。
+      body: SafeArea(top: true, bottom: false, child: _screens[_index]),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _index,
         onDestinationSelected: (i) => setState(() => _index = i),
