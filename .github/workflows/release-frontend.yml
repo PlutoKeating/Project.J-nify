@@ -52,8 +52,9 @@ jobs:
       run:
         working-directory: frontend
     # 固定 release 签名：所有版本用同一 keystore，保证 APK 可覆盖安装更新。
+    # 注意：runner 上下文不可用于 job 级 env，keystore 路径用 github.workspace。
     env:
-      ANDROID_KEYSTORE_PATH: ${{ runner.temp }}/jnify-release.jks
+      ANDROID_KEYSTORE_PATH: ${{ github.workspace }}/jnify-release.jks
       ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
       ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
       ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
