@@ -4,6 +4,13 @@
 > 权威信息源：`docs/compose/specs/2026-08-27-backend-replatform-supabase-design.md`、`docs/compose/plans/2026-08-27-backend-serverless-replatform.md`、`docs/devops/SECRETS_REGISTRY.md`（密钥台账）。
 > ⚠️ 仓库 **public**：本文不含任何密钥明文，只列「名称 + 存放位置」；真值在 GitHub Actions Secrets / CF Dashboard Worker secrets / 本机 `backend/.dev.vars`（gitignored）/ 密码管理器。
 
+> 📌 **未发版功能增量（2026-08-28 待发布）**：
+> - **资料/设置**：`我的` 页资料卡（昵称+邮箱）+ 齿轮进入 `SettingsScreen`（分组：改昵称 / 改邮箱 / 改密码）；后端新增 `GET/PUT /v1/me/profile`（昵称存 `users.nickname`，非唯一）；邮箱改经 `auth.updateUser` 触发确认邮件并回跳 App。
+> - **邮件回调（App Link）**：根因=Supabase **Site URL=`http://localhost:3000`**。改 Site URL 为 `https://j-nify.arr2018.dpdns.org` + 加 Additional Redirect URL；App 用 `app_links`+`verifyOTP` 接收；App Link 校验资产放 `website/public/.well-known/`（含占位值，需替换真实签名 SHA-256 / Apple Team ID）。详见 `docs/devops/email-callback.md`。
+> - **会话 30 天**：`main.dart` 显式 `autoRefreshToken/persistSession`；`AuthGate` 启动 `refreshSession()` 滑动重置；服务端 Inactivity timeout=720h / 关 time-box（后台人工步骤，Pro+）。
+> - **SafeArea**：`HomeShell` body 包 `SafeArea` 避开刘海/状态栏。「隐私说明」「关于」改 `ExpansionTile` 默认折叠。登录/注册密码框加显示明文眼睛。
+> - **验证**：后端 `tsc + vitest` 全绿（52 通过）；前端 `flutter analyze` + `flutter test`（11 通过）；`website npm run build` 通过（`dist/.well-known/` + `_headers` 已产出）。
+
 ---
 
 ## 1. 项目定位与技术栈（定案版）

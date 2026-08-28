@@ -30,7 +30,9 @@ J-nify 采用「Flutter 客户端 + Cloudflare Worker 后端 + Supabase（Postgr
 - `core/api/` — `ApiClient`：Bearer JWT 注入；401 → 静默登出（回登录页）；未初始化 guard。
 - `services/` — `ApiService` 封装 `/v1/...`（capture/now/items/decision/guardrails/signals）。
 - `models/` — `ItemCommitment`（含 const 构造器与 `options` 字段）。
-- `screens/ + widgets/` — `现在/全部/我的` 三视图；焦点卡按后端 options 渲染（含 rescue）；录入分类 chips+期限；Toast 顶部 pill（SPEC §3.5）；护栏真实读写。
+- `screens/ + widgets/` — `现在/全部/我的` 三视图；焦点卡按后端 options 渲染（含 rescue）；录入分类 chips+期限；Toast 顶部 pill（SPEC §3.5）；护栏真实读写。`HomeShell` body 包 `SafeArea` 避开刘海/状态栏；`我的` 页含资料卡（昵称+邮箱）+ 设置入口，`SettingsScreen` 分组改昵称/密码/邮箱；「隐私说明」「关于」用 `ExpansionTile` 默认折叠。
+- **资料/昵称**：昵称存 `public.users.nickname`（**非唯一**），因 RLS 客户端零数据访问，读写经后端 `GET/PUT /v1/me/profile`（service key）；邮箱来自 Supabase Auth（`auth.currentUser.email`），更改经 `auth.updateUser` 触发确认邮件并回跳 App（App Link）。
+- **邮件回调/会话（Deep Link）**：确认/重置邮件 `{{ .ConfirmationURL }}` 由 Supabase **Site URL** 生成（先前为 `http://localhost:3000`，需改为 `https://j-nify.arr2018.dpdns.org`）。App 用 `app_links` 订阅深链，`token_hash`+`type` → `auth.verifyOTP`，`code`/`access_token` → `getSessionFromUrl`；App Link 校验资产在 `website/public/.well-known/`。会话持久化：`main.dart` 显式 `autoRefreshToken/persistSession`，`AuthGate` 启动 `refreshSession()` 滑动重置未活动时钟；服务端 Inactivity timeout 建议 720h(30天)/关 time-box（见 `docs/devops/email-callback.md`）。
 
 ## 后端（Cloudflare Worker）
 
@@ -38,7 +40,7 @@ J-nify 采用「Flutter 客户端 + Cloudflare Worker 后端 + Supabase（Postgr
 | --- | --- |
 | `src/db/` | PostgREST 客户端（restGet/restInsert/restUpdate/restDelete/restRpc）+ 护栏/上下文读取 |
 | `services/` | capture / window-engine / escalation（频控：预算+安静时段）/ brain（模板降级 stub）/ decision-feedback / context / orchestrator（晚点冷却 + 全 defer 抑制 nudge） |
-| `routes/` | 11 端点：capture / list / decision / now / signals / guardrails×2 / me.data / llm.draft / root / health |
+| `routes/` | 13 端点：capture / list / decision / now / signals / guardrails×2 / me.data / me.profile×2 / llm.draft / root / health |
 | `lib/` | auth（JWKS 验签 + ensureUser upsert）、privacy scope、rate-limit（进程内）、audit（日志） |
 
 **身份与授权**：Supabase Auth 签发 JWT → Worker `jose` 从 `{SUPABASE_URL}/auth/v1/.well-known/jwks.json` 验签（模块级缓存），`sub`=user_id；任何客户端凭据不能读写数据表（RLS 全拒，见下）。

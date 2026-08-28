@@ -28,6 +28,17 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
+            <!-- App Link（Deep Link）：邮件确认/重置等回调，唤起 App 处理。
+                 autoVerify 需在 https://j-nify.arr2018.dpdns.org/.well-known/assetlinks.json
+                 提供正确的 release 签名 SHA-256 才会静默打开 App（见 docs/devops/email-callback.md）。 -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data android:scheme="https"
+                      android:host="j-nify.arr2018.dpdns.org"
+                      android:pathPrefix="/auth"/>
+            </intent-filter>
         </activity>
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
