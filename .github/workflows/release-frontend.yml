@@ -1,7 +1,7 @@
 # 前端 APP 自动打包发布：推送 tag vX.Y.Z 触发。
 # - 唯一版本来源：frontend/pubspec.yaml 的 version（tag 与之一致才放行，否则 fail-fast）
-# - Android：ubuntu 上构建 release APK + AAB（当前无签名密钥 → 未签名）
-# - iOS：macos 上 flutter build ipa --no-codesign（未签名）
+# - Android：ubuntu 上构建 release APK + AAB（固定 release keystore 签名，可覆盖安装更新）
+# - iOS：macos 上 flutter build ipa --no-codesign（未签名，需 Apple 证书）
 # - 汇总 job 把产物挂到 GitHub Release
 # 后端部署不在此工作流内：维持 Cloudflare Dashboard git 集成（Root directory=backend）。
 name: Release Frontend
@@ -157,8 +157,8 @@ jobs:
             - **AAB**（`app-release.aab`）：Google Play 上架用
             - **XCArchive**（`Runner.xcarchive`）：iOS 归档（**未签名**，需 Apple 证书签名后分发）
 
-            ### ⚠️ 当前为无签名构建
-            - Android：未配置 keystore（使用调试签名占位），正式上架前需接入签名（见 `docs/devops/release.md`「签名接入」）。
+            ### 签名状态
+            - Android：固定 release keystore 签名（secrets `ANDROID_KEYSTORE_*`），同签名可直接**覆盖安装更新**；`versionCode` 严格递增（见 `docs/devops/release.md`「版本号规则」）。
             - iOS：`--no-codesign` 构建仅产出归档，未签名无法直接安装到真机；需 Apple Developer 证书签名/公证。
           files: |
             android/flutter-apk/app-release.apk

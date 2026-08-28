@@ -44,9 +44,16 @@ git tag v0.1.0 && git push origin v0.1.0
 10. **release 必须固定签名 keystore（v0.1.2 修复）**：release 用 `signingConfigs.getByName("debug")` 时，CI 每次全新 runner 生成**不同** debug keystore → 相邻版本签名不一致 → Android 拒绝覆盖安装（提示"版本有问题无法更新"）。修复=固定 release keystore（secrets `ANDROID_KEYSTORE_BASE64/PASSWORD/ALIAS/KEY_PASSWORD`；`build.gradle.kts` 读环境变量，未配置回退 debug 保本地构建）。⚠️ 首次换签名版本需用户**卸载重装一次**，之后签名固定可覆盖更新。
 11. **GitHub Actions：`runner` 上下文不可用于 job 级 `env`（v0.1.2 踩坑）**：`jobs.<id>.env` 中写 `${{ runner.temp }}/...` 会致 workflow 解析失败（run 0s 失败、打 tag 不触发任何 run）。job 级 `env` 改用 `${{ github.workspace }}`（`runner` 仅 step 级可用）。改 workflow 后须重切 tag（见坑 5）。
 
+## ⚠️ 版本号规则（versionCode 必须单调递增，防覆盖更新被拒）
+
+- Flutter 用 `pubspec.yaml` 的 `version: <name>+<N>`：`<name>`=versionName，`+<N>`=Android **versionCode**（也=iOS `CFBundleVersion`）。
+- **`+<N>` 必须随每次发版严格递增，且大于历史最大值**。Android 以此判定升级/降级：新包 `versionCode` 小于已装版本会返回 `INSTALL_FAILED_VERSION_DOWNGRADE`（安装时提示"即将安装的版本比已安装的版本落后"）。
+- 历史已发布 versionCode：`v0.1.0=1`、`v0.1.1=2`、`v0.1.2=3`、`v0.1.3=1`、`v0.1.4=1`。⚠️ **v0.1.3/v0.1.4 误用 `+1`（versionCode=1 < v0.1.2 的 3），导致从 v0.1.2 覆盖安装 v0.1.4 被系统以"版本落后"拒绝**（本次修复背景）。故当前最大 versionCode=3，新版本必须 ≥ `+4`。
+- 发版动作：改 `pubspec.yaml`（及 `lib/core/config/app_config.dart` 的 `appVersion` 回退值）→ commit → 打 `v<name>` tag → push tag（CI 校验 tag=pubspec 版本后构建并发布）。
+
 ## 当前签名状态（✅ 已接入固定 release 签名，v0.1.2 起）
 
-> 当前最新版本：**v0.1.4**（2026-08-28 发布；自 v0.1.2 起均为固定 release keystore 签名，可覆盖安装更新）。
+> 当前最新版本：**v0.1.5**（待发布；自 v0.1.2 起均为固定 release keystore 签名，可覆盖安装更新）。App Link 校验指纹（`website/public/.well-known/assetlinks.json`）取自该固定 release 证书：`9d9018a5…369d6b3`。
 
 - Android：**固定 release keystore 签名**（secrets：`ANDROID_KEYSTORE_BASE64` / `ANDROID_KEYSTORE_PASSWORD` / `ANDROID_KEY_ALIAS` / `ANDROID_KEY_PASSWORD`）。**从 v0.1.2 起所有版本签名一致，可覆盖安装更新**；⚠️ 但因 v0.1.0/v0.1.1 为 debug 签名（每次 CI runner 各不相同），**从旧版升级到首个签名版（v0.1.2）仍需卸载重装一次**。
 - iOS：无签名，不可装真机；需 Apple Developer 证书/公证（接入步骤见下）。

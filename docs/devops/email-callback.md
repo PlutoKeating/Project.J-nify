@@ -53,7 +53,9 @@ App Link / Universal Link 要「静默唤起 App」），必须让系统能从�
 
 ### 4.1 iOS 附加（Associated Domains）
 
-要打 Universal Link 的 iOS 还需要在 Xcode 里给 target 加 **Associated Domains** 能力，值为 `applinks:j-nify.arr2018.dpdns.org`（即给 Runner 配置 `Runner.entitlements` 并在 Signing & Capabilities 勾选）。iOS 打包需 macOS，此仓库未验证，故作为人工步骤，未改动 pbxproj。
+> ⏳ **本次暂缓（已记录为待办，后续补）**：iOS 的 Universal Link 需 macOS + Apple 签名，本仓库未验证/未配置。
+
+要打 Universal Link 的 iOS 还需在 Xcode 里给 target 加 **Associated Domains** 能力，值为 `applinks:j-nify.arr2018.dpdns.org`（即给 Runner 配置 `Runner.entitlements` 并在 Signing & Capabilities 勾选）。iOS 打包需 macOS，此仓库未处理 pbxproj/entitlements；待接入 Apple 签名时一并完成。
 
 ## 5. App 侧已做的深链配置
 
