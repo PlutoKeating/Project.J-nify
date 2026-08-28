@@ -29,11 +29,11 @@ export function normalizeLlmConfig(raw: unknown): LlmConfig {
   const r = (raw ?? {}) as Record<string, unknown>;
   const providers = Array.isArray(r.providers)
     ? (r.providers as LlmProviderConfig[]).filter(
-        (p) => p && typeof p.id === 'string' && p.enabled !== false && typeof p.baseUrl === 'string',
+        (p) => p && typeof p.id === 'string' && typeof p.baseUrl === 'string',
       )
     : [];
   const order = Array.isArray(r.order)
-    ? (r.order as string[]).filter((id) => providers.some((p) => p.id === id))
+    ? (r.order as string[]).filter((entry) => isValidOrderEntry(entry, providers))
     : providers.map((p) => p.id);
   return {
     providers,
@@ -41,6 +41,20 @@ export function normalizeLlmConfig(raw: unknown): LlmConfig {
     timeoutMs: typeof r.timeoutMs === 'number' ? r.timeoutMs : DEFAULT_LLM_CONFIG.timeoutMs,
     maxToolIterations: typeof r.maxToolIterations === 'number' ? r.maxToolIterations : DEFAULT_LLM_CONFIG.maxToolIterations,
   };
+}
+
+/**
+ * order 条目合法性：既支持旧的纯 provider id，也支持新的 "providerId/modelId" 复合条目
+ * （模型必须存在于该 provider 的 models 列表中）。
+ */
+function isValidOrderEntry(entry: unknown, providers: LlmProviderConfig[]): boolean {
+  if (typeof entry !== 'string' || !entry) return false;
+  const slash = entry.indexOf('/');
+  if (slash === -1) return providers.some((p) => p.id === entry);
+  const pid = entry.slice(0, slash);
+  const mid = entry.slice(slash + 1);
+  const p = providers.find((x) => x.id === pid);
+  return !!p && p.models.includes(mid);
 }
 
 export async function loadLlmConfig(db: Db): Promise<LlmConfig> {
@@ -115,19 +129,42 @@ async function chatOpenAI(
 /** 按 admin 配置的 provider/key/model 优先级依次尝试，失败切换下一个。 */
 export async function callLlm(db: Db, messages: ChatMessage[], tools: ToolDef[]): Promise<LlmResult> {
   const cfg = await loadLlmConfig(db);
+  return callLlmWithConfig(cfg, messages, tools);
+}
+
+/** 供单元测试直接注入配置调用。 */
+export async function callLlmWithConfig(cfg: LlmConfig, messages: ChatMessage[], tools: ToolDef[]): Promise<LlmResult> {
   const errors: string[] = [];
-  for (const providerId of cfg.order) {
-    const p = cfg.providers.find((x) => x.id === providerId);
-    if (!p) continue;
-    const keys = p.apiKeys.length ? p.apiKeys : [''];
-    const models = p.models.length ? p.models : [''];
-    for (const apiKey of keys) {
-      for (const model of models) {
-        try {
-          return await chatOpenAI(p.baseUrl, apiKey, model, messages, tools, cfg.timeoutMs);
-        } catch (e) {
-          errors.push(`${p.id}/${model}: ${(e as Error).message}`);
+  for (const entry of cfg.order) {
+    const slash = entry.indexOf('/');
+    if (slash === -1) {
+      // 兼容旧格式：整 provider 的 keys×models 依次尝试
+      const p = cfg.providers.find((x) => x.id === entry);
+      if (!p || !p.enabled) continue;
+      const keys = p.apiKeys.length ? p.apiKeys : [''];
+      const models = p.models.length ? p.models : [''];
+      for (const apiKey of keys) {
+        for (const model of models) {
+          try {
+            return await chatOpenAI(p.baseUrl, apiKey, model, messages, tools, cfg.timeoutMs);
+          } catch (e) {
+            errors.push(`${p.id}/${model}: ${(e as Error).message}`);
+          }
         }
+      }
+      continue;
+    }
+    // 新格式："providerId/modelId" 模型级条目
+    const pid = entry.slice(0, slash);
+    const mid = entry.slice(slash + 1);
+    const p = cfg.providers.find((x) => x.id === pid);
+    if (!p || !p.enabled || !p.models.includes(mid)) continue;
+    const keys = p.apiKeys.length ? p.apiKeys : [''];
+    for (const apiKey of keys) {
+      try {
+        return await chatOpenAI(p.baseUrl, apiKey, mid, messages, tools, cfg.timeoutMs);
+      } catch (e) {
+        errors.push(`${entry}: ${(e as Error).message}`);
       }
     }
   }

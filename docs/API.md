@@ -31,7 +31,7 @@
 | --- | --- | --- |
 | POST | `/admin/api/login` | 登录（CF 环境变量 `ADMIN_USERNAME`/`ADMIN_PASSWORD`/`SESSION_SECRET`，签名 session cookie） |
 | GET | `/admin/api/session` | 会话状态 |
-| GET/PUT | `/admin/api/config/llm` | LLM 多 provider 配置（baseUrl/多 key/多模型/优先级/超时），保存即热加载 |
+| GET/PUT | `/admin/api/config/llm` | LLM 多 provider 配置（baseUrl/多 key/多模型/模型级尝试顺序 `providerId/modelId`/超时），保存即热加载 |
 | GET | `/admin/api/models/providers` | models.dev 供应商列表（公开 API；每项含 id/name/baseUrl（由 api 字段推导，无法推导为 null）/models） |
 | GET | `/admin/api/models/provider/{id}` | 某供应商及其模型列表 |
 | GET/PUT | `/admin/api/config/alerts` | 告警阈值（投诉率/降级率/收件邮箱） |

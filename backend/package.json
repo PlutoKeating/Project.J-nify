@@ -18,7 +18,9 @@
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20260826.1",
     "@supabase/supabase-js": "^2.112.4",
+    "@types/jsdom": "^30.0.0",
     "@types/node": "^26.3.0",
+    "jsdom": "^30.0.1",
     "postgres": "^3.4.9",
     "supabase": "^2.116.0",
     "tsx": "^4.23.12",

@@ -144,10 +144,22 @@ const SPA = `<!doctype html>
 <title>J-nify Admin</title><style>
 body{font-family:-apple-system,"PingFang SC",sans-serif;background:#F7F7F4;color:#17171A;margin:0;padding:24px;max-width:960px;margin:0 auto}
 h1{font-size:22px}.card{background:#fff;border:1px solid #E8E8E3;border-radius:16px;padding:16px 20px;margin:16px 0}
+h2{font-size:18px;margin:0}h3{font-size:15px;margin:18px 0 4px}
 label{display:block;font-size:13px;color:#76767D;margin:10px 0 4px}input,select,textarea{width:100%;box-sizing:border-box;padding:8px;border:1px solid #E8E8E3;border-radius:8px;font-size:14px}
 button{background:#FF5A4E;color:#fff;border:0;border-radius:8px;padding:10px 18px;font-size:14px;cursor:pointer;margin:8px 8px 0 0}
 button.ghost{background:#fff;color:#17171A;border:1px solid #E8E8E3}
+button.mini{padding:6px 12px;margin:0}
 .row{display:flex;gap:8px;align-items:center}.row>*{flex:1}.muted{color:#76767D;font-size:12px}
+.chips{margin:4px 0 8px;display:flex;flex-wrap:wrap;gap:6px}
+.chip{display:inline-flex;align-items:center;gap:6px;background:#F2F2ED;border:1px solid #E8E8E3;border-radius:999px;padding:4px 10px;font-size:13px;max-width:100%}
+.chip .k{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:340px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+.chip .x{background:none;border:0;color:#76767D;font-size:15px;line-height:1;cursor:pointer;padding:0 2px}
+.chip .x:hover{color:#d33}
+.addrow{display:flex;gap:8px;align-items:center;margin-top:4px}.addrow input{flex:2}.addrow select{flex:3}
+.draglist{list-style:none;padding:0;margin:6px 0}
+.dragitem{display:flex;align-items:center;gap:8px;border:1px solid #E8E8E3;border-radius:8px;padding:6px 10px;margin:6px 0;background:#fff}
+.dragitem.dragging{opacity:.45;border-style:dashed}
+.handle{color:#B8B8B0;cursor:grab;font-size:16px;user-select:none}
 table{width:100%;border-collapse:collapse;font-size:13px}td,th{border-bottom:1px solid #E8E8E3;padding:8px;text-align:left}
 pre{background:#17171A;color:#cfc;padding:12px;border-radius:8px;overflow:auto;font-size:12px}
 </style></head><body>
@@ -161,9 +173,13 @@ pre{background:#17171A;color:#cfc;padding:12px;border-radius:8px;overflow:auto;f
   <div class="card"><h2>LLM 配置（多 provider · 热加载）</h2>
     <div id="providers"></div>
     <button class="ghost" onclick="addProvider()">+ 添加 provider</button><span id="mdStatus" class="muted"></span>
-    <label>模型尝试顺序（逗号分隔 provider id，按序故障切换）</label><input id="order">
-    <label>超时（ms）</label><input id="timeoutMs" type="number">
-    <label>最大工具迭代数</label><input id="maxIters" type="number">
+    <h3>模型尝试顺序（providerID/modelID · 按序故障切换 · 可拖拽排序）</h3>
+    <ul id="orderList" class="draglist"></ul>
+    <div class="addrow"><select id="orderAdd"><option value="">— 添加 providerID/modelID —</option></select><button class="ghost mini" onclick="addOrderItem()">＋ 添加</button></div>
+    <div class="row" style="margin-top:12px">
+      <div><label>超时（ms）</label><input id="timeoutMs" type="number"></div>
+      <div><label>最大工具迭代数</label><input id="maxIters" type="number"></div>
+    </div>
     <br><button onclick="saveLlm()">保存 LLM 配置（立即生效）</button><span id="llmMsg" class="muted"></span>
   </div>
   <div class="card"><h2>告警配置</h2>
@@ -185,38 +201,130 @@ const $=(id)=>document.getElementById(id);
 async function j(url,opt={}){const r=await fetch(url,{headers:{'Content-Type':'application/json'},...opt});if(!r.ok){const e=await r.json().catch(()=>({}));throw new Error(e.detail||r.status)}return r.json()}
 async function login(){try{await j('/admin/api/login',{method:'POST',body:JSON.stringify({username:$('u').value,password:$('p').value})});$('err').textContent='';init()}catch(e){$('err').textContent=e.message}}
 async function logout(){await j('/admin/api/logout',{method:'POST'});location.reload()}
+function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function dedupe(a){return Array.isArray(a)?[...new Set(a.filter(x=>typeof x==='string'&&x.trim()))]:[]}
 let providers=[];
-let mdList=[];let mdLoaded=false;let mdError='';
-function mdModelsOf(pid){const p=mdList.find(x=>x.id===pid);return p?p.models:[]}
-function renderProviders(){const el=$('providers');el.innerHTML='';providers.forEach((p,idx)=>{const d=document.createElement('div');d.className='card';d.innerHTML=\`
-  <div class="row"><select id="md-\${idx}" onchange="pickProvider(\${idx})"><option value="">— 选择 models.dev 供应商（点选录入 id/名称/Base URL） —</option>\${mdList.map(x=>\`<option value="\${x.id}" \${x.id===p.id?'selected':''}>\${x.name}（\${x.id}）</option>\`).join('')}</select></div>
-  <div class="row"><input placeholder="provider id" value="\${p.id}" oninput="providers[\${idx}].id=this.value">
-  <input placeholder="名称" value="\${p.name}" oninput="providers[\${idx}].name=this.value">
-  <select onchange="providers[\${idx}].type=this.value"><option value="openai-compatible" \${p.type==='openai-compatible'?'selected':''}>OpenAI 兼容</option><option value="anthropic" \${p.type==='anthropic'?'selected':''}>Anthropic(预留)</option></select></div>
-  <label>Base URL（点选供应商后自动带出，可手改）</label><input placeholder="https://api.openai.com/v1" value="\${p.baseUrl||''}" oninput="providers[\${idx}].baseUrl=this.value">
-  <label>API Keys（逗号分隔，多 key 轮换）</label><input type="password" value="\${(p.apiKeys||[]).join(',')}" oninput="providers[\${idx}].apiKeys=this.value.split(',').map(s=>s.trim()).filter(Boolean)">
-  <label>模型（可手填逗号分隔；也可从下方该供应商模型列表点选添加）</label>
-  <div class="row"><input value="\${(p.models||[]).join(',')}" oninput="providers[\${idx}].models=this.value.split(',').map(s=>s.trim()).filter(Boolean)">
-  <select id="mdm-\${idx}" onchange="pickModel(\${idx})"><option value="">— 点选添加该供应商模型 —</option>\${mdModelsOf(p.id).map(m=>\`<option value="\${m.id}">\${m.name}（\${m.id}）</option>\`).join('')}</select></div>
-  <label><input type="checkbox" \${p.enabled!==false?'checked':''} onchange="providers[\${idx}].enabled=this.checked"> 启用</label>
-  <button class="ghost" onclick="providers.splice(\${idx},1);renderProviders()">删除</button>\`;
-  el.appendChild(d);});
-  $('order').value=(window.llmCfg.order||[]).join(',');
+let order=[];let mdList=[];let mdLoaded=false;let mdError='';let dragFrom=-1;
+function mdProvidersSorted(){return [...mdList].sort((a,b)=>(a.name||'').localeCompare(b.name||'','zh',{sensitivity:'base'})||a.id.localeCompare(b.id))}
+function mdModelsOf(pid){const p=mdList.find(x=>x.id===pid);return p?[...p.models].sort((a,b)=>a.id.localeCompare(b.id)):[]}
+function fuzzyModels(pid,q){
+  const models=mdModelsOf(pid);const ql=q.trim().toLowerCase();
+  if(!ql)return models;
+  const scored=[];
+  for(const m of models){
+    const idl=m.id.toLowerCase(),nml=m.name.toLowerCase();
+    if(!idl.includes(ql)&&!nml.includes(ql))continue;
+    let s;if(idl===ql)s=0;else if(idl.startsWith(ql))s=1;else if(nml.startsWith(ql))s=2;else s=3;
+    scored.push({m,s});
+  }
+  scored.sort((a,b)=>a.s-b.s||a.m.id.localeCompare(b.m.id));
+  return scored.map(x=>x.m);
+}
+function renderProviderCard(p,idx){
+  const keyChips=(p.apiKeys||[]).map((k,ki)=>'<span class="chip"><span class="k" title="'+esc(k)+'">'+esc(k)+'</span><button class="x" onclick="removeKey('+idx+','+ki+')" title="删除">×</button></span>').join('');
+  const modelChips=(p.models||[]).map((m,mi)=>'<span class="chip">'+esc(m)+'<button class="x" onclick="removeModel('+idx+','+mi+')" title="删除">×</button></span>').join('');
+  const provOpts=mdProvidersSorted().map(x=>'<option value="'+esc(x.id)+'"'+(x.id===p.id?' selected':'')+'>'+esc(x.name+'（'+x.id+'）')+'</option>').join('');
+  return '<div class="card">'
+    +'<div class="row"><select id="md-'+idx+'" onchange="pickProvider('+idx+')"><option value="">— 选择 models.dev 供应商（点选录入） —</option>'+provOpts+'</select></div>'
+    +'<div class="row"><input placeholder="provider id" value="'+esc(p.id)+'" oninput="providers['+idx+'].id=this.value;onProviderEdited('+idx+')">'
+    +'<input placeholder="名称" value="'+esc(p.name)+'" oninput="providers['+idx+'].name=this.value">'
+    +'<select onchange="providers['+idx+'].type=this.value"><option value="openai-compatible"'+(p.type==='openai-compatible'?' selected':'')+'>OpenAI 兼容</option><option value="anthropic"'+(p.type==='anthropic'?' selected':'')+'>Anthropic(预留)</option></select></div>'
+    +'<label>Base URL（点选供应商后自动带出，可手改）</label>'
+    +'<input placeholder="https://api.openai.com/v1" value="'+esc(p.baseUrl||'')+'" oninput="providers['+idx+'].baseUrl=this.value">'
+    +'<label>API Keys（可添加多项，每项独立删除）</label>'
+    +'<div class="chips" id="keys-'+idx+'">'+(keyChips||'<span class="muted">尚未添加 API Key</span>')+'</div>'
+    +'<div class="addrow"><input id="keyIn-'+idx+'" placeholder="粘贴 API Key，回车或点 ＋ 添加" onkeydown="keyDown(event,'+idx+',\\'key\\')"><button class="ghost mini" onclick="addKey('+idx+')">＋</button></div>'
+    +'<label>模型（可添加多项，每项独立删除；支持模糊搜索）</label>'
+    +'<div class="chips" id="models-'+idx+'">'+(modelChips||'<span class="muted">尚未添加模型</span>')+'</div>'
+    +'<div class="addrow"><input id="msearch-'+idx+'" placeholder="输入字母模糊搜索模型，或直接手填模型 id（回车添加）" oninput="onModelSearch('+idx+')" onkeydown="keyDown(event,'+idx+',\\'model\\')">'
+    +'<select id="mdm-'+idx+'"></select><button class="ghost mini" onclick="addModel('+idx+')">＋</button></div>'
+    +'<div class="row" style="margin-top:10px"><label style="display:inline;margin:0"><input type="checkbox"'+(p.enabled!==false?' checked':'')+' onchange="providers['+idx+'].enabled=this.checked"> 启用</label>'
+    +'<button class="ghost mini" onclick="removeProvider('+idx+')">删除 provider</button></div>'
+    +'</div>';
+}
+function renderProviders(){
+  const el=$('providers');el.innerHTML='';
+  providers.forEach((p,idx)=>{el.insertAdjacentHTML('beforeend',renderProviderCard(p,idx));renderModelOptions(idx);});
+  renderOrderList();
   $('timeoutMs').value=window.llmCfg.timeoutMs||30000;
   $('maxIters').value=window.llmCfg.maxToolIterations||6;
   if(mdError)$('mdStatus').textContent=mdError;
 }
+function renderModelOptions(idx){
+  const sel=$('mdm-'+idx);if(!sel)return;
+  const q=$('msearch-'+idx)?$('msearch-'+idx).value:'';
+  const list=fuzzyModels(providers[idx].id,q);
+  sel.innerHTML='<option value="">— 点选添加模型 —</option>'+list.map(m=>'<option value="'+esc(m.id)+'">'+esc(m.name+'（'+m.id+'）')+'</option>').join('');
+}
+function onModelSearch(idx){renderModelOptions(idx)}
 function addProvider(){providers.push({id:'p'+Date.now().toString(36),name:'',type:'openai-compatible',baseUrl:'https://api.openai.com/v1',apiKeys:[],models:[],enabled:true});renderProviders()}
-async function loadCatalog(){if(mdLoaded)return;try{mdList=await j('/admin/api/models/providers');mdLoaded=true}catch(e){mdError='models.dev 不可用（仍可手填）：'+e.message}}
+function removeProvider(idx){providers.splice(idx,1);renderProviders()}
 function pickProvider(idx){const v=$('md-'+idx).value;if(!v)return;const p=mdList.find(x=>x.id===v);if(!p)return;providers[idx].id=p.id;providers[idx].name=p.name||p.id;providers[idx].type='openai-compatible';providers[idx].baseUrl=p.baseUrl||(p.id==='openai'?'https://api.openai.com/v1':'');renderProviders()}
-function pickModel(idx){const v=$('mdm-'+idx).value;if(!v)return;const list=providers[idx].models=providers[idx].models||[];if(!list.includes(v))list.push(v);renderProviders()}
-async function saveLlm(){try{const cfg={providers,order:$('order').value.split(',').map(s=>s.trim()).filter(Boolean),timeoutMs:+$('timeoutMs').value,maxToolIterations:+$('maxIters').value};await j('/admin/api/config/llm',{method:'PUT',body:JSON.stringify(cfg)});$('llmMsg').textContent='已保存（立即生效）'}catch(e){$('llmMsg').textContent=e.message}}
+function onProviderEdited(idx){renderModelOptions(idx);renderOrderList()}
+function addKey(idx){const inp=$('keyIn-'+idx);const v=(inp.value||'').trim();if(!v)return;const arr=providers[idx].apiKeys=providers[idx].apiKeys||[];if(!arr.includes(v))arr.push(v);inp.value='';renderProviders()}
+function removeKey(idx,ki){providers[idx].apiKeys.splice(ki,1);renderProviders()}
+function addModel(idx){
+  const sel=$('mdm-'+idx);const q=($('msearch-'+idx).value||'').trim();
+  let v=sel&&sel.value?sel.value:(q||'');
+  if(!v)return;
+  const arr=providers[idx].models=providers[idx].models||[];
+  if(!arr.includes(v))arr.push(v);
+  $('msearch-'+idx).value='';sel.value='';
+  renderProviders();
+}
+function removeModel(idx,mi){providers[idx].models.splice(mi,1);renderProviders()}
+function keyDown(e,idx,kind){if(e.key==='Enter'){e.preventDefault();if(kind==='key')addKey(idx);else addModel(idx)}}
+function allModelEntries(){
+  const out=[];
+  providers.forEach(p=>{if(!p.id)return;(p.models||[]).forEach(m=>{if(m)out.push(p.id+'/'+m)})});
+  return out.sort((a,b)=>a.localeCompare(b));
+}
+function renderOrderList(){
+  const ul=$('orderList');if(!ul)return;
+  const entries=allModelEntries();const orderSet=new Set(order);
+  ul.innerHTML=order.map((entry,i)=>{
+    const known=entries.includes(entry);
+    const opts=entries.filter(e=>!orderSet.has(e)||e===entry);
+    const body=known
+      ? '<select onchange="setOrderItem('+i+',this.value)"><option value="">— 选择 providerID/modelID —</option>'+opts.map(e=>'<option value="'+esc(e)+'"'+(e===entry?' selected':'')+'>'+esc(e)+'</option>').join('')+'</select>'
+      : '<span class="muted">'+esc(entry)+'（已不在已添加模型中，保存时自动移除）</span>';
+    return '<li class="dragitem" draggable="true" ondragstart="dragStart('+i+')" ondragover="event.preventDefault()" ondrop="dragDrop('+i+')" ondragend="dragEnd()"><span class="handle">☰</span>'+body+'<button class="x" onclick="removeOrderItem('+i+')" title="移除该项">−</button></li>';
+  }).join('');
+  const addSel=$('orderAdd');
+  if(addSel){const avail=entries.filter(e=>!orderSet.has(e));addSel.innerHTML='<option value="">— 添加 providerID/modelID —</option>'+avail.map(e=>'<option value="'+esc(e)+'">'+esc(e)+'</option>').join('')}
+}
+function addOrderItem(){const v=$('orderAdd').value;if(!v)return;if(!order.includes(v))order.push(v);renderOrderList()}
+function removeOrderItem(i){order.splice(i,1);renderOrderList()}
+function setOrderItem(i,v){if(!v)return;order[i]=v;renderOrderList()}
+function dragStart(i){dragFrom=i;event.target.classList.add('dragging')}
+function dragEnd(){dragFrom=-1;document.querySelectorAll('.dragitem').forEach(el=>el.classList.remove('dragging'))}
+function dragDrop(i){event.preventDefault();if(dragFrom<0||dragFrom===i)return;const m=order.splice(dragFrom,1)[0];order.splice(i,0,m);renderOrderList()}
+async function loadCatalog(){if(mdLoaded)return;try{mdList=await j('/admin/api/models/providers');mdLoaded=true}catch(e){mdError='models.dev 不可用（仍可手填）：'+e.message}}
+function normalizeOrder(o,ps){
+  const out=[];
+  (o||[]).forEach(e=>{
+    if(typeof e!=='string'||!e)return;
+    if(e.includes('/')){out.push(e);return}
+    const p=ps.find(x=>x.id===e);
+    if(p&&(p.models||[]).length)out.push(p.id+'/'+p.models[0]);
+    else if(p)out.push(e);
+  });
+  return out;
+}
+async function saveLlm(){
+  try{
+    const entries=new Set(allModelEntries());
+    const cfg={providers,order:order.filter(e=>entries.has(e)),timeoutMs:+$('timeoutMs').value,maxToolIterations:+$('maxIters').value};
+    await j('/admin/api/config/llm',{method:'PUT',body:JSON.stringify(cfg)});
+    $('llmMsg').textContent='已保存（立即生效）';
+  }catch(e){$('llmMsg').textContent=e.message}
+}
 async function loadAlerts(){try{const a=await j('/admin/api/config/alerts');$('alertsEnabled').checked=!!a.enabled;$('complaintRate').value=a.complaintRateThreshold;$('degradationRate').value=a.degradationRateThreshold;$('toEmail').value=a.toEmail||''}catch(e){}}
 async function saveAlerts(){try{await j('/admin/api/config/alerts',{method:'PUT',body:JSON.stringify({enabled:$('alertsEnabled').checked,complaintRateThreshold:+$('complaintRate').value,degradationRateThreshold:+$('degradationRate').value,toEmail:$('toEmail').value})});$('alertMsg').textContent='已保存'}catch(e){$('alertMsg').textContent=e.message}}
 async function testAlerts(){try{const r=await j('/admin/api/alerts/test',{method:'POST',body:JSON.stringify({channel:'both'})});$('alertMsg').textContent='github='+r.results.github+' email='+r.results.email}catch(e){$('alertMsg').textContent=e.message}}
 async function loadMetrics(){try{const rows=await j('/admin/api/metrics/closure?days='+$('days').value);$('metrics').innerHTML='<table><tr><th>日期</th><th>72h内闭环</th><th>完成</th><th>延期</th><th>放弃</th><th>兜底</th><th>总数</th><th>闭环率</th></tr>'+rows.map(r=>\`<tr><td>\${r.day}</td><td>\${r.closed_within_72h}</td><td>\${r.done}</td><td>\${r.deferred}</td><td>\${r.abandoned}</td><td>\${r.rescued}</td><td>\${r.total}</td><td>\${r.total?((r.closed_within_72h/r.total)*100).toFixed(1)+'%':'-'}</td></tr>\`).join('')+'</table>'}catch(e){$('metrics').innerHTML='<span class="muted">'+e.message+'</span>'}}
 async function init(){try{const s=await j('/admin/api/session');if(!s.authenticated){$('login').style.display='block';return}$('login').style.display='none';$('app').style.display='block';
-const cfg=await j('/admin/api/config/llm');providers=cfg.providers||[];window.llmCfg=cfg;await loadCatalog();renderProviders();loadAlerts();loadMetrics();}catch(e){$('login').style.display='block'}}
+const cfg=await j('/admin/api/config/llm');providers=(cfg.providers||[]).map(p=>({id:p.id||'',name:p.name||'',type:p.type||'openai-compatible',baseUrl:p.baseUrl||'',apiKeys:dedupe(p.apiKeys),models:dedupe(p.models),enabled:p.enabled!==false}));order=normalizeOrder(cfg.order||[],providers);window.llmCfg=cfg;await loadCatalog();renderProviders();loadAlerts();loadMetrics();}catch(e){$('login').style.display='block'}}
 init();
 </script></body></html>`;
 
