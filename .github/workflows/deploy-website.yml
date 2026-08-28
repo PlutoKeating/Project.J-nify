@@ -95,7 +95,10 @@ jobs:
       - name: Smoke test (SPA fallback)
         run: |
           URL="https://j-nify-website.pages.dev"
+          fail=0
           for p in features download privacy auth/verify; do
             code=$(curl -sS -m 20 -o /dev/null -w '%{http_code}' "$URL/$p")
             echo "pages.dev /$p -> $code"
+            [ "$code" = "200" ] || fail=1
           done
+          [ "$fail" = "0" ] || { echo "SMOKE TEST FAILED: expected 200 for all SPA routes"; exit 1; }
