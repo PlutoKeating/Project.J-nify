@@ -110,6 +110,7 @@ LICENSE        AGPL-3.0
 - 🔌 [`docs/API.md`](docs/API.md) —— REST API
 - 🚀 [`docs/QUICK_START.md`](docs/QUICK_START.md) —— 快速开始
 - 🗂️ [`docs/HANDOVER.md`](docs/HANDOVER.md) —— 项目状态交接（本仓库最新实现/部署/运维要点）
+- 🤖 [`docs/JENNIFER_AGENT_REPORT.md`](docs/JENNIFER_AGENT_REPORT.md) —— Jennifer agent 设计与实现现状记录（LLM 调用构建 / prompt / 记忆 / 会话 / 人格设定 / 实测与缺口）
 - 📋 [`docs/DECISION_QUESTIONNAIRE.md`](docs/DECISION_QUESTIONNAIRE.md) —— 产品决策问卷（v0.1.5 全链路审视汇总，已人工填写并定案）
 - 📌 [`docs/DECISION_REGISTER.md`](docs/DECISION_REGISTER.md) —— 决策定案登记（权威定案 + 缺口登记 + 凭据指引）
 - 🗺️ [`docs/compose/plans/2026-08-29-v020-m0.5-m1-implementation.md`](docs/compose/plans/2026-08-29-v020-m0.5-m1-implementation.md) —— v0.2.0 实施计划

@@ -1,7 +1,7 @@
 # J-nify 项目交接文档（HANDOVER）— v0.1.2
 
 > 更新：2026-08-28（v0.1.2 发布日：修复 release 缺 INTERNET 权限 + 固定 release 签名）。目的：让**新 session 可立即找回工作状态**。
-> 权威信息源：`docs/compose/specs/2026-08-27-backend-replatform-supabase-design.md`、`docs/compose/plans/2026-08-27-backend-serverless-replatform.md`、`docs/devops/SECRETS_REGISTRY.md`（密钥台账）。
+> 权威信息源：`docs/compose/specs/2026-08-27-backend-replatform-supabase-design.md`、`docs/compose/plans/2026-08-27-backend-serverless-replatform.md`、`docs/devops/SECRETS_REGISTRY.md`（密钥台账）；Jennifer agent 设计与现状见 [`docs/JENNIFER_AGENT_REPORT.md`](docs/JENNIFER_AGENT_REPORT.md)。
 > ⚠️ 仓库 **public**：本文不含任何密钥明文，只列「名称 + 存放位置」；真值在 GitHub Actions Secrets / CF Dashboard Worker secrets / 本机 `backend/.dev.vars`（gitignored）/ 密码管理器。
 
 > 📌 **已发版功能增量（2026-08-28，v0.1.5 已发布）**：
