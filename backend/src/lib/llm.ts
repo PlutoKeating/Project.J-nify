@@ -85,6 +85,13 @@ export interface LlmResult {
   model: string;
   provider: string;
   degraded: boolean;
+  usage?: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number };
+}
+
+export interface CallLlmOpts {
+  /** 请求 OpenAI 兼容流式接口（stream: true），逐字 delta 通过 onDelta 回调透传。 */
+  stream?: boolean;
+  onDelta?: (text: string) => void;
 }
 
 async function chatOpenAI(
@@ -94,6 +101,7 @@ async function chatOpenAI(
   messages: ChatMessage[],
   tools: ToolDef[],
   timeoutMs: number,
+  opts: CallLlmOpts = {},
 ): Promise<LlmResult> {
   const url = `${baseUrl.replace(/\/+$/, '')}/chat/completions`;
   const res = await fetch(url, {
@@ -106,12 +114,17 @@ async function chatOpenAI(
       tool_choice: 'auto',
       temperature: 0.6,
       max_tokens: 1200,
+      stream: opts.stream ? true : undefined,
     }),
     signal: AbortSignal.timeout(timeoutMs),
   });
   if (!res.ok) throw new Error(`LLM HTTP ${res.status}: ${(await res.text()).slice(0, 200)}`);
+  if (opts.stream && res.body) {
+    return parseStreamedCompletion(res.body, model, baseUrl, opts.onDelta);
+  }
   const data = (await res.json()) as {
     choices?: { message?: { content?: string | null; tool_calls?: unknown[] } }[];
+    usage?: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number };
   };
   const msg = data.choices?.[0]?.message;
   const text = msg?.content ?? '';
@@ -123,17 +136,101 @@ async function chatOpenAI(
     name: tc.function?.name ?? '',
     arguments: tc.function?.arguments ?? '{}',
   }));
-  return { text, toolCalls, model, provider: baseUrl, degraded: false };
+  return { text, toolCalls, model, provider: baseUrl, degraded: false, usage: data.usage };
+}
+
+interface StreamToolCall {
+  index: number;
+  id?: string;
+  name?: string;
+  arguments?: string;
+}
+
+/** 解析 OpenAI 兼容 SSE 流（data: 行），累积 text / tool_calls / usage。 */
+async function parseStreamedCompletion(
+  body: ReadableStream<Uint8Array>,
+  model: string,
+  provider: string,
+  onDelta?: (text: string) => void,
+): Promise<LlmResult> {
+  const reader = body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+  let text = '';
+  const toolCalls: StreamToolCall[] = [];
+  let usage: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number } | undefined;
+
+  const handleData = (line: string) => {
+    const payload = line.slice(5).trim();
+    if (!payload || payload === '[DONE]') return;
+    let data: {
+      choices?: { delta?: { content?: string | null; tool_calls?: unknown[] }; finish_reason?: string }[];
+      usage?: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number };
+    };
+    try {
+      data = JSON.parse(payload) as typeof data;
+    } catch {
+      return;
+    }
+    if (data.usage) usage = data.usage;
+    const delta = data.choices?.[0]?.delta;
+    if (!delta) return;
+    if (typeof delta.content === 'string' && delta.content) {
+      text += delta.content;
+      onDelta?.(delta.content);
+    }
+    for (const tc of (delta.tool_calls ?? []) as {
+      index?: number;
+      id?: string;
+      function?: { name?: string; arguments?: string };
+    }[]) {
+      const idx = tc.index ?? toolCalls.length;
+      const cur = toolCalls[idx] ?? { index: idx };
+      if (tc.id) cur.id = tc.id;
+      if (tc.function?.name) cur.name = tc.function.name;
+      if (tc.function?.arguments) cur.arguments = (cur.arguments ?? '') + tc.function.arguments;
+      toolCalls[idx] = cur;
+    }
+  };
+
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split('\n');
+    buffer = lines.pop() ?? '';
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (trimmed.startsWith('data:')) handleData(trimmed);
+    }
+  }
+  if (buffer.trim().startsWith('data:')) handleData(buffer.trim());
+
+  return {
+    text,
+    toolCalls: toolCalls
+      .sort((a, b) => a.index - b.index)
+      .map((tc) => ({ id: tc.id ?? `tc_${Math.random().toString(36).slice(2)}`, name: tc.name ?? '', arguments: tc.arguments ?? '{}' })),
+    model,
+    provider,
+    degraded: false,
+    usage,
+  };
 }
 
 /** 按 admin 配置的 provider/key/model 优先级依次尝试，失败切换下一个。 */
-export async function callLlm(db: Db, messages: ChatMessage[], tools: ToolDef[]): Promise<LlmResult> {
+export async function callLlm(db: Db, messages: ChatMessage[], tools: ToolDef[], opts: CallLlmOpts = {}): Promise<LlmResult> {
   const cfg = await loadLlmConfig(db);
-  return callLlmWithConfig(cfg, messages, tools);
+  return callLlmWithConfig(cfg, messages, tools, opts);
 }
 
 /** 供单元测试直接注入配置调用。 */
-export async function callLlmWithConfig(cfg: LlmConfig, messages: ChatMessage[], tools: ToolDef[]): Promise<LlmResult> {
+export async function callLlmWithConfig(
+  cfg: LlmConfig,
+  messages: ChatMessage[],
+  tools: ToolDef[],
+  opts: CallLlmOpts = {},
+): Promise<LlmResult> {
   const errors: string[] = [];
   for (const entry of cfg.order) {
     const slash = entry.indexOf('/');
@@ -146,7 +243,7 @@ export async function callLlmWithConfig(cfg: LlmConfig, messages: ChatMessage[],
       for (const apiKey of keys) {
         for (const model of models) {
           try {
-            const result = await chatOpenAI(p.baseUrl, apiKey, model, messages, tools, cfg.timeoutMs);
+            const result = await chatOpenAI(p.baseUrl, apiKey, model, messages, tools, cfg.timeoutMs, opts);
             assertNonEmpty(result);
             return result;
           } catch (e) {
@@ -164,7 +261,7 @@ export async function callLlmWithConfig(cfg: LlmConfig, messages: ChatMessage[],
     const keys = p.apiKeys.length ? p.apiKeys : [''];
     for (const apiKey of keys) {
       try {
-        const result = await chatOpenAI(p.baseUrl, apiKey, mid, messages, tools, cfg.timeoutMs);
+        const result = await chatOpenAI(p.baseUrl, apiKey, mid, messages, tools, cfg.timeoutMs, opts);
         assertNonEmpty(result);
         return result;
       } catch (e) {
