@@ -110,6 +110,7 @@ LICENSE        AGPL-3.0
 - 🔌 [`docs/API.md`](docs/API.md) —— REST API
 - 🚀 [`docs/QUICK_START.md`](docs/QUICK_START.md) —— quick start
 - 🗂️ [`docs/HANDOVER.md`](docs/HANDOVER.md) —— project handoff (latest implementation / deployment / ops notes)
+- 📐 [`docs/compose/specs/2026-08-29-jennifer-agent-complete-spec.md`](docs/compose/specs/2026-08-29-jennifer-agent-complete-spec.md) —— Jennifer agent complete implementation spec (official doc set / MCP-style context / structured memory / streaming / change cards & undo / admin surface)
 
 ## Website
 
