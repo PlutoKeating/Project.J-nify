@@ -8,6 +8,8 @@ import { listMemories, upsertMemory, deleteMemory, MEMORY_TYPES } from './memory
 export interface ToolResult {
   ok: boolean;
   result: unknown;
+  /** 客户端渲染改动卡片时使用的工具名（服务端回填）。 */
+  tool?: string;
 }
 
 export interface ToolContext {
@@ -684,7 +686,7 @@ export async function runAgent(
           result = fail((e as Error).message);
         }
       }
-      toolResults.push(result);
+      toolResults.push({ tool: tc.name, ...result });
       const actionId = (result.result as { action_id?: string } | undefined)?.action_id;
       emit?.({ type: 'tool', data: { name: tc.name, status: 'done', ok: result.ok, action_id: actionId ?? null } });
       messages.push({ role: 'tool', content: JSON.stringify(result), tool_call_id: tc.id });

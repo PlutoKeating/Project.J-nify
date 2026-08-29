@@ -113,8 +113,66 @@ class ApiService {
   }
 
   /// 与 Jennifer 对话（自然语言 CRUD / 策略 / 草稿）
-  Future<Map<String, dynamic>> chat(String message, {List<Map<String, String>> history = const []}) async {
-    final data = await _client.post('/v1/jennifer/chat', body: {'message': message, 'history': history});
+  Future<Map<String, dynamic>> chat(
+    String message, {
+    List<Map<String, String>> history = const [],
+    Map<String, dynamic>? context,
+    String? sessionId,
+    bool newSession = false,
+  }) async {
+    final data = await _client.post('/v1/jennifer/chat', body: {
+      'message': message,
+      'history': history,
+      if (context != null) 'context': context,
+      if (sessionId != null) 'session_id': sessionId,
+      'new_session': newSession,
+    });
+    return data as Map<String, dynamic>;
+  }
+
+  /// Jennifer 对话流（SSE）：事件为 `{event, data}`。
+  Stream<Map<String, dynamic>> chatStream(
+    String message, {
+    List<Map<String, String>> history = const [],
+    Map<String, dynamic>? context,
+    String? sessionId,
+    bool newSession = false,
+  }) async* {
+    final res = await _client.streamPost('/v1/jennifer/chat', body: {
+      'message': message,
+      'history': history,
+      if (context != null) 'context': context,
+      if (sessionId != null) 'session_id': sessionId,
+      'new_session': newSession,
+      'stream': true,
+    });
+    var event = '';
+    final lines = res.transform(utf8.decoder).transform(const LineSplitter());
+    await for (final line in lines) {
+      if (line.startsWith('event: ')) {
+        event = line.substring(7).trim();
+      } else if (line.startsWith('data: ')) {
+        final raw = line.substring(6).trim();
+        if (raw.isEmpty) continue;
+        try {
+          final data = jsonDecode(raw);
+          yield {'event': event, 'data': data};
+        } catch (_) {
+          // 忽略无法解析的行
+        }
+      }
+    }
+  }
+
+  /// 一键撤销 agent 数据改动（活跃会话内卡片入口）
+  Future<Map<String, dynamic>> undoAgentAction(String actionId) async {
+    final data = await _client.post('/v1/jennifer/undo', body: {'action_id': actionId});
+    return data as Map<String, dynamic>;
+  }
+
+  /// 拉取当前用户节奏策略（本地窗口引擎消费 agent 写入的策略）
+  Future<Map<String, dynamic>> fetchRhythm() async {
+    final data = await _client.get('/v1/rhythm');
     return data as Map<String, dynamic>;
   }
 

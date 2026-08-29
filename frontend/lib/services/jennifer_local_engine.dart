@@ -15,6 +15,38 @@ class JenniferLocalEngine {
 
   static const _active = {'parked', 'window_candidate', 'nudged'};
 
+  /// 本地缓存 agent 写入的节奏策略（P2：本地引擎按类目消费，避免硬编码 72h）。
+  Map<String, RhythmPolicy>? _rhythmCache;
+  DateTime? _rhythmFetchedAt;
+
+  Future<RhythmPolicy> _rhythmFor(String category) async {
+    final now = DateTime.now();
+    if (_rhythmCache == null || now.difference(_rhythmFetchedAt ?? DateTime.fromMillisecondsSinceEpoch(0)).inMinutes > 15) {
+      try {
+        final data = await ApiService(ApiClient.instance).fetchRhythm();
+        final map = <String, RhythmPolicy>{};
+        data.forEach((cat, raw) {
+          if (raw is! Map<String, dynamic>) return;
+          final offsets = (raw['due_offsets'] as List<dynamic>? ?? const [])
+              .whereType<Map<String, dynamic>>()
+              .map((o) => (o['days_before'] as num?)?.toInt() ?? 0)
+              .where((d) => d > 0)
+              .toList();
+          final cooldown = (raw['cooldown_hours'] as num?)?.toInt() ?? 72;
+          map[cat] = RhythmPolicy(dueOffsets: offsets, cooldownHours: cooldown);
+        });
+        if (map.isNotEmpty) {
+          _rhythmCache = map;
+          _rhythmFetchedAt = now;
+        }
+      } catch (_) {
+        // 拉取失败回退默认策略
+      }
+    }
+    final cached = _rhythmCache?[category];
+    return cached ?? const RhythmPolicy(dueOffsets: [], cooldownHours: 72);
+  }
+
   Future<void> maybeNotify() async {
     try {
       final api = ApiService(ApiClient.instance);
@@ -38,7 +70,7 @@ class JenniferLocalEngine {
           dueAt: item.dueAt,
           sunny: sunny,
           usageMinutes: usageMinutes,
-          rhythm: const RhythmPolicy(dueOffsets: [], cooldownHours: 72),
+          rhythm: await _rhythmFor(item.category),
         );
         // 只对"真实理由"窗口打扰（B8：无信号不得编造理由）
         if (w.reasonCode != 'manual_window' && w.fitScore > (best?.fitScore ?? 0)) {

@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io' as io;
 
 import 'package:http/http.dart' as http;
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -84,6 +85,28 @@ class ApiClient {
     final res =
         await http.delete(_uri(path), headers: _headers()).timeout(_timeout);
     return _decode(res);
+  }
+
+  /// SSE 流式 POST（Jennifer 对话流）：返回原始字节流，调用方自行解析事件。
+  /// 非 2xx 时抛出 [ApiException]（含 401 静默登出）。
+  Future<io.HttpClientResponse> streamPost(
+    String path, {
+    Map<String, dynamic>? body,
+  }) async {
+    final client = io.HttpClient();
+    final req = await client.postUrl(_uri(path));
+    req.headers.contentType = io.ContentType.json;
+    _headers().forEach((key, value) {
+      req.headers.set(key, value);
+    });
+    req.add(utf8.encode(jsonEncode(body ?? {})));
+    final res = await req.close();
+    if (res.statusCode >= 400) {
+      final text = await utf8.decodeStream(res);
+      _invalidateSessionOn401(res.statusCode);
+      throw ApiException(res.statusCode, text);
+    }
+    return res;
   }
 
   dynamic _decode(http.Response res) {
