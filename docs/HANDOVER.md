@@ -13,11 +13,12 @@
 > - **iOS Universal Link**：⏳ 暂缓（记录为待办，未做）；见 `docs/devops/email-callback.md §4.1`。
 > - **验证**：后端 `tsc + vitest` 全绿（52 通过）；前端 `flutter analyze` + `flutter test`（11 通过）；`website npm run build` 通过（`dist/.well-known/` + `_headers` 已产出）；v0.1.5 APK `versionCode='4'`、证书=指纹 `9d9018a5…369d6b3`。
 
-> 🚧 **v0.2.0（M0.5+M1）实施中（2026-08-29）**：决策定案见 `docs/DECISION_REGISTER.md`，实施计划见 `docs/compose/plans/2026-08-29-v020-m0.5-m1-implementation.md`。
+> ✅ **v0.2.0（M0.5+M1）已发布（2026-08-29，Release `v0.2.0`，versionCode=5）**：决策定案见 `docs/DECISION_REGISTER.md`，实施计划见 `docs/compose/plans/2026-08-29-v020-m0.5-m1-implementation.md`，验收报告见 `docs/compose/reports/2026-08-29-v020-release.md`。
 > 后端已交付：admin 面板（/admin + /admin/api/*，LLM 多 provider 热加载 + models.dev 供应商字典序点选录入/模型模糊搜索点选/chip 式 key 与模型管理/`providerID/modelID` 尝试顺序拖拽排序 + 指标看板 + 告警配置）、Jennifer agent harness（/v1/jennifer/chat + MCP 风格工具集）、事项 PATCH/DELETE、列表理由、`/v1/me/timezone`、`DELETE /v1/me/data` 彻底注销（含 auth 账户）、频控重构（Q1：无硬上限，仅安静时段+窗口去重）、节奏策略（rhythm_policies）、匿名指标 `/v1/metrics/events` + `v_closure_rate` 视图、告警双通道（GH_PAT + SMTP）、迁移 `20260829000000_v020_admin_agent_metrics.sql`；`npm test` 72 通过 + typecheck 全绿。
 > CF Worker secrets 已配置：`SMTP_HOST/PORT/USER/AUTH`、`SESSION_SECRET`（经 `configure-worker-secrets.yml` 工作流同步）。待用户补充：`GH_PAT`、`ADMIN_USERNAME/ADMIN_PASSWORD`。
 > App 已交付：本地通知（含「别再提」action）、四信号采集（UsageStats/系统日历/OpenWeather/天地图，仅本地）、本地窗口引擎、离线队列（sqflite）、对话 UI（/v1/jennifer/chat）、引导框架（TourRegistry）、全部页分组/理由/多选删除/编辑、忘记密码、彻底注销、时区提示、隐私文案修正、品牌名统一 J-nify + 图标；`flutter analyze` 0 issues + `flutter test` 11 通过。
-> 官网/文档已交付：首页/功能页状态标注、/auth/verify 回退页、/privacy 隐私页、OpenWeather 署名、README（中英）三态徽章与路线图更新、SPEC §9.4/§9.5 修订、release.md v0.1.5 状态修正、GAPS.md 缺口登记。
+> 官网/文档已交付：首页/功能页状态标注、/auth/verify 回退页、/privacy 隐私页、OpenWeather 署名（官网 + App 关于页）、README（中英）三态徽章与路线图更新、SPEC §9.4/§9.5 修订、release.md 状态修正、GAPS.md 缺口登记。
+> **v0.2.0 修复记录**：① release 构建需启用 core library desugaring（`build.gradle.kts`）；② release 流水线注入 `OPENWEATHER_API_KEY`；③ Jennifer agent system prompt 注入当前日期+用户时区（防相对时间幻觉年份）；④ LLM 空完成视为失败继续切换下一顺序条目（防假确认）。`npm test` 74 通过 + typecheck 全绿。
 
 ---
 
