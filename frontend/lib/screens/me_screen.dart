@@ -230,6 +230,8 @@ class _MeScreenState extends State<MeScreen> {
                           ),
                           const SizedBox(height: 4),
                           Text('版本：$_appVersion'),
+                          const SizedBox(height: 12),
+                          const Text('天气数据由 OpenWeather 提供（Weather by OpenWeather）'),
                         ],
                       ),
                     ),

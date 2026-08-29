@@ -28,7 +28,7 @@ class AppConfig {
   static const appLinkVerify = 'https://$appLinkHost/auth/verify';
 
   /// App 版本，与 `pubspec.yaml` 的 `version` 保持一致（About us 展示失败时的回退值）。
-  static const appVersion = '0.1.5+4';
+  static const appVersion = '0.2.0+5';
 
   /// Supabase 端点编译期默认值（`--dart-define=SUPABASE_URL=...` 可注入；
   /// 运行时 `.env` 覆盖优先）。

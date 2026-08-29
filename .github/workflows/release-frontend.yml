@@ -77,10 +77,10 @@ jobs:
           test -s "$ANDROID_KEYSTORE_PATH" || { echo "::error::keystore 解出为空，请检查 ANDROID_KEYSTORE_BASE64"; exit 1; }
 
       - name: Build release APK
-        run: flutter build apk --release --dart-define=SUPABASE_URL=${{ secrets.SUPABASE_URL }} --dart-define=SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}
+        run: flutter build apk --release --dart-define=SUPABASE_URL=${{ secrets.SUPABASE_URL }} --dart-define=SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }} --dart-define=OPENWEATHER_API_KEY=${{ secrets.OPENWEATHER_API_KEY }}
 
       - name: Build release AAB
-        run: flutter build appbundle --release --dart-define=SUPABASE_URL=${{ secrets.SUPABASE_URL }} --dart-define=SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}
+        run: flutter build appbundle --release --dart-define=SUPABASE_URL=${{ secrets.SUPABASE_URL }} --dart-define=SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }} --dart-define=OPENWEATHER_API_KEY=${{ secrets.OPENWEATHER_API_KEY }}
 
       - name: Upload Android artifacts
         uses: actions/upload-artifact@v4
@@ -114,7 +114,7 @@ jobs:
         run: flutter pub get
 
       - name: Build unsigned archive (ipa needs Apple signing)
-        run: flutter build ipa --no-codesign --dart-define=SUPABASE_URL=${{ secrets.SUPABASE_URL }} --dart-define=SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}
+        run: flutter build ipa --no-codesign --dart-define=SUPABASE_URL=${{ secrets.SUPABASE_URL }} --dart-define=SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }} --dart-define=OPENWEATHER_API_KEY=${{ secrets.OPENWEATHER_API_KEY }}
 
       # --no-codesign 只产出 xcarchive（iOS 签名 IPA 需 Apple Developer 证书，后续接）
       - name: Upload iOS archive
@@ -138,6 +138,7 @@ jobs:
 
       - name: Download iOS artifacts
         uses: actions/download-artifact@v4
+        continue-on-error: true
         with:
           name: ios-artifacts
           path: ios

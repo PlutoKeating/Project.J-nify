@@ -15,14 +15,14 @@
 | GAP-RATE-LIMIT | CF Rate Limiting 跨实例限流 | 单实例规模内进程内限流够用；多实例部署前接入（F2） |
 | GAP-OFFLINE-CLOUD | 离线/弱网下云端同步冲突合并策略 | 本期离线队列为 last-write-wins；冲突合并后续细化 |
 | GAP-DUAL-ENGINE | 本地窗口引擎与后端 /v1/now 双实现 | 执行层本地优先后，两端规则需保持同步；建议后续统一为共享规则文档 |
-| GAP-ADMIN-CREDS | admin 面板管理员凭据（ADMIN_USERNAME/ADMIN_PASSWORD） | 待用户创建（随机强口令）→ GH Secrets → `configure-worker-secrets` 工作流同步 |
-| GAP-GH_PAT | 告警自动建 GitHub Issue 凭据 | 待用户创建 fine-grained PAT（仅 Issues read/write）→ GH Secrets → 同步 CF |
+| GAP-ADMIN-CREDS | admin 面板管理员凭据（ADMIN_USERNAME/ADMIN_PASSWORD） | ✅ 已配置（2026-08-29 用户设置）；⚠️ CF 侧已生效，GH Secrets 仍为旧值，同步前先在 GH 更新（勿用旧值覆盖 CF） |
+| GAP-GH_PAT | 告警自动建 GitHub Issue 凭据 | ✅ 已配置（2026-08-29，fine-grained PAT，仅 Issues read/write，已同步 CF） |
 
 ## 运营/宣传侧缺口
 
 | 缺口 | 说明 | 状态 |
 | --- | --- | --- |
-| OpenWeather 署名义务 | 免费商用许可要求 App「关于/隐私」页与官网标注 "Weather by OpenWeather" | 官网已加（Footer + 隐私页）；App「关于」页需在 v0.2.0 发布前补一行 |
+| OpenWeather 署名义务 | 免费商用许可要求 App「关于/隐私」页与官网标注 "Weather by OpenWeather" | ✅ 已全部完成（官网 Footer + 隐私页；App「关于」页 v0.2.0 已补） |
 | 内测计划 | 团队成员内测（F4 定案：邮件模板先不验证，内测时一起看） | 待用户安排 |
 | 场景文案"示意"标注 | 官网场景卡片标注"示意，即将上线" | 已完成（H1/Q2） |
 | iOS 发布说明 | 下载页已注明 iOS 未签名需 Apple 证书 | 保持 |
