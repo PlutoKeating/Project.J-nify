@@ -20,7 +20,9 @@
 | GET | `/v1/me/profile` | 当前用户资料（`{ id, nickname }`；昵称来自 `users` 表，可空） |
 | PUT | `/v1/me/profile` | 更新昵称（用户名，**非唯一**）：`{ nickname }`，空/超 64 字符 → 400 |
 | PUT | `/v1/me/timezone` | 更新用户时区（IANA，如 `Asia/Shanghai`）；静默时段按该时区计算 |
-| POST | `/v1/jennifer/chat` | 与 Jennifer 对话：`{ message, history? }` → 自然语言事项 CRUD / 节奏策略 / 草稿，返回 `{ reply, toolResults, degraded }` |
+| POST | `/v1/jennifer/chat` | 与 Jennifer 对话：`{ message, history?, context?, session_id?, new_session?, stream? }` → 自然语言事项 CRUD / 节奏策略 / 记忆 / 草稿；`stream: true` 时返回 SSE 事件流；默认返回 `{ reply, toolResults, degraded }` |
+| POST | `/v1/jennifer/undo` | 一键撤销 agent 数据改动：`{ action_id }`（活跃会话内卡片入口，服务端 24h 保留期） |
+| GET | `/v1/rhythm` | 返回当前用户全部类目的提醒节奏策略（本地执行引擎消费 agent 写入的策略） |
 | POST | `/v1/metrics/events` | 匿名指标事件：`event_type ∈ capture/nudge_sent/nudge_opened/decision/rescue_action/complaint`（不含事项内容） |
 | POST | `/v1/geo/reverse` | 天地图逆地理编码代理（服务端 `TIANDITU_KEY`，坐标二次模糊化，仅返回城市/地址文本） |
 | GET | `/health` | 健康检查 |
@@ -37,6 +39,12 @@
 | GET/PUT | `/admin/api/config/alerts` | 告警阈值（投诉率/降级率/收件邮箱） |
 | POST | `/admin/api/alerts/test` | 测试告警（GitHub Issues + SMTP 双通道） |
 | GET | `/admin/api/metrics/closure?days=N` | 闭环率看板（72h 内 done/deferred/abandoned/rescued 比例） |
+| GET/POST/PUT/DELETE | `/admin/api/docs` | Jennifer 官方文档集 CRUD（identity/workflow/tools + 自定义/skill；保存即热重载） |
+| PUT | `/admin/api/docs/reorder` | 文档排序 `{ ids }` |
+| GET | `/admin/api/memories?user_id=` | 按用户查看结构化记忆 |
+| DELETE | `/admin/api/memories/:id` | 删除单条记忆（不提供编辑） |
+| POST | `/admin/api/playground` | LLM playground：`{ message, context?, new_session?, history? }` → `{ systemPrompt, promptTokens, latencyMs, reply, toolResults, degraded }` |
+| GET | `/admin/api/costs?days=N` | 成本/降级聚合（按日/provider/model：调用量、成功率、降级率、均耗时、tokens） |
 | GET | `/admin` | 管理面板 SPA |
 
 > 频控口径（Q1 定案）：**无硬编码提醒次数上限**；仅保留安静时段（按用户时区）与窗口级 nudge 去重；频率管理由 Jennifer agent 通过节奏策略（`rhythm_policies`）动态决定。
@@ -67,3 +75,25 @@ curl -X POST https://j-nify.williamhvollita.dpdns.org/v1/items/<id>/decision \
 
 > 说明：决策文案由后端返回（`message`），前端 Toast 直接展示；`decision` 取值统一 `now/later/drop/rescue`（`do` 为旧文档笔误，已废弃）。
 > 鉴权：Worker 用 jose 从 Supabase JWKS 验签；数据访问在 Worker 内以 service key 走 PostgREST —— **客户端不需要也拿不到 service key**。
+
+### 与 Jennifer 对话（v0.3.0 完整版）
+
+`POST /v1/jennifer/chat` 请求体：
+
+```json
+{
+  "message": "现在适合处理晒被子吗？",
+  "history": [{ "role": "user", "content": "..." }],
+  "context": { "calendar_free_slots": [], "weather": {}, "usage": {}, "active_window": {} },
+  "session_id": "uuid",
+  "new_session": true,
+  "stream": true
+}
+```
+
+- `history`：≤12 条，服务端仅接受 `user/assistant` 角色（阻断 system/tool 注入）；
+- `context`：设备本地数据**完整原文**拼入本轮 prompt（日历空闲/天气/usage/窗口摘要），**不落库、不记日志**，上限 4KB；
+- `session_id` + `new_session=true`：新会话开始时把「用户记忆文档」随官方文档集注入 system prompt 一次；
+- `stream: true`：SSE 事件序列 `start → tool(进度) → delta(文本增量) → done(reply+toolResults+degraded) / error`；`done` 的 `toolResults` 每项含 `tool/ok/result`，数据改动项带 `result.action_id` 供前端渲染撤销卡片。
+
+`POST /v1/jennifer/undo`：`{ action_id }` → `{ ok, tool }`；支持逆操作：items_create→删、items_update→还原、items_delete→快照重建、rhythm_set→还原、guardrails_set→还原、memory_write/delete→还原、steps_set→还原。

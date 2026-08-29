@@ -7,7 +7,7 @@ workers_dev = true
 
 [vars]
 APP_ENV = "production"
-APP_VERSION = "0.2.0"
+APP_VERSION = "0.3.0"
 CORS_ORIGINS = "*"
 LOG_LEVEL = "info"
 RATE_LIMIT_PER_MINUTE = "60"

@@ -5,10 +5,10 @@ import { t, useLang } from '../i18n';
 
 const PILLARS = [
   { key: 'capture', status: 'status.live' },
-  { key: 'window', status: 'status.inprogress' },
+  { key: 'window', status: 'status.live' },
   { key: 'decision', status: 'status.live' },
   { key: 'guardrail', status: 'status.live' },
-  { key: 'memory', status: 'status.planned' },
+  { key: 'memory', status: 'status.live' },
 ] as const;
 const STEPS = [1, 2, 3, 4, 5] as const;
 
@@ -20,8 +20,8 @@ const CASES = [
 
 const ROADMAP = [
   { m: 'features.m0', d: 'features.m0d', done: true },
-  { m: 'features.m1', d: 'features.m1d', done: false },
-  { m: 'features.m2', d: 'features.m2d', done: false },
+  { m: 'features.m1', d: 'features.m1d', done: true },
+  { m: 'features.m2', d: 'features.m2d', done: true },
   { m: 'features.m3', d: 'features.m3d', done: false },
 ] as const;
 

@@ -133,8 +133,8 @@ Product landing site: [https://j-nify.arr2018.dpdns.org](https://j-nify.arr2018.
 ## Roadmap
 
 - ✅ **M0 Skeleton** (**v0.1.x released**) — capture → drift → manual window → four-choice loop; accounts/settings, email deep links, 30-day sessions (v0.1.5).
-- 🚧 **M0.5 + M1 (v0.2.0, in progress, 2026-08-29)** — local execution layer (local notifications + "never again"), four signal sources (screen usage / system calendar / weather / location, processed locally), local window engine, offline queue, natural-language chat (Jennifer agent harness), admin panel (hot-reloadable multi-provider LLM + metrics dashboard + alerts), reminder rhythm policies, anonymous metrics & closure rate.
-- ⏳ **M2 Jennifer brain deepening** — multi-provider hot-reload model management is in place (admin panel); deeper orchestration for copy/decomposition/rescue drafts and model-cost governance.
+- ✅ **M0.5 + M1 (v0.2.0 released, 2026-08-29)** — local execution layer (local notifications + "never again"), four signal sources (screen usage / system calendar / weather / location, processed locally), local window engine, offline queue, natural-language chat (Jennifer agent harness), admin panel (hot-reloadable multi-provider LLM + metrics dashboard + alerts), reminder rhythm policies, anonymous metrics & closure rate.
+- ✅ **M2 Jennifer brain (v0.3.0 released, 2026-08-29)** — official doc set (identity/workflow/tools + skills, admin-editable with hot reload), structured memory & per-user memory doc, MCP-style local data context, streaming chat, change cards with one-click undo, admin docs/memory/playground/cost dashboard, 15 tools incl. LLM-powered rescue drafts.
 - ⏳ **M3 Gradual rollout** — metrics dashboard is in place (admin panel); seed-user recruiting and distribution later.
 
 > **Status badges (H2)**: ✅ shipped · 🚧 in progress · ⏳ planned. Only shipped capabilities appear in marketing copy; planned ones live on the roadmap. See [`docs/DECISION_REGISTER.md`](docs/DECISION_REGISTER.md).

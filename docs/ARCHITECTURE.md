@@ -53,6 +53,18 @@ J-nify 采用「Flutter 客户端 + Cloudflare Worker 后端 + Supabase（Postgr
 - **频控（Q1 定案）**：移除 `max_nudge_budget` 硬门；保留安静时段（按 `users.timezone` 本地时间）与窗口级 nudge 去重（同 `window_id` 已有 nudge 则复用）；冷却/节奏由 Jennifer 通过 `rhythm_policies` 管理（初始默认：账单 10/3 天、退货 3/5/1 天、作业 10/5/3 天、无死线同理由冷却 72h）。
 - **指标与告警**：`metrics_events` 匿名事件（不含内容）+ `v_closure_rate` 视图；告警双通道 = GitHub Issues（`GH_PAT`，最小权限）+ SMTP 邮件（`SMTP_HOST/PORT/USER/AUTH`），阈值经 admin 配置。
 
+### v0.3.0 新增：Jennifer agent 完整实现（官方文档集 / 结构化记忆 / 流式 / 撤销 / 管理面）
+
+- **官方文档集（`agent_docs` 表）**：identity 人设 / workflow 工作流程规范 / tools 工具与使用规范三件套 + 任意自定义/skill 文档；admin 面板在线增删改、排序、启停，保存即热重载（`config-store` 同款 TTL + 显式失效）；system prompt 按 `identity → workflow → tools → custom/skill → 时间上下文 →（新会话）用户记忆文档` 装配。
+- **MCP 风格上下文**：`/v1/jennifer/chat` 接收 `context`（设备本地日历/天气/usage/窗口摘要**完整原文**），服务端不落库、不记日志，原样拼入本轮 prompt；`history` 服务端白名单（仅 user/assistant）阻断 prompt 注入。
+- **结构化记忆（`agent_memories`）**：用户级（FK 级联），类型 preference/fact/event/lesson，agent 经 `memory_read/write/delete` 工具主动沉淀；`buildUserMemoryDoc` 编译为「用户记忆文档」，新会话随文档集注入一次。
+- **工具集扩展**：guardrails_set（写护栏）、feedback_read（决策/投诉聚合）、steps_get/set（拆解）、memory 三件套、draft_generate LLM 化（兜底/问候语/拆解草稿，降级回模板并标 degraded）；items_delete 需 `confirm: true` 二次确认。
+- **数据改动留痕与撤销**：每次实际改动写 `agent_action_logs`（before/after 快照）；`POST /v1/jennifer/undo` 按逆操作还原（24h 保留期）；前端把改动渲染为**活跃会话内**的卡片 + 一键撤销（纯前端、不落库、不进 LLM 上下文，退出即失效）。
+- **流式输出（SSE）**：`stream: true` 时返回 `text/event-stream`（start/tool/delta/done/error）；LLM 网关支持 OpenAI 兼容流式接口（`stream: true` + SSE 解析），失败仍按顺序切换。
+- **节奏下发**：`GET /v1/rhythm` 供本地执行引擎按类目拉取 agent 写入的 `rhythm_policies`（替换本地硬编码 72h 冷却，P2 真正生效）。
+- **可观测/成本**：`agent_call_logs` 记录每次 LLM 调用（provider/model/ok/degraded/延迟/tokens）；admin 新增成本/降级看板与 LLM playground；告警自动评估维持手动测试通道（R6 本期不做）。
+- **admin 扩展**：文档管理、用户记忆查看/删除、playground、成本看板（`/admin/api/docs|memories|playground|costs`）。
+
 ## 数据访问层（PostgREST + RPC，含踩坑）
 
 - 运行时一律 REST：`GET/POST/PATCH/DELETE /rest/v1/<table>`（service key 头部 `apikey` + `Authorization: Bearer`）。

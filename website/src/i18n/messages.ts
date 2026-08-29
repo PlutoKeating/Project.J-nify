@@ -147,8 +147,8 @@ export const messages: Messages = {
   'status.planned': { zh: '规划中', en: 'Planned' },
   'status.example': { zh: '示意，即将上线', en: 'Illustrative — coming soon' },
   'home.statusLine': {
-    zh: '当前版本已提供：录入 → 漂浮 → 顺手窗口 → 四选一闭环；日历 / 天气 / 顺路 / 使用状态等信号与兜底动作正在规划中，将以路线图为准逐步上线。',
-    en: 'Available now: capture → drift → window → four-choice loop. Signal sources (calendar / weather / location / usage) and rescue actions are planned — see the roadmap.',
+    zh: '当前版本已提供：一句话托付 → 低电量漂浮 → 顺手窗口 → 四选一闭环；日历 / 天气 / 顺路 / 使用状态等信号已在本地生效，兜底草稿与结构化记忆也已上线。',
+    en: 'Available now: one-line handoff → drift → fitting window → four-choice loop. Calendar / weather / location / usage signals work locally; rescue drafts and structured memory are live.',
   },
 
   // 隐私政策页
@@ -188,9 +188,9 @@ export const messages: Messages = {
   'features.pillar.decision': { zh: '决策闭环', en: 'Decision loop' },
   'features.pillar.decisionD': { zh: '现在做 / 晚点 / 算了 / 帮我兜底，每一次选择都构成闭环。', en: 'Do now / later / drop / cover — every choice closes the loop.' },
   'features.pillar.guardrail': { zh: '反打扰护栏', en: 'Anti-nag guardrails' },
-  'features.pillar.guardrailD': { zh: '安静时段、单事项提醒上限、「别再提」一次生效、没有理由不通知。', en: 'Quiet hours, per-item nudge cap, one-shot “never again,” and no nudge without a reason.' },
+  'features.pillar.guardrailD': { zh: '安静时段、窗口级去重、「别再提」一次生效、没有理由不通知。', en: 'Quiet hours, per-window dedupe, one-shot “never again,” and no nudge without a reason.' },
   'features.pillar.memory': { zh: '记忆校准与兜底', en: 'Memory calibration & rescue' },
-  'features.pillar.memoryD': { zh: '记住哪些窗口有效、哪些话术被嫌弃，以及放弃后的真实后果，用来校准 Jennifer。', en: 'Learns which windows work, which phrasing flops, and what abandonment really costs.' },
+  'features.pillar.memoryD': { zh: '记住您的偏好与事实，主动沉淀为长期记忆；为您生成延期申请、寄件清单、回复草稿等兜底。', en: 'Remembers your preferences and facts, proactively builds long-term memory; drafts extensions, pickup lists, and replies for you.' },
 
   'features.how.title': { zh: 'Jennifer 怎么用：一次完整的托付', en: 'How Jennifer works: one complete handoff' },
   'features.how.step1': { zh: '一句话交给 Jennifer', en: 'Give Jennifer one line' },
@@ -214,12 +214,12 @@ export const messages: Messages = {
   'features.m0': { zh: 'M0 骨架', en: 'M0 Skeleton' },
   'features.m0d': { zh: '录入 → 漂浮 → 窗口 → 三选项闭环（已发布）', en: 'Capture → drift → window → three-choice loop (shipped)' },
   'features.m1': { zh: 'M1 信号', en: 'M1 Signals' },
-  'features.m1d': { zh: '日历 / 天气 / 位置 / 使用状态 + 频控红线（进行中）', en: 'Calendar / weather / location / usage + limits (in progress)' },
+  'features.m1d': { zh: '日历 / 天气 / 位置 / 使用状态 + 本地执行与节奏策略（已发布）', en: 'Calendar / weather / location / usage + local execution & rhythm policies (shipped)' },
   'features.m2': { zh: 'M2 Jennifer 大脑', en: 'M2 Jennifer brain' },
-  'features.m2d': { zh: '多供应商热重载模型管理，时序判断仍用确定性规则', en: 'Hot-reload multi-provider models; timing stays deterministic' },
+  'features.m2d': { zh: '结构化记忆、流式对话、改动可撤销、admin 文档化与成本看板（已发布）', en: 'Structured memory, streaming chat, undoable changes, admin docs & cost dashboard (shipped)' },
   'features.m3': { zh: 'M3 灰度', en: 'M3 Gradual rollout' },
-  'features.m3d': { zh: '100–300 种子用户 + 指标看板', en: '100–300 seed users + metrics' },
-  'features.status.now': { zh: '当前', en: 'Now' },
+  'features.m3d': { zh: '100–300 种子用户招募 + 指标看板（进行中）', en: '100–300 seed users + metrics dashboard (in progress)' },
+  'features.status.now': { zh: '已发布', en: 'Shipped' },
   'features.opensource.body': {
     zh: 'J-nify 开源，遵循 AGPL-3.0。官网与 App 的每一次「时机提醒」都由确定性规则驱动，智能只用于解析、拆解、话术与兜底草稿。',
     en: 'J-nify is open source under AGPL-3.0. Every timing nudge is driven by deterministic rules; intelligence is used only for parsing, splitting, phrasing and rescue drafts.',

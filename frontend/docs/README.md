@@ -41,3 +41,11 @@ frontend/
 - **引导框架**：通用 feature-tour registry（onboarding v1，完成/跳过防二次触发，未来新功能复用）。
 - **品牌**：Android/iOS 显示名统一 `J-nify`，启动图标品牌化（#FF5A4E + J）。
 - **指标埋点**：capture/nudge_sent/nudge_opened/decision/rescue_action/complaint（匿名）→ `/v1/metrics/events`。
+
+## v0.3.0（Jennifer 完整实现）增量
+
+- **会话上下文纯客户端持久化**（`services/conversation_store.dart`，sqflite）：只存 user/assistant 文本消息；工具结果卡片与占位气泡不落库；服务端保持无状态。
+- **流式对话（SSE）**：`ApiService.chatStream` 解析 `text/event-stream`（start/tool/delta/done/error）；`ChatScreen` 发送后立即插入 responding 占位气泡，首 token 原位增量渲染。
+- **Markdown 渲染**：assistant 消息经 `flutter_markdown` 渲染（修复纯 Text 显示）。
+- **数据改动卡片 + 一键撤销（R9）**：chat 响应的 `toolResults` 中带 `action_id` 的改动渲染为卡片（事项/节奏/护栏/记忆/拆解），卡片带撤销按钮调 `POST /v1/jennifer/undo`；卡片仅活跃会话内展示，退出 App 或开新会话即失效。
+- **本地引擎消费节奏策略**：`JenniferLocalEngine` 经 `GET /v1/rhythm` 按类目拉取 agent 写入的 `rhythm_policies`（替换硬编码 72h 冷却），本地通知真正跟随 agent 策略。

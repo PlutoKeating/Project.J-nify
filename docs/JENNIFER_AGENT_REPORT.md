@@ -213,3 +213,36 @@ openrouter/thinkingmachines/inkling:free
 | 前端对话 API | `frontend/lib/services/api_service.dart`（`chat()`） |
 | 接口文档 | `docs/API.md`（`POST /v1/jennifer/chat`） |
 | 决策定案 | `docs/DECISION_REGISTER.md`（P2/P3/B6/B8/C1/C2） |
+
+---
+
+## 十三、v0.3.0 完整实现落地记录（2026-08-29）
+
+> 依据：`docs/compose/specs/2026-08-29-jennifer-agent-complete-spec.md`（v2 定稿，含 R0–R11 逐项定案）。
+
+### 13.1 已落地能力（相对 §十一 缺口表）
+
+| §十一 缺口 | v0.3.0 落地 |
+| --- | --- |
+| 会话管理 | 会话上下文纯客户端 sqflite 持久化（`conversation_store.dart`），服务端无状态；`session_id`/`new_session` 标志驱动记忆注入 |
+| 永久记忆 | `agent_memories` 结构化表 + `memory_read/write/delete` 工具 + 编译「用户记忆文档」新会话注入；workflow 文档含记忆沉淀强制条款 |
+| 人格配置化 | `agent_docs` 官方文档集（identity/workflow/tools + 任意 skill/custom md），admin 面板在线编辑、排序、启停，保存即热重载 |
+| 用户特殊设定 | 用户记忆文档（偏好/事实/事件/经验）随新会话注入 system prompt |
+| 上下文增强 | chat 请求 `context`（设备本地数据完整原文，MCP 风格）+ history role 白名单；首轮不再注入事项概览（保持按需取数，预算可控） |
+| 流式输出 | SSE（start/tool/delta/done/error）+ 前端增量渲染 + responding 占位气泡 + Markdown 渲染 |
+| 数据改动可感知 | `agent_action_logs` + `POST /v1/jennifer/undo`；前端改动卡片 + 一键撤销（活跃会话内，纯前端，不入库、不进上下文） |
+| 告警自动评估 | 维持手动测试通道（R6）；`agent_call_logs` 已落库供成本/降级看板 |
+
+### 13.2 新增工具（TOOL_DEFS 现为 15 个）
+
+`guardrails_set`（写护栏）、`feedback_read`（决策/投诉聚合）、`steps_get/steps_set`（拆解）、`memory_read/memory_write/memory_delete`（记忆）、`draft_generate`（LLM 化，kind 含 breakdown）；`items_delete` 增加 `confirm` 二次确认语义；`items_create` 移除硬编码 `escalation_policies.max_nudges=3`。
+
+### 13.3 新增端点
+
+`POST /v1/jennifer/undo`、`GET /v1/rhythm`；admin：`/api/docs*`、`/api/memories*`、`/api/playground`、`/api/costs`；chat 请求扩展 `context/session_id/new_session/stream`。
+
+### 13.4 验证
+
+- 后端：`npm run typecheck` 全绿；`npm test` **79 passed / 5 skipped**（新增 agent-full.test.ts：文档装配顺序、记忆分区编译、历史白名单全链路、热重载失效等）；
+- 前端：`flutter analyze` 0 issues；`flutter test` 11 passed；
+- 官网：`npm run build` 通过；21 tests 通过。

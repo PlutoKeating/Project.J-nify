@@ -20,6 +20,11 @@
 > 官网/文档已交付：首页/功能页状态标注、/auth/verify 回退页、/privacy 隐私页、OpenWeather 署名（官网 + App 关于页）、README（中英）三态徽章与路线图更新、SPEC §9.4/§9.5 修订、release.md 状态修正、GAPS.md 缺口登记。
 > **v0.2.0 修复记录**：① release 构建需启用 core library desugaring（`build.gradle.kts`）；② release 流水线注入 `OPENWEATHER_API_KEY`；③ Jennifer agent system prompt 注入当前日期+用户时区（防相对时间幻觉年份）；④ LLM 空完成视为失败继续切换下一顺序条目（防假确认）。`npm test` 74 通过 + typecheck 全绿。
 
+> ✅ **v0.3.0（Jennifer 完整实现）已发布（2026-08-29，Release `v0.3.0`，versionCode=6）**：需求定稿见 `docs/compose/specs/2026-08-29-jennifer-agent-complete-spec.md`（R0–R11 定案），验收见 `docs/compose/reports/2026-08-29-v030-release.md`。
+> 后端已交付：`agent_docs` 官方文档集（identity/workflow/tools + 任意 skill/custom md，admin 在线编辑、保存即热重载，system prompt 按序装配）+ `agent_memories` 结构化记忆（agent 工具沉淀 + 用户记忆文档新会话注入）+ 工具集扩展至 15 个（guardrails_set/feedback_read/steps/memory/draft LLM 化/items_delete 确认语义）+ MCP 风格 `context` 原文进 prompt + history role 白名单 + SSE 流式（start/tool/delta/done/error）+ `agent_action_logs` 与 `POST /v1/jennifer/undo`（24h 逆操作）+ `GET /v1/rhythm`（本地引擎消费节奏）+ `agent_call_logs`（成本/降级数据）；admin 新增文档管理/记忆管理/playground/成本看板；迁移 `20260829000001_jennifer_full.sql`（4 新表 + 三件套种子）。`npm test` 79 通过 + typecheck 全绿。
+> App 已交付：会话上下文纯客户端持久化（sqflite，只存文本消息）、SSE 流式对话、Markdown 渲染、发送后立即 responding 占位气泡、数据改动卡片 + 一键撤销（活跃会话内纯前端）、本地窗口引擎按 `GET /v1/rhythm` 消费 agent 节奏（替换硬编码 72h）；`flutter analyze` 0 issues + `flutter test` 11 通过。
+> 官网已交付：功能状态与路线图如实更新（M1/M2 已发布、护栏口径修正为窗口级去重）、v0.3.0 Release 同步；`npm run build` + 21 tests 通过。
+
 ---
 
 ## 1. 项目定位与技术栈（定案版）
