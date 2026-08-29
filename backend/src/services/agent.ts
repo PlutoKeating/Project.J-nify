@@ -1,5 +1,5 @@
 import type { Db } from '../db';
-import { restGet, restInsert, restUpdate, restDelete, robustGuardrails } from '../db';
+import { restGet, restInsert, restUpdate, restDelete, robustGuardrails, getTimezone } from '../db';
 import { callLlm, loadLlmConfig, type ChatMessage, type ToolCall, type ToolDef } from '../lib/llm';
 import { putConfig } from '../lib/config-store';
 import { getRhythm, setRhythm } from './rhythm';
@@ -268,6 +268,17 @@ const SYSTEM_PROMPT = `你是 Jennifer，J-nify 的低打扰行动秘书，一�
 
 你可以使用工具对用户的事项进行完整的增删改查与统筹管理。请用简体中文回复，简洁、像秘书而非机器人。`;
 
+/**
+ * 组装完整 system prompt：基础人设 + 当前时间上下文。
+ * 注入真实日期与时区，避免模型把"今天/明天/月底"等相对时间按训练数据幻觉成错误年份。
+ */
+export function buildSystemPrompt(now: Date, timezone: string): string {
+  const date = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  return `${SYSTEM_PROMPT}
+
+【当前时间上下文】今天是 ${date}（用户时区：${timezone}）。涉及"今天/明天/这周/月底"等相对时间表达时，必须以上述当前日期为准计算具体日期，不得使用训练数据中的年份。`;
+}
+
 export async function runAgent(
   db: Db,
   userId: string,
@@ -275,7 +286,13 @@ export async function runAgent(
   history: { role: 'user' | 'assistant'; content: string }[] = [],
 ): Promise<{ reply: string; toolResults: ToolResult[]; degraded: boolean }> {
   const cfg = await loadLlmConfig(db);
-  const messages: ChatMessage[] = [{ role: 'system', content: SYSTEM_PROMPT }];
+  let timezone = 'UTC';
+  try {
+    timezone = await getTimezone(db, userId);
+  } catch {
+    // 时区读取失败不阻塞对话，回退 UTC（仅影响相对时间换算精度，不影响人设）。
+  }
+  const messages: ChatMessage[] = [{ role: 'system', content: buildSystemPrompt(new Date(), timezone) }];
   for (const h of history) messages.push({ role: h.role, content: h.content });
   messages.push({ role: 'user', content: userMessage });
 

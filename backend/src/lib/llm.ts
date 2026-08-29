@@ -146,7 +146,9 @@ export async function callLlmWithConfig(cfg: LlmConfig, messages: ChatMessage[],
       for (const apiKey of keys) {
         for (const model of models) {
           try {
-            return await chatOpenAI(p.baseUrl, apiKey, model, messages, tools, cfg.timeoutMs);
+            const result = await chatOpenAI(p.baseUrl, apiKey, model, messages, tools, cfg.timeoutMs);
+            assertNonEmpty(result);
+            return result;
           } catch (e) {
             errors.push(`${p.id}/${model}: ${(e as Error).message}`);
           }
@@ -162,13 +164,25 @@ export async function callLlmWithConfig(cfg: LlmConfig, messages: ChatMessage[],
     const keys = p.apiKeys.length ? p.apiKeys : [''];
     for (const apiKey of keys) {
       try {
-        return await chatOpenAI(p.baseUrl, apiKey, mid, messages, tools, cfg.timeoutMs);
+        const result = await chatOpenAI(p.baseUrl, apiKey, mid, messages, tools, cfg.timeoutMs);
+        assertNonEmpty(result);
+        return result;
       } catch (e) {
         errors.push(`${entry}: ${(e as Error).message}`);
       }
     }
   }
   throw new Error(`all LLM providers failed: ${errors.join(' | ') || 'no providers configured'}`);
+}
+
+/**
+ * 空完成（无文本且无工具调用）对 agent 毫无价值，视为该条目失败，
+ * 让上层按顺序切换到下一个 provider/model，避免"好的，已记下"式假确认。
+ */
+function assertNonEmpty(result: LlmResult): void {
+  if (!result.text.trim() && result.toolCalls.length === 0) {
+    throw new Error('empty completion (no text, no tool calls)');
+  }
 }
 
 // ---- models.dev 公开模型列表（动态加载，1h 缓存） ----

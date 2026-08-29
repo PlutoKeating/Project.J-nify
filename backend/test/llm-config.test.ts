@@ -78,6 +78,27 @@ describe('callLlmWithConfig', () => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
+  it('treats empty completion as failure and moves to the next entry', async () => {
+    fetchMock
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ choices: [{ message: { content: '', tool_calls: [] } }] }),
+      } as never)
+      .mockResolvedValueOnce(okRes('m2') as never);
+    const cfg: LlmConfig = {
+      providers: [
+        provider({ id: 'p1', baseUrl: 'https://p1.test/v1', models: ['m1'], apiKeys: ['k1'] }),
+        provider({ id: 'p2', baseUrl: 'https://p2.test/v1', models: ['m2'], apiKeys: ['k2'] }),
+      ],
+      order: ['p1/m1', 'p2/m2'],
+      timeoutMs: 1000,
+      maxToolIterations: 3,
+    };
+    const result = await callLlmWithConfig(cfg, [], []);
+    expect(result.model).toBe('m2');
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
   it('skips disabled providers', async () => {
     fetchMock.mockResolvedValue(okRes('m1') as never);
     const cfg: LlmConfig = {
