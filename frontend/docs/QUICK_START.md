@@ -20,6 +20,8 @@ flutter test integration_test/app_smoke_test.dart -d <android-device> --dart-def
 flutter build apk --release --dart-define=SUPABASE_URL=... --dart-define=SUPABASE_ANON_KEY=...   # 出手装包
 ```
 
+Android 构建需安装 API 37 编译平台（`compileSdk=37`）；最低运行版本仍为 API 31，CI 会在 API 31 模拟器执行启动冒烟。
+
 > 发布构建要点（v0.1.2 起）：
 > - **主 `AndroidManifest.xml` 必须声明 `INTERNET` 权限**（Flutter 仅 debug/profile manifest 默认带，release 只合入 main 清单；缺失会导致 release 包任何网络请求立即失败——曾致注册报 `Failed host lookup (errno=7)`）。
 > - **release 签名固定 keystore**：CI 经 secrets `ANDROID_KEYSTORE_BASE64/PASSWORD/ALIAS/KEY_PASSWORD` 注入（`build.gradle.kts` 读环境变量，未配置回退 debug）。固定签名是 APK 覆盖安装更新的前提（曾因每次 CI runner 生成的 debug keystore 不同导致无法覆盖更新）。

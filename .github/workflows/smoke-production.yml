@@ -48,6 +48,9 @@ jobs:
         working-directory: frontend
         run: flutter pub get
 
+      - name: Install Android compile SDK
+        run: sdkmanager 'platforms;android-37'
+
       - name: Launch app on Android emulator
         uses: reactivecircus/android-emulator-runner@v2
         with:
