@@ -8,13 +8,13 @@
 
 | 项目 | 状态 | 可复核证据 |
 | --- | --- | --- |
-| 代码同步 | ✅ | 本地 `main` = `origin/main` = `3e63ba2`，工作区无未提交/未跟踪文件（文档审计开始前快照） |
+| 代码同步 | ✅ | 2026-08-30 已完成 `main` 与受影响 tags 的历史清洗和强制同步；当前 SHA 以 `git rev-parse HEAD origin/main` 实时复核 |
 | CI | ✅ | [run 33297116059](https://github.com/PlutoKeating/Project.J-nify/actions/runs/33297116059)：后端单测+类型、本地 Supabase 5/5 集成、Flutter analyze+16 tests、官网 21 tests+lint+build 全绿 |
 | 生产冒烟 | ✅ | [run 33297145574](https://github.com/PlutoKeating/Project.J-nify/actions/runs/33297145574)：官网/Worker 公开端点、Admin 登录+会话+只读 docs/costs、Android API 31 安装启动全绿 |
 | 后端/官网部署 | ✅ | [Backend run 33295560193](https://github.com/PlutoKeating/Project.J-nify/actions/runs/33295560193) / [Website run 33295560180](https://github.com/PlutoKeating/Project.J-nify/actions/runs/33295560180) |
 | Admin 凭据 | ✅ | `ADMIN_USERNAME` / `ADMIN_PASSWORD` 已由管理员更新到 GH Secrets，并经 [Configure Worker Secrets run 33296295275](https://github.com/PlutoKeating/Project.J-nify/actions/runs/33296295275) 同步到 Worker；随后只读生产冒烟通过 |
 | 最新 Release | ✅ | [`v0.3.0`](https://github.com/PlutoKeating/Project.J-nify/releases/tag/v0.3.0)（2026-08-29）；APK + AAB，versionCode=6 |
-| 凭据安全 | ⚠️ 需轮换 | 历史版 `DECISION_REGISTER.md` 曾误写 `TIANDITU_KEY` 真值；当前文件已移除，但公开 Git 历史仍可见。需运维者在天地图控制台轮换，更新 GH Secret 后同步 Worker 并冒烟验证 |
+| 凭据安全 | ⚠️ 需轮换 | 历史版 `DECISION_REGISTER.md` 曾误写 `TIANDITU_KEY` 真值；2026-08-30 已重写 `main`、`v0.2.0`、`v0.3.0`，并验证 168 个可达提交中剩余匹配为 0。旧 clone/fork/平台缓存仍可能保留已曝光值，仍需在天地图控制台轮换，更新 GH Secret 后同步 Worker 并冒烟验证 |
 
 **当前无等待中的部署或 CI 人工输入；但 `TIANDITU_KEY` 轮换是待运维者执行的安全项。** 另一非阻断项：GitHub 托管 Action `actions/checkout@v4` / `actions/setup-node@v4` 仍会产生 Node.js 20 runtime 弃用警告（GitHub 当前强制转用 Node.js 24），不影响现有作业结论，待官方 Action 主版升级时跟进。
 
@@ -164,7 +164,7 @@ git tag v<pubspec 版本> && git push origin v<tag>   # 触发 Release 工作流
 
 ## 8. 剩余工作（v0.3.0 之后）
 
-> **优先运维项**：轮换曾出现于公开 Git 历史的 `TIANDITU_KEY`，然后更新 GH Secret、运行 `Configure Worker Secrets (Ops)` 和 `Production Smoke`。文档中的明文已移除，但在供应商端轮换前风险不算关闭。
+> **优先运维项**：轮换曾出现于公开 Git 历史的 `TIANDITU_KEY`，然后更新 GH Secret、运行 `Configure Worker Secrets (Ops)` 和 `Production Smoke`。可达历史已重写并验证无剩余匹配，但旧 clone/fork/平台缓存可能保留已曝光值；在供应商端轮换前风险不算关闭。
 
 1. **完整人工真机验收（用户）**：CI/本机模拟器已自动验证安装启动；仍需侧载正式 APK 验证真实邮件、权限、天气/日历/UsageStats、对话改动与重启恢复等硬件/账户链路。
 2. **Admin 写操作验收（管理员）**：每日工作流已只读验证登录、会话、文档和成本接口；编辑 identity、playground LLM 调用等有成本/写入的操作仍由管理员人工验收。

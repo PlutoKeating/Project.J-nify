@@ -36,7 +36,7 @@
 4. 只用 `gh secret list` / `wrangler secret list` 核对“名称与更新时间”，不在终端、Issue、Actions 日志或文档中回显真值。
 
 ## 轮换与泄露处置
-- **当前待办（2026-08-30）**：`TIANDITU_KEY` 曾误写入公开仓库文档，当前文件已删除真值，但 Git 历史仍可恢复。必须在天地图控制台轮换，然后更新 GH Secret、同步 Worker 并运行生产冒烟；未轮换前不得标记为已处置。
+- **当前待办（2026-08-30）**：`TIANDITU_KEY` 曾误写入公开仓库文档。`main`、`v0.2.0`、`v0.3.0` 的可达历史已重写，168 个可达提交验证无剩余匹配；但旧 clone/fork/平台缓存可能保留已曝光值。必须在天地图控制台轮换，然后更新 GH Secret、同步 Worker 并运行生产冒烟；未轮换前不得标记为已处置。
 - 任一密钥疑似泄露：立即在对应平台轮换（网易授权码→设置页重新生成；CF/Supabase→控制台重新生成），随后 `gh secret set` 覆盖，并更新本台账。
 - 邮件模板与 SMTP 配置步骤见 `docs/devops/smtp.md`（Task 16 交付）。
 - **SMTP 已上线（2026-08-27）**：确认/重置邮件经 j_nify@yeah.net（smtp.yeah.net:465，sender `J-nify Jennifer`）发送，mailer_autoconfirm=false（确认开启）。

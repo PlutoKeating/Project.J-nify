@@ -14,7 +14,7 @@
 | GAP-RATE-LIMIT | CF Rate Limiting 跨实例限流 | 单实例规模内进程内限流够用；多实例部署前接入（F2） |
 | GAP-OFFLINE-CLOUD | 离线/弱网下云端同步冲突合并策略 | 本期离线队列为 last-write-wins；冲突合并后续细化 |
 | GAP-DUAL-ENGINE | 本地窗口引擎与后端 /v1/now 双实现 | 执行层本地优先后，两端规则需保持同步；建议后续统一为共享规则文档 |
-| GAP-TIANDITU-ROTATE | 轮换曾出现于公开 Git 历史的 `TIANDITU_KEY` | 当前文件已移除明文；需在供应商控制台轮换，再更新 GH Secret、同步 Worker 并运行生产冒烟 |
+| GAP-TIANDITU-ROTATE | 轮换曾出现于公开 Git 历史的 `TIANDITU_KEY` | ✅ 可达历史已于 2026-08-30 重写并验证无剩余匹配；⏳ 仍需在供应商控制台轮换，再更新 GH Secret、同步 Worker 并运行生产冒烟 |
 
 ## 已解决的运维项（保留审计）
 

@@ -177,7 +177,7 @@
 > ⚠️ **天地图 Key 类型定案（2026-08-29）**：用户选择「**浏览器端**」类型 key，白名单仅配置 `https://j-nify.williamhvollita.dpdns.org`。
 > 原因：浏览器端与服务端类型的实际区别仅为白名单控制类别——浏览器端=域名白名单，服务端=固定 IP 白名单；Cloudflare Worker 出口 IP 不固定/不可控，域名白名单更贴合部署形态。
 > 实现：后端 `/v1/geo/reverse` 代理请求显式携带 `Referer: https://j-nify.williamhvollita.dpdns.org/` 以通过域名白名单校验；key 存 CF Secret `TIANDITU_KEY`，不打进 APK。
-> Key 真值只存 GH/CF Secrets，文档仅登记名称 `TIANDITU_KEY`。历史版文档曾误写真值，2026-08-30 已移除；按公开仓库凭据泄露流程应在天地图控制台轮换，再更新 GH Secret 并同步 Worker。
+> Key 真值只存 GH/CF Secrets，文档仅登记名称 `TIANDITU_KEY`。历史版文档曾误写真值；2026-08-30 已移除并强制重写 `main`、`v0.2.0`、`v0.3.0`，可达历史验证无剩余匹配。因旧 clone/fork/平台缓存可能保留已曝光值，仍应在天地图控制台轮换，再更新 GH Secret 并同步 Worker。
 
 ### 5.2 GitHub 告警 Token（最小权限）
 1. GitHub → Settings → Developer settings → **Fine-grained personal access tokens** → Generate new token。
