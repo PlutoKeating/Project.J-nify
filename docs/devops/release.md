@@ -12,7 +12,7 @@
 ## 触发
 
 ```bash
-# 1) 确 like pubspec version 已提交
+# 1) 确认 pubspec version 已提交
 # 2) 打 tag 推送
 git tag v0.1.0 && git push origin v0.1.0
 ```
@@ -54,6 +54,7 @@ git tag v0.1.0 && git push origin v0.1.0
 ## 当前签名状态（✅ 已接入固定 release 签名，v0.1.2 起）
 
 > 当前最新版本：**v0.3.0**（已发布，2026-08-29；自 v0.1.2 起均为固定 release keystore 签名，可覆盖安装更新）。App Link 校验指纹（`website/public/.well-known/assetlinks.json`）取自该固定 release 证书：`9d9018a5…369d6b3`。
+> GitHub Release 资产已于 2026-08-30 复核：`app-release.apk` 与 `app-release.aab` 均存在；Release 页为 `https://github.com/PlutoKeating/Project.J-nify/releases/tag/v0.3.0`。
 > 构建提示：**flutter_local_notifications v17+ 要求启用 core library desugaring**（`build.gradle.kts` 已配置 `isCoreLibraryDesugaringEnabled` + `desugar_jdk_libs:2.1.4`），改动 Android 构建配置后需重切 tag 重发。
 
 - Android：**固定 release keystore 签名**（secrets：`ANDROID_KEYSTORE_BASE64` / `ANDROID_KEYSTORE_PASSWORD` / `ANDROID_KEY_ALIAS` / `ANDROID_KEY_PASSWORD`）。**从 v0.1.2 起所有版本签名一致，可覆盖安装更新**；⚠️ 但因 v0.1.0/v0.1.1 为 debug 签名（每次 CI runner 各不相同），**从旧版升级到首个签名版（v0.1.2）仍需卸载重装一次**。

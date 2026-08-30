@@ -4,6 +4,8 @@
 > 范围：Jennifer agent（`/v1/jennifer/chat`）当前的设计与实现现状——LLM 调用构建、system prompt 组成、记忆设计、上下文取舍、前端对话入口与会话管理、人格设定修改途径、用户特殊设定/永久记忆现状，以及 2026-08-29 生产链路实测记录。
 > 关联：`docs/ARCHITECTURE.md`（系统架构）、`docs/DECISION_REGISTER.md`（P2/P3/B6/B8/C1/C2 等定案）、`docs/API.md`（`POST /v1/jennifer/chat`）、`docs/compose/reports/2026-08-29-v020-release.md`（v0.2.0 验收报告）。
 
+> **时效性说明**：§一–§十二保留 v0.2.0 发布时的设计基线与缺口推导，不是当前状态；当前 v0.3.0 落地结果以 **§十三**、`docs/ARCHITECTURE.md` 和 `docs/HANDOVER.md` 为准。
+
 ---
 
 ## 一、链路总览

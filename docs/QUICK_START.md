@@ -50,3 +50,12 @@ flutter run
 - 「我的」页改昵称走 `GET/PUT /v1/me/profile`（昵称非唯一）；邮箱/密码经 Supabase Auth，邮箱改需到新邮箱点确认链接（回调回 App，App Link，见 `docs/devops/email-callback.md`）。
 - 本地集成测试：`cd backend && npx supabase start` 启动一次性本地 Supabase 栈，按 `npx supabase status -o env` 映射 `API_URL/ANON_KEY/SERVICE_ROLE_KEY/DB_URL` 后运行 `npm run test:integration`。CI 自动执行这 5 项测试，不接触生产库或生产 service key。
 - 生产只读冒烟：`cd backend && npm run smoke:production`；提供 `ADMIN_USERNAME/ADMIN_PASSWORD` 与 `SMOKE_REQUIRE_ADMIN=1` 时同时验证 Admin 登录、会话、文档和成本接口。
+
+## 生产运维速查
+
+- 当前工作状态、最新验证记录和未完成项：`docs/HANDOVER.md`。
+- 查 CI/部署/冒烟：`gh run list --limit 20`；查某次失败：`gh run view <run-id> --log-failed`。
+- 后端部署：`backend/**` 推入 `main` 自动触发 `Deploy Backend`。官网部署：`website/**` 推入 `main` 自动触发 `Deploy Website`。
+- 生产冒烟：每日 UTC 01:17（北京时间 09:17）自动运行，也可手动运行 `Production Smoke`；包含公开端点、Admin 只读链路和 Android 安装启动。
+- Admin 凭据轮换：先更新 GH Secrets，再运行 `Configure Worker Secrets (Ops)`（`confirm=YES`），最后手动运行 `Production Smoke`；真值不入库。
+- 密钥名称、所属系统和轮换规则：`docs/devops/SECRETS_REGISTRY.md`。发布、官网与邮件分别见 `docs/devops/release.md`、`website-deploy.md`、`email-callback.md`。

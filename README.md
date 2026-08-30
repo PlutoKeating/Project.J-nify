@@ -99,7 +99,7 @@ frontend/      Flutter 客户端（认证 + 三屏 + 录入/决策闭环）
 backend/       Cloudflare Worker 后端（TS + Hono；Supabase REST/RPC 数据层）
 docs/          文档：SPEC / ARCHITECTURE / API / QUICK_START / HANDOVER
 docs/devops/   发布规范 / SMTP / 密钥台账
-.github/       GitHub Actions（CI / 后端部署 / 前端发布）
+.github/       GitHub Actions（CI / 后端与官网部署 / App 发布 / 运维 / 生产冒烟）
 LICENSE        AGPL-3.0
 ```
 
@@ -117,13 +117,15 @@ LICENSE        AGPL-3.0
 - 🗺️ [`docs/compose/plans/2026-08-29-v020-m0.5-m1-implementation.md`](docs/compose/plans/2026-08-29-v020-m0.5-m1-implementation.md) —— v0.2.0 实施计划
 - 🕳️ [`docs/GAPS.md`](docs/GAPS.md) —— 缺口登记（暂不实现，条件成熟时补齐）
 
+> 文档时效性：`README` / `ARCHITECTURE` / `API` / `QUICK_START` / `HANDOVER` / `docs/devops/*` 描述当前实现与运维状态；`docs/compose/plans|specs|reports` 与 `DECISION_QUESTIONNAIRE` 是带日期的过程档案，保留当时语境，不作为当前运维手册。最新工作状态以 [`docs/HANDOVER.md`](docs/HANDOVER.md) 为准。
+
 ## 官网
 
 产品落地官网：[https://j-nify.arr2018.dpdns.org](https://j-nify.arr2018.dpdns.org)
 
 - 源码：`website/`（Vite + React + TypeScript + React Router + Tailwind CSS 4）
 - 内容：首页（营销）/ 功能详解 / 下载页（实时从 GitHub Release 读取最新版本，无需跳转）
-- 部署：Cloudflare Pages（git 集成，push `main` 自动发布）；自定义域名 `https://j-nify.arr2018.dpdns.org`
+- 部署：GitHub Actions `deploy-website.yml` 在 `main` 的 `website/**` 变更后校验并直发 Cloudflare Pages；自定义域名 `https://j-nify.arr2018.dpdns.org`
 - 本地预览：`cd website && npm ci && npm run dev`
 - 详细部署与自定义域名配置：[`docs/devops/website-deploy.md`](docs/devops/website-deploy.md)
 

@@ -1,17 +1,27 @@
-# jnify_app
+# J-nify Flutter 客户端
 
-A new Flutter project.
+J-nify 的 Android / iOS / Web Flutter 客户端。当前发布版为 `v0.3.0`（`0.3.0+6`）；认证使用 Supabase Auth，业务数据只经 Cloudflare Worker API 访问。
 
-## Getting Started
+```bash
+cp .env.example .env   # 可选；本地联调时改 BACKEND_BASE_URL
+flutter pub get
+flutter run
+```
 
-This project is a starting point for a Flutter application.
+验证：
 
-A few resources to get you started if this is your first Flutter project:
+```bash
+flutter analyze
+flutter test
+flutter test integration_test/app_smoke_test.dart -d <android-device> \
+  --dart-define=SUPABASE_URL=... \
+  --dart-define=SUPABASE_ANON_KEY=...
+```
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+- [模块说明](docs/README.md)
+- [架构](docs/ARCHITECTURE.md)
+- [快速开始](docs/QUICK_START.md)
+- [发布与签名](../docs/devops/release.md)
+- [邮件 App Link](../docs/devops/email-callback.md)
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+生产包由 `.github/workflows/release-frontend.yml` 通过 tag `vX.Y.Z` 构建；不要提交 `.env`、keystore 或任何真实凭据。

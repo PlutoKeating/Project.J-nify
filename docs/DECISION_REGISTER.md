@@ -113,7 +113,7 @@
 | H1 | 首页保留愿景 + 增加"已发布/规划中"状态标注；Features 支柱标注状态；场景标注"示意，即将上线" | Q2 联动 |
 | H2 | README/官网统一三态徽章；发布 checklist 强制同步 README/官网/release.md/HANDOVER | — |
 | H3 | SPEC 五用例拆"手动窗口判定/M1 信号窗口判定"两列；M1 完成定义 = 四信号源 + 本地执行闭环 + 节奏表生效 | — |
-| H4 | 修正 release.md v0.1.5 状态；README 文档索引补登记/计划 | 已部分完成 |
+| H4 | 修正 release.md v0.1.5 状态；README 文档索引补登记/计划 | ✅ 已完成；2026-08-30 又完成一次全量文档/运维时效性审计 |
 
 ### I · 发布与里程碑
 
@@ -177,28 +177,28 @@
 > ⚠️ **天地图 Key 类型定案（2026-08-29）**：用户选择「**浏览器端**」类型 key，白名单仅配置 `https://j-nify.williamhvollita.dpdns.org`。
 > 原因：浏览器端与服务端类型的实际区别仅为白名单控制类别——浏览器端=域名白名单，服务端=固定 IP 白名单；Cloudflare Worker 出口 IP 不固定/不可控，域名白名单更贴合部署形态。
 > 实现：后端 `/v1/geo/reverse` 代理请求显式携带 `Referer: https://j-nify.williamhvollita.dpdns.org/` 以通过域名白名单校验；key 存 CF Secret `TIANDITU_KEY`，不打进 APK。
-> Key 值：`[REDACTED]`（2026-08-29 用户提供并配置；真值只存 GH/CF Secrets 与本文档登记，不写入代码）。
+> Key 真值只存 GH/CF Secrets，文档仅登记名称 `TIANDITU_KEY`。历史版文档曾误写真值，2026-08-30 已移除；按公开仓库凭据泄露流程应在天地图控制台轮换，再更新 GH Secret 并同步 Worker。
 
 ### 5.2 GitHub 告警 Token（最小权限）
 1. GitHub → Settings → Developer settings → **Fine-grained personal access tokens** → Generate new token。
 2. Repository access：**Only select repositories** → 只选 `PlutoKeating/Project.J-nify`。
 3. Permissions：只开 **Issues → Read and write**（不要授 repo contents/admin 等其他权限）。
-4. 生成后复制 token → **存为 GH Actions Secret `GH_PAT`**，再运行 `configure-worker-secrets` 工作流（main 上的权威同步工作流，confirm=YES 门控）同步到 CF Worker（工作流已预留该步骤，GH 中未配置时自动跳过）。
+4. 当前已配置。轮换时将新 token 存为 GH Actions Secret `GH_PAT`，再运行 `configure-worker-secrets` 工作流（main，`confirm=YES`）同步到 CF Worker。
 
 ### 5.3 管理员账号（admin 面板）
 1. 生成强随机口令（建议 20+ 位，大小写+数字+符号）。
-2. **状态：`SESSION_SECRET` 已配置（2026-08-29，随机 64 位 hex，GH Secret + CF Worker Secret 同步）**；`ADMIN_USERNAME` / `ADMIN_PASSWORD` 待用户创建后存入 GH Secrets，再运行 `configure-worker-secrets` 工作流同步。
-3. 存法：`gh secret set ADMIN_USERNAME` / `gh secret set ADMIN_PASSWORD`，然后 GitHub Actions 手动运行 `configure-worker-secrets`（confirm 填 YES）。
+2. **状态：`SESSION_SECRET`、`ADMIN_USERNAME` 和 `ADMIN_PASSWORD` 均已配置**；后两项于 2026-08-30 由管理员更新 GH Secrets，同步 Worker 后通过只读生产冒烟。
+3. 轮换：`gh secret set ADMIN_USERNAME` / `gh secret set ADMIN_PASSWORD`，然后手动运行 `configure-worker-secrets`（confirm 填 YES），最后运行 `Production Smoke`。
 
 ### 5.4 SMTP 告警（复用现有邮箱）
-1. **状态：已全部配置到 CF Worker（2026-08-29）**：`SMTP_HOST=smtp.yeah.net`、`SMTP_PORT=465`、`SMTP_USER=j_nify@yeah.net`、`SMTP_AUTH=<yeah.net 客户端授权码>`，经 `sync-worker-secrets` 工作流从 GH Secrets 同步，已 `wrangler secret list` 验证。
+1. **状态：已全部配置到 CF Worker（2026-08-29）**：`SMTP_HOST=smtp.yeah.net`、`SMTP_PORT=465`、`SMTP_USER=j_nify@yeah.net`、`SMTP_AUTH=<yeah.net 客户端授权码>`，经 `configure-worker-secrets` 工作流从 GH Secrets 同步，已 `wrangler secret list` 验证。
 2. 后端告警邮件实现统一读取 `SMTP_HOST` / `SMTP_PORT` / `SMTP_USER` / `SMTP_AUTH`。
 
 ### 5.5 提交到台账
 上述新增 secret 名称统一登记到 `docs/devops/SECRETS_REGISTRY.md`（已完成 2026-08-29），真值不落库。
 
 ### 5.6 凭据同步工作流（权威）
-`.github/workflows/configure-worker-secrets.yml`（main，2026-08-29 已执行成功）：手动触发（confirm 填 YES），把 GH Actions Secrets 中的 `SMTP_HOST/PORT/USER/AUTH`、`SESSION_SECRET`、以及（若已配置）`ADMIN_USERNAME/ADMIN_PASSWORD/GH_PAT` 同步为 CF Worker secrets，并以 `wrangler secret list` 验证。真值不落库、不写入日志（GitHub 自动掩码）。
+`.github/workflows/configure-worker-secrets.yml`（main，2026-08-30 最近执行成功）：手动触发（confirm 填 YES），把 GH Actions Secrets 中的 `SMTP_HOST/PORT/USER/AUTH`、`SESSION_SECRET`、以及（若已配置）`ADMIN_USERNAME/ADMIN_PASSWORD/GH_PAT/TIANDITU_KEY` 同步为 CF Worker secrets，并以 `wrangler secret list` 验证。真值不落库、不写入日志（GitHub 自动掩码）。
 > 注：早期特性分支 `chore/sync-worker-secrets` 上的同名工作流已废弃（功能并入 main 的 `configure-worker-secrets.yml`）。
 
 ---

@@ -32,7 +32,7 @@ J-nify 采用「Flutter 客户端 + Cloudflare Worker 后端 + Supabase（Postgr
 - `models/` — `ItemCommitment`（含 const 构造器与 `options` 字段）。
 - `screens/ + widgets/` — `现在/全部/我的` 三视图；焦点卡按后端 options 渲染（含 rescue）；录入分类 chips+期限；Toast 顶部 pill（SPEC §3.5）；护栏真实读写。`HomeShell` body 包 `SafeArea` 避开刘海/状态栏；`我的` 页含资料卡（昵称+邮箱）+ 设置入口，`SettingsScreen` 分组改昵称/密码/邮箱；「隐私说明」「关于」用 `ExpansionTile` 默认折叠。
 - **资料/昵称**：昵称存 `public.users.nickname`（**非唯一**），因 RLS 客户端零数据访问，读写经后端 `GET/PUT /v1/me/profile`（service key）；邮箱来自 Supabase Auth（`auth.currentUser.email`），更改经 `auth.updateUser` 触发确认邮件并回跳 App（App Link）。
-- **邮件回调/会话（Deep Link）**：确认/重置邮件 `{{ .ConfirmationURL }}` 由 Supabase **Site URL** 生成（先前为 `http://localhost:3000`，需改为 `https://j-nify.arr2018.dpdns.org`）。App 用 `app_links` 订阅深链，`token_hash`+`type` → `auth.verifyOTP`，`code`/`access_token` → `getSessionFromUrl`；App Link 校验资产在 `website/public/.well-known/`。会话持久化：`main.dart` 显式 `autoRefreshToken/persistSession`，`AuthGate` 启动 `refreshSession()` 滑动重置未活动时钟；服务端 Inactivity timeout 建议 720h(30天)/关 time-box（见 `docs/devops/email-callback.md`）。
+- **邮件回调/会话（Deep Link）**：确认/重置邮件 `{{ .ConfirmationURL }}` 由 Supabase **Site URL** 生成；生产 Site URL 已从历史的 `http://localhost:3000` 改为 `https://j-nify.arr2018.dpdns.org`，Additional Redirect URL 与 30 天滑动会话配置已生效。App 用 `app_links` 订阅深链，`token_hash`+`type` → `auth.verifyOTP`，`code`/`access_token` → `getSessionFromUrl`；Android App Link 校验资产已部署在 `website/public/.well-known/`。App 显式启用 `autoRefreshToken/persistSession`，`AuthGate` 启动时 `refreshSession()` 滑动重置未活动时钟（见 `docs/devops/email-callback.md`）。
 
 ## 后端（Cloudflare Worker）
 
@@ -88,5 +88,7 @@ J-nify 采用「Flutter 客户端 + Cloudflare Worker 后端 + Supabase（Postgr
 
 - **后端**：CF Worker secrets：`SUPABASE_URL`、`SUPABASE_SERVICE_KEY`；本地 `.dev.vars`（gitignored）；迁移用 `supabase/migrations/*.sql` + `npm run db:migrate`（golden rule：禁 Dashboard 直改结构）。
 - **部署**：push main（backend/**）→ Actions `wrangler deploy` → 生产 URL `https://j-nify.williamhvollita.dpdns.org`；CI 门禁另跑 test/typecheck。
+- **官网**：push main（website/**）→ Actions 完成 test/lint/build 后直发 Cloudflare Pages；不依赖 Dashboard Git 集成。
+- **生产监测**：`smoke-production.yml` 每日 01:17 UTC（北京时间 09:17）及手动执行，覆盖官网 SPA 路由、Worker `/health`、Admin 登录/会话/只读端点与 Android API 31 模拟器安装启动。
 - **发布**：tag `vX.Y.Z` → Actions 构建 APK/AAB/iOS 归档并发布 GitHub Release（详见 `docs/devops/release.md`）。Android **固定 release keystore 签名**（v0.1.2 起，keystore/口令走 GH Secrets，不入库；保证版本间签名一致、支持覆盖安装更新）。
 - **前端**：生产构建无需 `.env`（`AppConfig.load` 用 `isOptional` 回退内置生产 Base URL + CI 注入的 SUPABASE dart-define）；**主 `AndroidManifest.xml` 声明 `INTERNET` 权限**（release 网络必需，Flutter 默认只在 debug/profile manifest 带）。

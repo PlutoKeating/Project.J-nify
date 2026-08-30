@@ -11,10 +11,12 @@ frontend/
 │   ├── auth/                  # AuthGate（登录态路由 + 启动 refreshSession）+ 登录/注册逻辑
 │   ├── core/config/           # AppConfig（dotenv + 生产默认值 + appLinkHost/appLinkVerify）
 │   ├── core/api/              # ApiClient（Bearer JWT 注入、401 静默登出）
-│   ├── services/              # 业务 API 封装（含 /v1/me/profile：getProfile/updateNickname）
+│   ├── services/              # API/SSE、会话 SQLite、离线队列、信号/本地窗口与通知
 │   ├── models/                # ItemCommitment（含 options）
-│   ├── screens/               # 现在/全部/我的 + 设置(settings_screen) + login
-│   └── widgets/               # 焦点卡（后端 options 渲染）/录入（分类+期限）/任务行
+│   ├── screens/               # 现在/全部/我的/设置/Jennifer 对话/登录
+│   └── widgets/               # 焦点卡/录入/任务行/对话卡片
+├── test/                       # 16 项单元/widget 测试
+├── integration_test/           # Android 安装启动冒烟
 ├── android/ ios/ web/         # 平台目录（minSdk 31 / iOS target 15.0；Android 已加 App Link intent-filter）
 ├── pubspec.yaml               # 唯一版本来源（version:；`+N`=versionCode 必须单调递增）
 └── .env.example               # BACKEND_BASE_URL / SUPABASE_URL / SUPABASE_ANON_KEY（publishable）
@@ -50,3 +52,9 @@ frontend/
 - **数据改动卡片 + 一键撤销（R9）**：chat 响应的 `toolResults` 中带 `action_id` 的改动渲染为卡片（事项/节奏/护栏/记忆/拆解），卡片带撤销按钮调 `POST /v1/jennifer/undo`；卡片仅活跃会话内展示，退出 App 或开新会话即失效。
 - **本地引擎消费节奏策略**：`JenniferLocalEngine` 经 `GET /v1/rhythm` 按类目拉取 agent 写入的 `rhythm_policies`（替换硬编码 72h 冷却），本地通知真正跟随 agent 策略。
 - **自动化验证**：16 项单元/widget 测试覆盖 SSE 解析、SQLite 会话恢复、流式占位与 delta、改动卡片/撤销、节奏策略解析；`integration_test/app_smoke_test.dart` 在 Android 模拟器验证安装启动到认证页。
+
+## 当前工程状态（2026-08-30）
+
+- `flutter analyze`：0 issues；`flutter test`：16/16。
+- GitHub `Production Smoke` 已在启用 KVM 的 Android API 31 x86_64 模拟器完成构建、安装、启动并断言登录页标题。
+- `permission_handler` 保持 12.x；13.x 需 compileSdk 37，当前 Flutter stable / 托管 Android SDK 链路不稳定，不作生产基线。

@@ -2,7 +2,7 @@
 
 基于 SPEC §7.2 的 API 草案实现于 Cloudflare Worker 后端。生产 Base URL：**`https://j-nify.williamhvollita.dpdns.org`**（本地开发 `http://localhost:8787`，`wrangler dev`）。
 
-所有接口 base path 为 `/v1`。**鉴权**：`Authorization: Bearer <Supabase Auth JWT>`（邮箱注册/登录后由 supabase_flutter 取得）；缺失/无效 → `401 {"detail":"unauthorized"}`。错误统一 `{"detail":"<msg>"}`。
+业务接口 base path 为 `/v1`。`/health` 和 `/admin` / `/admin/api/*` 不在 `/v1` 下。**业务接口鉴权**：`Authorization: Bearer <Supabase Auth JWT>`（邮箱注册/登录后由 supabase_flutter 取得）；缺失/无效 → `401 {"detail":"unauthorized"}`。错误统一 `{"detail":"<msg>"}`。
 
 | 方法 | 路径 | 说明 |
 | --- | --- | --- |
@@ -13,10 +13,10 @@
 | POST | `/v1/items/{id}/decision` | `now / later / drop / rescue`（响应含中文 message） |
 | GET | `/v1/items?status=` | 全部事项列表（可选按状态过滤） |
 | POST | `/v1/signals` | 端侧信号上报，受 privacy scope 限制（403） |
-| GET | `/v1/guardrails` | 安静时段 / 授权 / 提醒预算 |
+| GET | `/v1/guardrails` | 安静时段 / 授权 / 兼容字段 `max_nudge_budget`（不作提醒次数硬门） |
 | PUT | `/v1/guardrails` | 更新护栏（持久化到 user_preferences） |
 | DELETE | `/v1/me/data` | 可验证删除（级联清空业务数据 + **删除 Supabase Auth 账户**，彻底注销） |
-| POST | `/v1/llm/draft` | 草稿生成（当前模板降级 stub） |
+| POST | `/v1/llm/draft` | 旧版兼容草稿端点（模板降级）；Jennifer 对话内的草稿使用 `/v1/jennifer/chat` 工具链 |
 | GET | `/v1/me/profile` | 当前用户资料（`{ id, nickname }`；昵称来自 `users` 表，可空） |
 | PUT | `/v1/me/profile` | 更新昵称（用户名，**非唯一**）：`{ nickname }`，空/超 64 字符 → 400 |
 | PUT | `/v1/me/timezone` | 更新用户时区（IANA，如 `Asia/Shanghai`）；静默时段按该时区计算 |
@@ -26,12 +26,14 @@
 | POST | `/v1/metrics/events` | 匿名指标事件：`event_type ∈ capture/nudge_sent/nudge_opened/decision/rescue_action/complaint`（不含事项内容） |
 | POST | `/v1/geo/reverse` | 天地图逆地理编码代理（服务端 `TIANDITU_KEY`，坐标二次模糊化，仅返回城市/地址文本） |
 | GET | `/health` | 健康检查 |
+| GET | `/` | Worker 元信息（name/version/env） |
 
 ### Admin 面板（浏览器 `/admin`，管理员登录）
 
 | 方法 | 路径 | 说明 |
 | --- | --- | --- |
 | POST | `/admin/api/login` | 登录（CF 环境变量 `ADMIN_USERNAME`/`ADMIN_PASSWORD`/`SESSION_SECRET`，签名 session cookie） |
+| POST | `/admin/api/logout` | 清除 Admin session cookie |
 | GET | `/admin/api/session` | 会话状态 |
 | GET/PUT | `/admin/api/config/llm` | LLM 多 provider 配置（baseUrl/多 key/多模型/模型级尝试顺序 `providerId/modelId`/超时），保存即热加载 |
 | GET | `/admin/api/models/providers` | models.dev 供应商列表（公开 API；每项含 id/name/baseUrl（由 api 字段推导，无法推导为 null）/models） |

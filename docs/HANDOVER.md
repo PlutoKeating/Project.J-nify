@@ -4,6 +4,24 @@
 > 权威信息源：`docs/DECISION_REGISTER.md`（决策定案）、`docs/compose/specs/2026-08-29-jennifer-agent-complete-spec.md`（Jennifer 完整实现 spec，R0–R11 定案）、`docs/JENNIFER_AGENT_REPORT.md`（agent 设计与现状）、`docs/devops/SECRETS_REGISTRY.md`（密钥台账）。
 > ⚠️ 仓库 **public**：本文不含任何密钥明文，只列「名称 + 存放位置」；真值在 GitHub Actions Secrets / CF Dashboard Worker secrets / 本机 `backend/.dev.vars`（gitignored）/ 密码管理器。
 
+## 0. 当前工作与运维快照（2026-08-30）
+
+| 项目 | 状态 | 可复核证据 |
+| --- | --- | --- |
+| 代码同步 | ✅ | 本地 `main` = `origin/main` = `3e63ba2`，工作区无未提交/未跟踪文件（文档审计开始前快照） |
+| CI | ✅ | [run 33297116059](https://github.com/PlutoKeating/Project.J-nify/actions/runs/33297116059)：后端单测+类型、本地 Supabase 5/5 集成、Flutter analyze+16 tests、官网 21 tests+lint+build 全绿 |
+| 生产冒烟 | ✅ | [run 33297145574](https://github.com/PlutoKeating/Project.J-nify/actions/runs/33297145574)：官网/Worker 公开端点、Admin 登录+会话+只读 docs/costs、Android API 31 安装启动全绿 |
+| 后端/官网部署 | ✅ | [Backend run 33295560193](https://github.com/PlutoKeating/Project.J-nify/actions/runs/33295560193) / [Website run 33295560180](https://github.com/PlutoKeating/Project.J-nify/actions/runs/33295560180) |
+| Admin 凭据 | ✅ | `ADMIN_USERNAME` / `ADMIN_PASSWORD` 已由管理员更新到 GH Secrets，并经 [Configure Worker Secrets run 33296295275](https://github.com/PlutoKeating/Project.J-nify/actions/runs/33296295275) 同步到 Worker；随后只读生产冒烟通过 |
+| 最新 Release | ✅ | [`v0.3.0`](https://github.com/PlutoKeating/Project.J-nify/releases/tag/v0.3.0)（2026-08-29）；APK + AAB，versionCode=6 |
+| 凭据安全 | ⚠️ 需轮换 | 历史版 `DECISION_REGISTER.md` 曾误写 `TIANDITU_KEY` 真值；当前文件已移除，但公开 Git 历史仍可见。需运维者在天地图控制台轮换，更新 GH Secret 后同步 Worker 并冒烟验证 |
+
+**当前无等待中的部署或 CI 人工输入；但 `TIANDITU_KEY` 轮换是待运维者执行的安全项。** 另一非阻断项：GitHub 托管 Action `actions/checkout@v4` / `actions/setup-node@v4` 仍会产生 Node.js 20 runtime 弃用警告（GitHub 当前强制转用 Node.js 24），不影响现有作业结论，待官方 Action 主版升级时跟进。
+
+> 快照会随新提交自然过时；日常复核以 `git status --short --branch`、`gh run list`、`gh release view` 和生产冒烟的最新输出为准。
+
+---
+
 > 📌 **已发版功能增量（2026-08-28，v0.1.5 已发布）**：
 > - **资料/设置**：`我的` 页资料卡（昵称+邮箱）+ 齿轮进入 `SettingsScreen`（分组：改昵称 / 改邮箱 / 改密码）；后端新增 `GET/PUT /v1/me/profile`（昵称存 `users.nickname`，非唯一）；邮箱改经 `auth.updateUser` 触发确认邮件并回跳 App。
 > - **邮件回调（App Link）**：根因=Supabase **Site URL=`http://localhost:3000`**。Site URL 已改 `https://j-nify.arr2018.dpdns.org` + 加 Additional Redirect URL；App 用 `app_links`+`verifyOTP` 接收；App Link 校验指纹（真实值）在 `website/public/.well-known/assetlinks.json`（`9d9018a5…369d6b3`）。详见 `docs/devops/email-callback.md`。
@@ -15,7 +33,7 @@
 
 > ✅ **v0.2.0（M0.5+M1）已发布（2026-08-29，Release `v0.2.0`，versionCode=5）**：决策定案见 `docs/DECISION_REGISTER.md`，实施计划见 `docs/compose/plans/2026-08-29-v020-m0.5-m1-implementation.md`，验收报告见 `docs/compose/reports/2026-08-29-v020-release.md`。
 > 后端已交付：admin 面板（/admin + /admin/api/*，LLM 多 provider 热加载 + models.dev 供应商字典序点选录入/模型模糊搜索点选/chip 式 key 与模型管理/`providerID/modelID` 尝试顺序拖拽排序 + 指标看板 + 告警配置）、Jennifer agent harness（/v1/jennifer/chat + MCP 风格工具集）、事项 PATCH/DELETE、列表理由、`/v1/me/timezone`、`DELETE /v1/me/data` 彻底注销（含 auth 账户）、频控重构（Q1：无硬上限，仅安静时段+窗口去重）、节奏策略（rhythm_policies）、匿名指标 `/v1/metrics/events` + `v_closure_rate` 视图、告警双通道（GH_PAT + SMTP）、迁移 `20260829000000_v020_admin_agent_metrics.sql`；`npm test` 72 通过 + typecheck 全绿。
-> CF Worker secrets 已配置：`SMTP_HOST/PORT/USER/AUTH`、`SESSION_SECRET`（经 `configure-worker-secrets.yml` 工作流同步）。待用户补充：`GH_PAT`、`ADMIN_USERNAME/ADMIN_PASSWORD`。
+> CF Worker secrets 当时先配置了 `SMTP_HOST/PORT/USER/AUTH`、`SESSION_SECRET`；`GH_PAT` 与 `ADMIN_USERNAME/ADMIN_PASSWORD` 已在后续运维中补齐，并于 2026-08-30 再次同步、冒烟验证。
 > App 已交付：本地通知（含「别再提」action）、四信号采集（UsageStats/系统日历/OpenWeather/天地图，仅本地）、本地窗口引擎、离线队列（sqflite）、对话 UI（/v1/jennifer/chat）、引导框架（TourRegistry）、全部页分组/理由/多选删除/编辑、忘记密码、彻底注销、时区提示、隐私文案修正、品牌名统一 J-nify + 图标；`flutter analyze` 0 issues + `flutter test` 11 通过。
 > 官网/文档已交付：首页/功能页状态标注、/auth/verify 回退页、/privacy 隐私页、OpenWeather 署名（官网 + App 关于页）、README（中英）三态徽章与路线图更新、SPEC §9.4/§9.5 修订、release.md 状态修正、GAPS.md 缺口登记。
 > **v0.2.0 修复记录**：① release 构建需启用 core library desugaring（`build.gradle.kts`）；② release 流水线注入 `OPENWEATHER_API_KEY`；③ Jennifer agent system prompt 注入当前日期+用户时区（防相对时间幻觉年份）；④ LLM 空完成视为失败继续切换下一顺序条目（防假确认）。`npm test` 74 通过 + typecheck 全绿。
@@ -97,6 +115,8 @@
 | `sync-worker-domain.yml` | 手动 | Worker 自定义域名同步（j-nify.williamhvollita.dpdns.org） |
 | `smoke-production.yml` | 每日+手动 | 官网/健康检查/只读 Admin API + Android 模拟器安装启动冒烟 |
 
+生产冒烟的定时值为 `17 1 * * *`（UTC 01:17 / 北京时间 09:17）。Admin 作业显式设置 `SMOKE_REQUIRE_ADMIN=1`，因此 GH 端凭据缺失或与 Worker 不一致会直接使作业失败，不会静默跳过。Android 作业先授予 `/dev/kvm` 访问，再用 API 31 x86_64 模拟器运行 `integration_test/app_smoke_test.dart`。
+
 **GH Secrets（已设）**：`ANDROID_KEYSTORE_BASE64`、`ANDROID_KEYSTORE_PASSWORD`、`ANDROID_KEY_ALIAS`、`ANDROID_KEY_PASSWORD`、`CLOUDFLARE_ACCOUNT_ID`、`CLOUDFLARE_API_TOKEN`、`SMTP_AUTH_PROD`、`SMTP_HOST`、`SMTP_PORT`、`SMTP_USER`、`SUPABASE_ANON_KEY`、`SUPABASE_URL`、`OPENWEATHER_API_KEY`、`SESSION_SECRET`、`ADMIN_USERNAME`、`ADMIN_PASSWORD`、`GH_PAT`、`TIANDITU_KEY`。
 **CF Worker secrets**：`SUPABASE_URL`、`SUPABASE_SERVICE_KEY`、SMTP 四项、`SESSION_SECRET`、`ADMIN_USERNAME/ADMIN_PASSWORD`、`GH_PAT`、`TIANDITU_KEY`（DEBUG 已删）。**App Link 校验指纹**（`assetlinks.json` 的 SHA-256）是**公开值非密钥**，直接入仓库 `website/public/.well-known/assetlinks.json`。
 - 推送提示：本机 remote 为 SSH（github-personal）可用；Clash 开启时 SSH 不通则临时用 HTTPS：`TOKEN=$(gh auth token); git push "https://x-access-token:${TOKEN}@github.com/PlutoKeating/Project.J-nify.git" <ref>`（不改配置）。
@@ -110,6 +130,7 @@
 - 临时文件约定：探针等放 `backend/.scratch/`（已 gitignore），收尾整体清一次；**工作途中不执行 rm**。
 - 邮件模板：默认 Supabase 文案在用；自设计模板（docs/devops/smtp.md 内 HTML）可后续贴入 Auth → Email Templates。
 - **Jennifer 运维要点（v0.3.0）**：① agent 人设/流程/工具规范 = `agent_docs` 三件套，admin `/admin` → Jennifer 文档集 在线编辑，**保存即热重载**，无需重新部署；② 用户记忆在 `agent_memories`（新会话注入 system prompt），admin 可查看/删除；③ 撤销入口仅在活跃会话内（前端卡片），服务端 `agent_action_logs` 保留 24h；④ 成本/降级看板数据源 = `agent_call_logs`，告警自动评估按 R6 暂缓（后续接 CF cron 即可复用）；⑤ LLM provider 配置仍在 `system_config.llm`（admin 热加载），API key 明文存库（RLS+service key 保护，已知风险）。
+- **Admin 凭据轮换顺序**：先在 GitHub 更新 `ADMIN_USERNAME` / `ADMIN_PASSWORD`，再手动运行 `Configure Worker Secrets (Ops)` 且 `confirm=YES`，最后运行 `Production Smoke`。不要只改 Worker 后直接运行同步，否则 GH 中的旧值会覆盖 Worker。
 
 ---
 
@@ -142,6 +163,8 @@ git tag v<pubspec 版本> && git push origin v<tag>   # 触发 Release 工作流
 ---
 
 ## 8. 剩余工作（v0.3.0 之后）
+
+> **优先运维项**：轮换曾出现于公开 Git 历史的 `TIANDITU_KEY`，然后更新 GH Secret、运行 `Configure Worker Secrets (Ops)` 和 `Production Smoke`。文档中的明文已移除，但在供应商端轮换前风险不算关闭。
 
 1. **完整人工真机验收（用户）**：CI/本机模拟器已自动验证安装启动；仍需侧载正式 APK 验证真实邮件、权限、天气/日历/UsageStats、对话改动与重启恢复等硬件/账户链路。
 2. **Admin 写操作验收（管理员）**：每日工作流已只读验证登录、会话、文档和成本接口；编辑 identity、playground LLM 调用等有成本/写入的操作仍由管理员人工验收。

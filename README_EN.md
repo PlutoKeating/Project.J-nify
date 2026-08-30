@@ -99,7 +99,7 @@ frontend/      Flutter client (auth + three screens + capture/decision loop)
 backend/       Cloudflare Worker backend (TS + Hono; Supabase REST/RPC data layer)
 docs/          Docs: SPEC / ARCHITECTURE / API / QUICK_START / HANDOVER
 docs/devops/   Release guide / SMTP / secrets registry
-.github/       GitHub Actions (CI / backend deploy / frontend release)
+.github/       GitHub Actions (CI / backend & website deploy / app release / ops / production smoke)
 LICENSE        AGPL-3.0
 ```
 
@@ -112,13 +112,15 @@ LICENSE        AGPL-3.0
 - 🗂️ [`docs/HANDOVER.md`](docs/HANDOVER.md) —— project handoff (latest implementation / deployment / ops notes)
 - 📐 [`docs/compose/specs/2026-08-29-jennifer-agent-complete-spec.md`](docs/compose/specs/2026-08-29-jennifer-agent-complete-spec.md) —— Jennifer agent complete implementation spec (official doc set / MCP-style context / structured memory / streaming / change cards & undo / admin surface)
 
+> Documentation freshness: `README`, `ARCHITECTURE`, `API`, `QUICK_START`, `HANDOVER`, and `docs/devops/*` describe the current implementation and operations. Dated files under `docs/compose/plans|specs|reports` and `DECISION_QUESTIONNAIRE` are historical records. Use [`docs/HANDOVER.md`](docs/HANDOVER.md) for the latest working state.
+
 ## Website
 
 Product landing site: [https://j-nify.arr2018.dpdns.org](https://j-nify.arr2018.dpdns.org)
 
 - Source: `website/` (Vite + React + TypeScript + React Router + Tailwind CSS 4)
 - Content: Home (marketing) / Features / Download (reads the latest release live from GitHub Release, no redirect away)
-- Deploy: Cloudflare Pages (git integration, auto publish on push `main`); custom domain `https://j-nify.arr2018.dpdns.org`
+- Deploy: GitHub Actions `deploy-website.yml` verifies and deploys `website/**` changes on `main` directly to Cloudflare Pages; custom domain `https://j-nify.arr2018.dpdns.org`
 - Local preview: `cd website && npm ci && npm run dev`
 - Full deploy & custom-domain config: [`docs/devops/website-deploy.md`](docs/devops/website-deploy.md)
 

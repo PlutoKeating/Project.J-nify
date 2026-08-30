@@ -1,7 +1,9 @@
 # 邮件回调（Deep Link / App Link）与会话时长
 
 > 主题：修复「用户收到的所有邮件回调地址都是 `localhost:3000`」的根因，并把确认/重置邮件回调接入安装版 App；同时把「登录状态保持时长」调为 30 天并随登录滑动重置。
-> 本文不包含任何真实密钥/指纹，只给「配置在哪 + 要填什么 + 怎么拿」。真值（release 签名证书、Apple Team ID）在 GitHub Actions Secrets / 密码管理器 / 本机 keystore。
+> 本文不包含任何密钥真值；Android 签名证书 SHA-256 是 App Link 协议要求公开的校验值，可入库。keystore/口令和未来的 Apple 签名凭据只能存在 GitHub Actions Secrets / 密码管理器 / 本机安全存储。
+
+> **当前状态（2026-08-30）**：Supabase Site URL / Additional Redirect URL 和 30 天滑动会话已配置；Android `assetlinks.json` 生产访问为 HTTP 200 + `application/json`，并与固定 release 签名指纹一致。iOS AASA 虽可访问，但 Team ID 仍为占位符，iOS Universal Link 仍未上线。邮件实收和真机唤起仍属人工验收。
 
 ---
 
@@ -9,7 +11,7 @@
 
 - 邮件里的确认/重置链接由 Supabase Auth（GoTrue）生成，模板 `{{ .ConfirmationURL }}` 默认等于
   `{{ .SiteURL }}/auth/v1/verify?token_hash=...&type=...&redirect_to=...`。
-- 项目的 **Supabase 项目 Site URL** 一直是默认值 **`http://localhost:3000`** → 于是所有邮件的回调都变成 `http://localhost:3000/auth/v1/verify?...`。
+- 历史上项目的 **Supabase Site URL** 曾是默认值 **`http://localhost:3000`** → 导致当时邮件回调为 `http://localhost:3000/auth/v1/verify?...`。该配置现已修正，本节保留作为故障根因记录。
 - 这是**配置问题**，不是代码硬编码。App 以「安装包」形式装在手机上，`localhost:3000` 对手机无意义 → 必须先改后台配置，再让 App 能接收并处理该回调。
 
 ## 2. 方案：Universal Link / App Link + `verifyOTP`
@@ -88,7 +90,7 @@ App Link / Universal Link 要「静默唤起 App」），必须让系统能从�
 
 ## 7. 验证清单
 
-- [ ] `https://j-nify.arr2018.dpdns.org/.well-known/assetlinks.json` 返回真实 SHA-256，且与 release APK 签名一致。
-- [ ] `https://j-nify.arr2018.dpdns.org/.well-known/apple-app-site-association` 返回 `Content-Type: application/json`。
+- [x] `https://j-nify.arr2018.dpdns.org/.well-known/assetlinks.json` 返回真实 SHA-256，且与 release APK 签名一致（2026-08-30 复核）。
+- [x] `https://j-nify.arr2018.dpdns.org/.well-known/apple-app-site-association` 返回 `Content-Type: application/json`（2026-08-30 复核；内容仍是 iOS 占位配置）。
 - [ ] 邮件确认链接域名 = `j-nify.arr2018.dpdns.org`（不再是 `localhost:3000`），点后在已装 App 上直接打开并完成确认。
 - [ ] 登录/注册后关闭重开 App，30 天内保持登录；退出后重新登录可续期。
