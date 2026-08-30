@@ -21,7 +21,8 @@ dependencies:
   geolocator: ^14.0.3
   http: ^1.2.0
   path: ^1.9.0
-  permission_handler: ^13.0.1
+  # 13.x requires unreleased stable Android compileSdk 37; stay on latest 12.x.
+  permission_handler: ^12.0.3
   # 运行时读取包版本/构建号（About us 展示）
   package_info_plus: ^10.2.1
   shared_preferences: ^2.3.3

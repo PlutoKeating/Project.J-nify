@@ -6,8 +6,7 @@ plugins {
 
 android {
     namespace = "com.jnify.jnify_app"
-    // permission_handler_android 13.x requires Android API 37 at compile time.
-    compileSdk = 37
+    compileSdk = flutter.compileSdkVersion
 
     compileOptions {
         // flutter_local_notifications（v17+）要求启用 core library desugaring（AAR metadata 校验强制）。

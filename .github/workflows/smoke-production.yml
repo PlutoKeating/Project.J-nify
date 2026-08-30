@@ -51,7 +51,7 @@ jobs:
       - name: Launch app on Android emulator
         uses: reactivecircus/android-emulator-runner@v2
         with:
-          api-level: 37
+          api-level: 31
           arch: x86_64
           profile: pixel_6
           working-directory: frontend
