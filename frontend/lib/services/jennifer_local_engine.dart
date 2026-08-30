@@ -7,6 +7,24 @@ import 'metrics_reporter.dart';
 import 'notifications_service.dart';
 import 'signal_collectors.dart';
 
+Map<String, RhythmPolicy> parseRhythmPolicies(Map<String, dynamic> data) {
+  final policies = <String, RhythmPolicy>{};
+  data.forEach((category, raw) {
+    if (raw is! Map<String, dynamic>) return;
+    final offsets = (raw['due_offsets'] as List<dynamic>? ?? const [])
+        .whereType<Map<String, dynamic>>()
+        .map((offset) => (offset['days_before'] as num?)?.toInt() ?? 0)
+        .where((days) => days > 0)
+        .toList();
+    final cooldown = (raw['cooldown_hours'] as num?)?.toInt() ?? 72;
+    policies[category] = RhythmPolicy(
+      dueOffsets: offsets,
+      cooldownHours: cooldown,
+    );
+  });
+  return policies;
+}
+
 /// 执行层本地优先（F7/Q3 定案）：App 拉取事项 → 本地信号 → 本地窗口评估 → 本地通知。
 class JenniferLocalEngine {
   JenniferLocalEngine._();
@@ -21,20 +39,15 @@ class JenniferLocalEngine {
 
   Future<RhythmPolicy> _rhythmFor(String category) async {
     final now = DateTime.now();
-    if (_rhythmCache == null || now.difference(_rhythmFetchedAt ?? DateTime.fromMillisecondsSinceEpoch(0)).inMinutes > 15) {
+    if (_rhythmCache == null ||
+        now
+                .difference(
+                    _rhythmFetchedAt ?? DateTime.fromMillisecondsSinceEpoch(0))
+                .inMinutes >
+            15) {
       try {
         final data = await ApiService(ApiClient.instance).fetchRhythm();
-        final map = <String, RhythmPolicy>{};
-        data.forEach((cat, raw) {
-          if (raw is! Map<String, dynamic>) return;
-          final offsets = (raw['due_offsets'] as List<dynamic>? ?? const [])
-              .whereType<Map<String, dynamic>>()
-              .map((o) => (o['days_before'] as num?)?.toInt() ?? 0)
-              .where((d) => d > 0)
-              .toList();
-          final cooldown = (raw['cooldown_hours'] as num?)?.toInt() ?? 72;
-          map[cat] = RhythmPolicy(dueOffsets: offsets, cooldownHours: cooldown);
-        });
+        final map = parseRhythmPolicies(data);
         if (map.isNotEmpty) {
           _rhythmCache = map;
           _rhythmFetchedAt = now;
@@ -55,10 +68,14 @@ class JenniferLocalEngine {
       if (active.isEmpty) return;
 
       final muted = await LocalMuteStore.instance.mutedIds();
-      final usage = await SignalCollectors.instance.usageStats(sinceMinutes: 60);
-      final usageMinutes = (usage['totalForegroundMinutes'] as num?)?.toInt() ?? 0;
+      final usage =
+          await SignalCollectors.instance.usageStats(sinceMinutes: 60);
+      final usageMinutes =
+          (usage['totalForegroundMinutes'] as num?)?.toInt() ?? 0;
       final loc = await SignalCollectors.instance.locate();
-      final sunny = loc != null ? await SignalCollectors.instance.isSunny(loc.lat, loc.lon) : false;
+      final sunny = loc != null
+          ? await SignalCollectors.instance.isSunny(loc.lat, loc.lon)
+          : false;
       const engine = LocalWindowEngine();
 
       LocalWindow? best;
@@ -73,7 +90,8 @@ class JenniferLocalEngine {
           rhythm: await _rhythmFor(item.category),
         );
         // 只对"真实理由"窗口打扰（B8：无信号不得编造理由）
-        if (w.reasonCode != 'manual_window' && w.fitScore > (best?.fitScore ?? 0)) {
+        if (w.reasonCode != 'manual_window' &&
+            w.fitScore > (best?.fitScore ?? 0)) {
           best = w;
           bestItem = item;
         }
@@ -84,7 +102,10 @@ class JenniferLocalEngine {
           body: best.reasonText,
           itemId: bestItem.id,
         );
-        await MetricsReporter.instance.report(eventType: 'nudge_sent', itemId: bestItem.id, category: bestItem.category);
+        await MetricsReporter.instance.report(
+            eventType: 'nudge_sent',
+            itemId: bestItem.id,
+            category: bestItem.category);
       }
     } catch (_) {
       // 本地评估失败不影响主流程

@@ -10,7 +10,8 @@ class NotificationsService {
 
   static final NotificationsService instance = NotificationsService._();
 
-  final FlutterLocalNotificationsPlugin _plugin = FlutterLocalNotificationsPlugin();
+  final FlutterLocalNotificationsPlugin _plugin =
+      FlutterLocalNotificationsPlugin();
   bool _initialized = false;
 
   /// 由 App 层注入：itemId → 本地静默（写 muted 存储并同步后端）。
@@ -20,15 +21,16 @@ class NotificationsService {
     if (_initialized) return;
     tzdata.initializeTimeZones();
     try {
-      final name = await FlutterTimezone.getLocalTimezone();
-      tz.setLocalLocation(tz.getLocation(name));
+      final timezone = await FlutterTimezone.getLocalTimezone();
+      tz.setLocalLocation(tz.getLocation(timezone.identifier));
     } catch (_) {
       tz.setLocalLocation(tz.getLocation('Asia/Shanghai'));
     }
     const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
     const iosInit = DarwinInitializationSettings();
     await _plugin.initialize(
-      const InitializationSettings(android: androidInit, iOS: iosInit),
+      settings:
+          const InitializationSettings(android: androidInit, iOS: iosInit),
       onDidReceiveNotificationResponse: _onResponse,
     );
     _initialized = true;
@@ -45,8 +47,11 @@ class NotificationsService {
 
   Future<bool> requestPermission() async {
     await init();
-    final android = _plugin.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
-    if (android != null) return await android.requestNotificationsPermission() ?? false;
+    final android = _plugin.resolvePlatformSpecificImplementation<
+        AndroidFlutterLocalNotificationsPlugin>();
+    if (android != null) {
+      return await android.requestNotificationsPermission() ?? false;
+    }
     return true;
   }
 
@@ -67,6 +72,12 @@ class NotificationsService {
       ),
       iOS: DarwinNotificationDetails(),
     );
-    await _plugin.show(itemId.hashCode, title, body, details, payload: itemId);
+    await _plugin.show(
+      id: itemId.hashCode,
+      title: title,
+      body: body,
+      notificationDetails: details,
+      payload: itemId,
+    );
   }
 }

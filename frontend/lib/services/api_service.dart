@@ -4,8 +4,39 @@ import '../core/api/api_client.dart';
 import '../models/item_commitment.dart';
 import 'offline_queue.dart';
 
+abstract interface class JenniferChatApi {
+  Stream<Map<String, dynamic>> chatStream(
+    String message, {
+    List<Map<String, String>> history = const [],
+    Map<String, dynamic>? context,
+    String? sessionId,
+    bool newSession = false,
+  });
+
+  Future<Map<String, dynamic>> undoAgentAction(String actionId);
+}
+
+/// 将 Jennifer 的 SSE 字节流解码为 `{event, data}`，保持解析逻辑可独立测试。
+Stream<Map<String, dynamic>> decodeJenniferSse(Stream<List<int>> bytes) async* {
+  var event = '';
+  final lines = bytes.transform(utf8.decoder).transform(const LineSplitter());
+  await for (final line in lines) {
+    if (line.startsWith('event: ')) {
+      event = line.substring(7).trim();
+    } else if (line.startsWith('data: ')) {
+      final raw = line.substring(6).trim();
+      if (raw.isEmpty) continue;
+      try {
+        yield {'event': event, 'data': jsonDecode(raw)};
+      } catch (_) {
+        // 忽略无法解析的行，后续合法事件仍可继续消费。
+      }
+    }
+  }
+}
+
 /// 业务 API 服务：封装 /v1/... 端点。
-class ApiService {
+class ApiService implements JenniferChatApi {
   ApiService(this._client);
 
   final ApiClient _client;
@@ -57,7 +88,8 @@ class ApiService {
     return data as Map<String, dynamic>;
   }
 
-  Future<Map<String, dynamic>> updateGuardrails(Map<String, dynamic> body) async {
+  Future<Map<String, dynamic>> updateGuardrails(
+      Map<String, dynamic> body) async {
     final data = await _client.put('/v1/guardrails', body: body);
     return data as Map<String, dynamic>;
   }
@@ -70,13 +102,15 @@ class ApiService {
 
   /// 更新昵称（用户名，非唯一）。
   Future<Map<String, dynamic>> updateNickname(String nickname) async {
-    final data = await _client.put('/v1/me/profile', body: {'nickname': nickname});
+    final data =
+        await _client.put('/v1/me/profile', body: {'nickname': nickname});
     return data as Map<String, dynamic>;
   }
 
   /// 更新时区（B9）
   Future<Map<String, dynamic>> updateTimezone(String timezone) async {
-    final data = await _client.put('/v1/me/timezone', body: {'timezone': timezone});
+    final data =
+        await _client.put('/v1/me/timezone', body: {'timezone': timezone});
     return data as Map<String, dynamic>;
   }
 
@@ -131,6 +165,7 @@ class ApiService {
   }
 
   /// Jennifer 对话流（SSE）：事件为 `{event, data}`。
+  @override
   Stream<Map<String, dynamic>> chatStream(
     String message, {
     List<Map<String, String>> history = const [],
@@ -146,27 +181,14 @@ class ApiService {
       'new_session': newSession,
       'stream': true,
     });
-    var event = '';
-    final lines = res.transform(utf8.decoder).transform(const LineSplitter());
-    await for (final line in lines) {
-      if (line.startsWith('event: ')) {
-        event = line.substring(7).trim();
-      } else if (line.startsWith('data: ')) {
-        final raw = line.substring(6).trim();
-        if (raw.isEmpty) continue;
-        try {
-          final data = jsonDecode(raw);
-          yield {'event': event, 'data': data};
-        } catch (_) {
-          // 忽略无法解析的行
-        }
-      }
-    }
+    yield* decodeJenniferSse(res);
   }
 
   /// 一键撤销 agent 数据改动（活跃会话内卡片入口）
+  @override
   Future<Map<String, dynamic>> undoAgentAction(String actionId) async {
-    final data = await _client.post('/v1/jennifer/undo', body: {'action_id': actionId});
+    final data =
+        await _client.post('/v1/jennifer/undo', body: {'action_id': actionId});
     return data as Map<String, dynamic>;
   }
 
@@ -178,7 +200,8 @@ class ApiService {
 
   /// 天地图逆地理编码（服务端代理；坐标已模糊化，仅返回城市/地址）
   Future<Map<String, dynamic>> reverseGeocode(double lat, double lon) async {
-    final data = await _client.post('/v1/geo/reverse', body: {'lat': lat, 'lon': lon});
+    final data =
+        await _client.post('/v1/geo/reverse', body: {'lat': lat, 'lon': lon});
     return data as Map<String, dynamic>;
   }
 
@@ -209,7 +232,9 @@ class ApiService {
       final method = row['method'] as String;
       final path = row['path'] as String;
       final rawBody = row['body'] as String?;
-      final body = rawBody == null ? null : (jsonDecode(rawBody) as Map<String, dynamic>);
+      final body = rawBody == null
+          ? null
+          : (jsonDecode(rawBody) as Map<String, dynamic>);
       try {
         switch (method) {
           case 'POST':

@@ -1,14 +1,15 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_markdown/flutter_markdown.dart';
+import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 
 import '../core/api/api_client.dart';
 import '../services/api_service.dart';
 import '../services/conversation_store.dart';
 
 class ChatMessage {
-  const ChatMessage({required this.role, required this.content, this.responding = false});
+  const ChatMessage(
+      {required this.role, required this.content, this.responding = false});
 
   final String role; // user / assistant
   final String content;
@@ -35,14 +36,26 @@ class ActionCard {
 
 /// 与 Jennifer 对话（D2/Q7/R5/R9）：自然语言 CRUD + 策略 + 记忆 + 流式输出。
 class ChatScreen extends StatefulWidget {
-  const ChatScreen({super.key});
+  const ChatScreen({
+    super.key,
+    this.api,
+    this.conversations,
+    this.conversationId,
+    this.sessionId,
+  });
+
+  final JenniferChatApi? api;
+  final ConversationRepository? conversations;
+  final String? conversationId;
+  final String? sessionId;
 
   @override
   State<ChatScreen> createState() => _ChatScreenState();
 }
 
 class _ChatScreenState extends State<ChatScreen> {
-  final _api = ApiService(ApiClient.instance);
+  late final JenniferChatApi _api;
+  late final ConversationRepository _conversations;
   final _controller = TextEditingController();
   final _scroll = ScrollController();
   final _rand = Random();
@@ -63,8 +76,10 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   void initState() {
     super.initState();
-    _conversationId = _uuid();
-    _sessionId = _uuid();
+    _api = widget.api ?? ApiService(ApiClient.instance);
+    _conversations = widget.conversations ?? ConversationStore.instance;
+    _conversationId = widget.conversationId ?? _uuid();
+    _sessionId = widget.sessionId ?? _uuid();
     _restore();
   }
 
@@ -78,8 +93,9 @@ class _ChatScreenState extends State<ChatScreen> {
   Future<void> _restore() async {
     List<Map<String, Object?>> rows = const [];
     try {
-      await ConversationStore.instance.openOrCreate(_conversationId);
-      rows = await ConversationStore.instance.loadMessages(_conversationId);
+      _conversationId =
+          await _conversations.openLatestOrCreate(_conversationId);
+      rows = await _conversations.loadMessages(_conversationId);
     } catch (_) {
       rows = const [];
     }
@@ -117,24 +133,26 @@ class _ChatScreenState extends State<ChatScreen> {
     setState(() {
       _messages.add(ChatMessage(role: 'user', content: text));
       _placeholderIndex = _messages.length;
-      _messages.add(const ChatMessage(role: 'assistant', content: '', responding: true));
+      _messages.add(
+          const ChatMessage(role: 'assistant', content: '', responding: true));
       _busy = true;
     });
     _controller.clear();
     _scrollToBottom();
     try {
-      await ConversationStore.instance.saveMessage(_conversationId, 'user', text);
+      await _conversations.saveMessage(_conversationId, 'user', text);
     } catch (_) {}
 
     final history = _history();
     final newSession = !_sentFirst;
     _sentFirst = true;
     try {
-      await for (final evt
-          in _api.chatStream(text, history: history, sessionId: _sessionId, newSession: newSession)) {
+      await for (final evt in _api.chatStream(text,
+          history: history, sessionId: _sessionId, newSession: newSession)) {
         if (!mounted) return;
         final event = (evt['event'] as String?) ?? '';
-        final data = (evt['data'] as Map<String, dynamic>?) ?? const <String, dynamic>{};
+        final data =
+            (evt['data'] as Map<String, dynamic>?) ?? const <String, dynamic>{};
         switch (event) {
           case 'delta':
             _appendDelta((data['text'] as String?) ?? '');
@@ -144,7 +162,8 @@ class _ChatScreenState extends State<ChatScreen> {
               (data['toolResults'] as List<dynamic>?) ?? const [],
             );
           case 'error':
-            _failMessage((data['detail'] as String?) ?? '暂时无法联系 Jennifer，请稍后再试。');
+            _failMessage(
+                (data['detail'] as String?) ?? '暂时无法联系 Jennifer，请稍后再试。');
         }
       }
       if (_busy && mounted) {
@@ -160,7 +179,8 @@ class _ChatScreenState extends State<ChatScreen> {
     setState(() {
       if (_placeholderIndex >= 0 && _placeholderIndex < _messages.length) {
         final prev = _messages[_placeholderIndex];
-        _messages[_placeholderIndex] = ChatMessage(role: 'assistant', content: prev.content + delta, responding: true);
+        _messages[_placeholderIndex] = ChatMessage(
+            role: 'assistant', content: prev.content + delta, responding: true);
       }
     });
     _scrollToBottom();
@@ -169,7 +189,8 @@ class _ChatScreenState extends State<ChatScreen> {
   void _finishMessage(String reply, List<dynamic> toolResults) {
     setState(() {
       if (_placeholderIndex >= 0 && _placeholderIndex < _messages.length) {
-        _messages[_placeholderIndex] = ChatMessage(role: 'assistant', content: reply);
+        _messages[_placeholderIndex] =
+            ChatMessage(role: 'assistant', content: reply);
         final index = _placeholderIndex;
         for (final tr in toolResults) {
           if (tr is! Map<String, dynamic>) continue;
@@ -178,11 +199,12 @@ class _ChatScreenState extends State<ChatScreen> {
           if (result is! Map<String, dynamic>) continue;
           final actionId = result['action_id'];
           if (actionId is! String || actionId.isEmpty) continue;
-          final card = _cardFromTool(tr['tool'] as String? ?? '', result, index);
+          final card =
+              _cardFromTool(tr['tool'] as String? ?? '', result, index);
           if (card != null) _cards.add(card);
         }
         try {
-          ConversationStore.instance.saveMessage(_conversationId, 'assistant', reply);
+          _conversations.saveMessage(_conversationId, 'assistant', reply);
         } catch (_) {}
       }
       _busy = false;
@@ -190,7 +212,8 @@ class _ChatScreenState extends State<ChatScreen> {
     _scrollToBottom();
   }
 
-  ActionCard? _cardFromTool(String tool, Map<String, dynamic> result, int index) {
+  ActionCard? _cardFromTool(
+      String tool, Map<String, dynamic> result, int index) {
     switch (tool) {
       case 'items_create':
         return ActionCard(
@@ -265,7 +288,8 @@ class _ChatScreenState extends State<ChatScreen> {
   void _failMessage(String message) {
     setState(() {
       if (_placeholderIndex >= 0 && _placeholderIndex < _messages.length) {
-        _messages[_placeholderIndex] = ChatMessage(role: 'assistant', content: message);
+        _messages[_placeholderIndex] =
+            ChatMessage(role: 'assistant', content: message);
       }
       _busy = false;
     });
@@ -288,7 +312,8 @@ class _ChatScreenState extends State<ChatScreen> {
   void _showToast(String message) {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(message), duration: const Duration(seconds: 2)));
+      ..showSnackBar(SnackBar(
+          content: Text(message), duration: const Duration(seconds: 2)));
   }
 
   void _scrollToBottom() {
@@ -310,12 +335,14 @@ class _ChatScreenState extends State<ChatScreen> {
               itemCount: _messages.length,
               itemBuilder: (context, i) {
                 final m = _messages[i];
-                final cards = _cards.where((c) => c.afterMessageIndex == i).toList();
+                final cards =
+                    _cards.where((c) => c.afterMessageIndex == i).toList();
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     _MessageBubble(message: m, isUser: m.role == 'user'),
-                    ...cards.map((c) => _ActionCardView(card: c, onUndo: () => _undo(c))),
+                    ...cards.map((c) =>
+                        _ActionCardView(card: c, onUndo: () => _undo(c))),
                     const SizedBox(height: 8),
                   ],
                 );
@@ -336,12 +363,15 @@ class _ChatScreenState extends State<ChatScreen> {
                         hintText: '交给 Jennifer…',
                         filled: true,
                         fillColor: Colors.white,
-                        border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(20)), borderSide: BorderSide.none),
+                        border: OutlineInputBorder(
+                            borderRadius: BorderRadius.all(Radius.circular(20)),
+                            borderSide: BorderSide.none),
                       ),
                     ),
                   ),
                   const SizedBox(width: 8),
-                  FilledButton(onPressed: _busy ? null : _send, child: const Text('发送')),
+                  FilledButton(
+                      onPressed: _busy ? null : _send, child: const Text('发送')),
                 ],
               ),
             ),
@@ -373,19 +403,24 @@ class _MessageBubble extends StatelessWidget {
         ),
         child: isUser
             ? Text(message.content, style: const TextStyle(color: Colors.white))
-            : message.responding
+            : message.responding && message.content.isEmpty
                 ? const Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2)),
+                      SizedBox(
+                          width: 14,
+                          height: 14,
+                          child: CircularProgressIndicator(strokeWidth: 2)),
                       SizedBox(width: 8),
-                      Text('Jennifer 正在思考…', style: TextStyle(color: Color(0xFF76767D))),
+                      Text('Jennifer 正在思考…',
+                          style: TextStyle(color: Color(0xFF76767D))),
                     ],
                   )
                 : MarkdownBody(
                     data: message.content,
                     styleSheet: MarkdownStyleSheet(
-                      p: const TextStyle(fontSize: 14, color: Color(0xFF17171A), height: 1.45),
+                      p: const TextStyle(
+                          fontSize: 14, color: Color(0xFF17171A), height: 1.45),
                     ),
                   ),
       ),
@@ -411,15 +446,20 @@ class _ActionCardView extends StatelessWidget {
       ),
       child: Row(
         children: [
-          const Icon(Icons.check_circle_outline, color: Color(0xFFFF5A4E), size: 20),
+          const Icon(Icons.check_circle_outline,
+              color: Color(0xFFFF5A4E), size: 20),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(card.title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                Text(card.title,
+                    style: const TextStyle(
+                        fontSize: 14, fontWeight: FontWeight.w600)),
                 if (card.subtitle != null && card.subtitle!.isNotEmpty)
-                  Text(card.subtitle!, style: const TextStyle(fontSize: 12, color: Color(0xFF76767D))),
+                  Text(card.subtitle!,
+                      style: const TextStyle(
+                          fontSize: 12, color: Color(0xFF76767D))),
               ],
             ),
           ),
@@ -427,7 +467,8 @@ class _ActionCardView extends StatelessWidget {
             onPressed: onUndo,
             icon: const Icon(Icons.undo, size: 16),
             label: const Text('撤销'),
-            style: TextButton.styleFrom(foregroundColor: const Color(0xFF17171A)),
+            style:
+                TextButton.styleFrom(foregroundColor: const Color(0xFF17171A)),
           ),
         ],
       ),

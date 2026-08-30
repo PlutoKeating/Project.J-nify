@@ -95,7 +95,9 @@ class SignalCollectors {
       final granted = await Geolocator.checkPermission();
       if (granted == LocationPermission.denied) {
         final asked = await Geolocator.requestPermission();
-        if (asked == LocationPermission.denied || asked == LocationPermission.deniedForever) return null;
+        if (asked == LocationPermission.denied || asked == LocationPermission.deniedForever) {
+          return null;
+        }
       }
       final pos = await Geolocator.getCurrentPosition(
         locationSettings: const LocationSettings(

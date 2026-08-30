@@ -14,7 +14,7 @@ class TimezoneService {
 
   Future<String> deviceTimezone() async {
     try {
-      return await FlutterTimezone.getLocalTimezone();
+      return (await FlutterTimezone.getLocalTimezone()).identifier;
     } catch (_) {
       return 'UTC';
     }
