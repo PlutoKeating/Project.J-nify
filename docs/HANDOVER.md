@@ -1,6 +1,6 @@
 # J-nify 项目交接文档（HANDOVER）— v0.3.0
 
-> 更新：2026-08-29（v0.3.0 发布日：Jennifer agent 完整实现上线）。目的：让**新 session 可立即找回工作状态**。
+> 更新：2026-08-30（v0.3.0 发布后工程质量收口）。目的：让**新 session 可立即找回工作状态**。
 > 权威信息源：`docs/DECISION_REGISTER.md`（决策定案）、`docs/compose/specs/2026-08-29-jennifer-agent-complete-spec.md`（Jennifer 完整实现 spec，R0–R11 定案）、`docs/JENNIFER_AGENT_REPORT.md`（agent 设计与现状）、`docs/devops/SECRETS_REGISTRY.md`（密钥台账）。
 > ⚠️ 仓库 **public**：本文不含任何密钥明文，只列「名称 + 存放位置」；真值在 GitHub Actions Secrets / CF Dashboard Worker secrets / 本机 `backend/.dev.vars`（gitignored）/ 密码管理器。
 
@@ -38,7 +38,7 @@
 | 后端 | **Cloudflare Worker**：TypeScript + Hono | 部署=GitHub Actions `wrangler deploy`（push main 自动）；生产 URL `https://j-nify.williamhvollita.dpdns.org` |
 | **DB 访问** | **Supabase REST (PostgREST) + Postgres RPC** | 2026-08-27 定案：worker 内 postgres.js 直连不可行（Supavisor 私有根 CA 不被 workerd 信任、Hyperdrive 未开通）→ 全部走标准 HTTPS fetch；事务写走 `fn_decide`/`fn_create_nudge`/`fn_ingest_signal` |
 | 认证 | **Supabase Auth（当前项目即生产）** | 完整邮箱体系；邮箱确认开启，确认/重置邮件经 **j_nify@yeah.net** SMTP；Worker JWKS 验签 |
-| CI/CD | GitHub Actions：`ci.yml` + `deploy-backend.yml` + `deploy-website.yml` + `release-frontend.yml` + `configure-worker-secrets.yml` + `sync-worker-domain.yml` | 后端/官网 push main 自动部署；前端 tag 自动出 APK/AAB + iOS xcarchive 并发布 Release |
+| CI/CD | GitHub Actions：`ci.yml` + `deploy-backend.yml` + `deploy-website.yml` + `release-frontend.yml` + `configure-worker-secrets.yml` + `sync-worker-domain.yml` + `smoke-production.yml` | 三端 CI、本地 Supabase 集成、每日生产/Admin/Android 冒烟、自动部署与发布 |
 
 **生产环境定案（2026-08-27 用户纠正）**：用户提供的 Supabase 项目 `ajeratjsxyxtdqtmtvxh` 与邮箱 `j_nify@yeah.net` **即生产环境** —— 不存在「待建生产项目」。
 
@@ -50,12 +50,12 @@
 |---|---|---|
 | 后端业务端点 | ✅ 生产可用 | `/v1/*`：items(capture/list/patch/delete/decision)、now、guardrails×2、me(profile×2/timezone/data)、llm/draft、signals、metrics/events、geo/reverse、**jennifer/chat（含 SSE 流式）/undo**、**rhythm** + /health |
 | 后端管理面 | ✅ 生产可用 | `/admin` SPA + `/admin/api/*`：LLM 多 provider 热加载、指标看板、告警配置/测试、**文档集 docs、记忆 memories、playground、成本 costs** |
-| 数据库 | ✅ | 迁移 `0000..0004` + `20260829000000_v020_*` + `20260829000001_jennifer_full` 全应用；共 19 业务表 + RPC + 视图（含 agent_docs / agent_memories / agent_action_logs / agent_call_logs） |
+| 数据库 | ✅ | 迁移 `0000..0004` + `20260829000000_v020_*` + `20260829000001_jennifer_full` 全应用；共 23 表 + RPC + 视图（含 agent_docs / agent_memories / agent_action_logs / agent_call_logs） |
 | **数据安全 RLS** | ✅ | 全表 RLS + anon/authenticated 权限回收；publishable key 直读数据 → 401（解包攻击路径封死） |
 | **生产邮件** | ✅ | SMTP live：`smtp.yeah.net:465`、`j_nify@yeah.net`、sender `J-nify Jennifer`、`mailer_autoconfirm=false`（确认开启） |
 | 前端认证 | ✅ | 注册→邮箱确认→登录→登出→401 自动重登（gotrue 源码级验证） |
 | **安装包** | ✅ | 最新 **v0.3.0** Release：`app-release.apk` + `app-release.aab`（**release keystore 签名**，versionCode=6，内置生产 Supabase 配置 + INTERNET 权限）；v0.1.2 起签名一致可覆盖安装更新 |
-| CI/CD+部署 | ✅ | 六工作流全绿；push main 自动部署后端（wrangler）+ 官网（Pages）；tag `v0.3.0` → Release（Android APK/AAB + iOS xcarchive） |
+| CI/CD+部署 | ✅ | 7 条工作流；push/PR 三端门禁 + 本地 Supabase 集成，push main 自动部署后端/官网，tag 自动发布，生产冒烟每日/手动执行 |
 | 密钥与文档 | ✅ | GH Secrets / CF Worker secrets / 台账 / 本 HANDOVER 同步（详见 §5/§6） |
 
 ---
@@ -65,10 +65,10 @@
 - **目录**：`backend/src/{config,app,index}.ts` + `lib/{auth,audit,privacy,rate-limit,admin-auth,config-store,llm,alerts}.ts` + `services/{capture,context,decision-feedback,window-engine,escalation,brain,orchestrator,rhythm,agent,agent-docs,memory}.ts` + `routes/{health,items,now,signals,guardrails,me,llm,jennifer,rhythm,metrics,geo,admin}.ts` + `db/index.ts`（REST 层 `restGet/restInsert/restUpdate/restDelete/restRpc` + `robustGuardrails/robustPrivacyScope/latestContext`）。
 - **运行时 secrets**：`SUPABASE_URL` + `SUPABASE_SERVICE_KEY`（仅 CF Worker secrets + 本机 `.dev.vars`）；「前端/仓库永不出现 service key」。
 - **postgres.js 仅剩**：`scripts/apply-migrations.ts`（迁移）与 `test/integration.test.ts`（真库断言）—— Node 侧 devDep，绝不在 Worker 运行时。
-- **PostgREST 经验（避免重踩）**：操作符在值侧（`key=in.(a,b)`/`key=gt.v`）；带 uuid 的普通值必须显式 `eq.`（隐式 eq 报 PGRST100）；upsert 用 `on-conflict` + `Prefer: resolution=merge-duplicates`；jsonb 列写数值须 `to_jsonb`（RPC 内）。
+- **PostgREST 经验（避免重踩）**：操作符在值侧（`key=in.(a,b)`/`key=gt.v`）；带 uuid 的普通值必须显式 `eq.`（隐式 eq 报 PGRST100）；upsert 用 **`on_conflict` 查询参数** + `Prefer: resolution=merge-duplicates`（不能写成 header）；jsonb 列写数值须 `to_jsonb`（RPC 内）。
 - **频控红线（v0.2.0 Q1 定案）**：无硬编码提醒次数上限；仅保留安静时段（按用户时区）+ 窗口级去重；频率/冷却由 Jennifer agent 经 `rhythm_policies` 管理；`redline.test.ts` 以源码断言钉住。
 - **Jennifer agent（v0.3.0）**：官方文档集 `agent_docs`（identity/workflow/tools + 任意 skill/custom md，admin 编辑保存即热重载）→ system prompt 按序装配；结构化记忆 `agent_memories`（preference/fact/event/lesson + 用户记忆文档新会话注入）；工具集 15 个（items CRUD/rhythm/guardrails/feedback/steps/memory/draft LLM 化，items_delete 需 confirm）；MCP 风格 `context` 原文进 prompt（不落库）；history role 白名单；SSE 流式；`agent_action_logs` + `/v1/jennifer/undo`（24h 逆操作）；`GET /v1/rhythm` 供本地引擎消费；`agent_call_logs` 供成本/降级看板。
-- **测试**：单元 **79 passed / 5 skipped**（agent-full.test.ts 覆盖文档装配/记忆编译/历史白名单/全链路）；集成 5 例独立（确认邮件开启下用 service key 建已确认用户 + 真实登录）。
+- **测试**：单元 **80 passed / 5 skipped**；CI 另启动一次性本地 Supabase 执行 **5/5** Auth/PostgREST/RPC 集成测试，不使用生产 service key。新增用例钉住 `on_conflict` 查询参数语义。
 
 ---
 
@@ -77,22 +77,24 @@
 - `lib/core/config/app_config.dart`：`prodBackendBaseUrl = https://j-nify.williamhvollita.dpdns.org`（默认）；Supabase url/anon 经 `String.fromEnvironment`（release 由 CI dart-define 注入）。
 - 认证：`lib/auth/auth_gate.dart`（authStateChanges → LoginScreen/HomeShell）+ `login_screen.dart`（登录/注册切换、确认邮件提示）+ `me_screen.dart` 退出登录；`api_client.dart` Bearer 注入 + 401→静默登出 + 未初始化 guard（try/catch 包 `Supabase.instance`）。
 - 执行层本地优先（v0.2.0）：`notifications_service`（本地通知 + 别再提 action）、`signal_collectors`（UsageStats/系统日历/OpenWeather/天地图，仅本地）、`local_window_engine` + `jennifer_local_engine`（本地窗口评估 → 通知；v0.3.0 起按 `GET /v1/rhythm` 消费 agent 节奏）、`offline_queue`（sqflite）、`tour_registry`、`metrics_reporter`。
-- **Jennifer 对话（v0.3.0）**：`chat_screen.dart`（SSE 流式、`flutter_markdown` 渲染、responding 占位气泡、数据改动卡片 + 一键撤销）、`conversation_store.dart`（sqflite 会话持久化，只存文本消息）、`api_service.chatStream/undoAgentAction/fetchRhythm`、`api_client.streamPost`（dart:io SSE）。
-- 测试：11/11 widget（纯组件、不 mock 网络策略）+ `flutter analyze` 0 issues。
+- **Jennifer 对话（v0.3.0）**：`chat_screen.dart`（SSE 首 token 原位显示、`flutter_markdown_plus`、responding 占位气泡、数据改动卡片 + 一键撤销）、`conversation_store.dart`（sqflite 恢复最近会话，只存文本消息）、`api_service.chatStream/undoAgentAction/fetchRhythm`、`api_client.streamPost`（dart:io SSE）。
+- 测试：**16/16** 单元/widget（含 SSE、SQLite 会话恢复、流式 UI、卡片撤销、节奏解析）+ `flutter analyze` 0 issues；另有 Android 模拟器启动集成测试。
+- **依赖维护（2026-08-30）**：Flutter 直接依赖升级到当前可解析主版本，停用的 `flutter_markdown` 已替换为 `flutter_markdown_plus`；后端锁文件更新至约束内最新版；官网升级 ESLint 10 / react-hooks 7 / jest-dom 7。官网 TypeScript 保持 5.9（`typescript-eslint` 当前 peer 上限 `<6.1`），不是遗漏升级。
 - **构建**：release 必须带 `--dart-define=SUPABASE_URL=... --dart-define=SUPABASE_ANON_KEY=...`（CI secrets 已配；本机构建示例见 §7）。**勿在构建中途 kill Gradle 守护进程**（会致 assembleRelease 失败；`/tmp FileAlreadyExistsException` 为良性告警）。
 
 ---
 
-## 5. CI/CD（GitHub Actions，6 条工作流）
+## 5. CI/CD（GitHub Actions，7 条工作流）
 
 | 工作流 | 触发 | 内容 |
 |---|---|---|
-| `ci.yml` | push/PR | backend: npm ci+test+typecheck；frontend: flutter analyze+test |
+| `ci.yml` | push/PR | backend 单测+typecheck；一次性本地 Supabase 5 项集成；frontend analyze+16 tests；website test+lint+build |
 | `deploy-backend.yml` | push main（backend/**）+ workflow_dispatch | wrangler deploy（node 24；secrets: CLOUDFLARE_API_TOKEN + CLOUDFLARE_ACCOUNT_ID） |
 | `deploy-website.yml` | push main（website/**）+ workflow_dispatch | Cloudflare Pages 部署官网 |
 | `release-frontend.yml` | tag `v*` | 校验 tag=pubspec 版本 → Android APK+AAB（ubuntu）+ iOS xcarchive（macos）→ GitHub Release（secrets: SUPABASE_URL/SUPABASE_ANON_KEY/OPENWEATHER_API_KEY dart-define） |
 | `configure-worker-secrets.yml` | 手动（confirm=YES 门控） | 把 GH Secrets 中 SMTP/SESSION_SECRET/ADMIN/GH_PAT/TIANDITU_KEY 同步为 CF Worker secrets + 验证 |
 | `sync-worker-domain.yml` | 手动 | Worker 自定义域名同步（j-nify.williamhvollita.dpdns.org） |
+| `smoke-production.yml` | 每日+手动 | 官网/健康检查/只读 Admin API + Android 模拟器安装启动冒烟 |
 
 **GH Secrets（已设）**：`ANDROID_KEYSTORE_BASE64`、`ANDROID_KEYSTORE_PASSWORD`、`ANDROID_KEY_ALIAS`、`ANDROID_KEY_PASSWORD`、`CLOUDFLARE_ACCOUNT_ID`、`CLOUDFLARE_API_TOKEN`、`SMTP_AUTH_PROD`、`SMTP_HOST`、`SMTP_PORT`、`SMTP_USER`、`SUPABASE_ANON_KEY`、`SUPABASE_URL`、`OPENWEATHER_API_KEY`、`SESSION_SECRET`、`ADMIN_USERNAME`、`ADMIN_PASSWORD`、`GH_PAT`、`TIANDITU_KEY`。
 **CF Worker secrets**：`SUPABASE_URL`、`SUPABASE_SERVICE_KEY`、SMTP 四项、`SESSION_SECRET`、`ADMIN_USERNAME/ADMIN_PASSWORD`、`GH_PAT`、`TIANDITU_KEY`（DEBUG 已删）。**App Link 校验指纹**（`assetlinks.json` 的 SHA-256）是**公开值非密钥**，直接入仓库 `website/public/.well-known/assetlinks.json`。
@@ -114,20 +116,23 @@
 
 ```bash
 # 后端（backend/）
-npm test && npm run typecheck          # 79 unit（集成 5 需 env 自动跑）
-SUPABASE_URL=... SUPABASE_ANON_KEY=... SUPABASE_SERVICE_KEY=... DATABASE_URL=<pooler串> \
-  npx vitest run test/integration.test.ts   # 5/5（确认邮件开启流程）
+npm test && npm run typecheck          # 80 unit（生产凭据缺失时 5 项集成套件跳过）
+npx supabase start                     # 自动应用 migrations；CI 使用同一方案
+# 将 `supabase status -o env` 的 API_URL/ANON_KEY/SERVICE_ROLE_KEY/DB_URL 映射后：
+npm run test:integration               # 5/5，不接触生产库
+npm run smoke:production               # 生产公开端点；Admin 凭据可选
 DIRECT_DATABASE_URL=<pooler串> npm run db:migrate
 
 # 前端（frontend/；flutter 在 ~/.local/bin）
-flutter analyze && flutter test
+flutter analyze && flutter test        # 16/16
+flutter test integration_test/app_smoke_test.dart -d <android-device> --dart-define=SUPABASE_URL=... --dart-define=SUPABASE_ANON_KEY=...
 flutter build apk --release \
   --dart-define=SUPABASE_URL=https://ajeratjsxyxtdqtmtvxh.supabase.co \
   --dart-define=SUPABASE_ANON_KEY=<GH secret 值或本地变量> \
   --dart-define=OPENWEATHER_API_KEY=<GH secret 值或本地变量>
 
 # 官网（website/）
-npm run build && npm test            # build（含 SPA 回退）+ 21 tests
+npm test && npm run lint && npm run build  # 21 tests + lint + build
 
 # 发布（用户/CI）
 git tag v<pubspec 版本> && git push origin v<tag>   # 触发 Release 工作流
@@ -137,8 +142,8 @@ git tag v<pubspec 版本> && git push origin v<tag>   # 触发 Release 工作流
 
 ## 8. 剩余工作（v0.3.0 之后）
 
-1. **真机冒烟（用户）**：侧载 `app-release.apk`（v0.3.0）→ 注册（收确认邮件）→ 对话流式/占位气泡/Markdown 渲染 → 数据改动卡片 + 一键撤销 → 重启 App 会话保留 → 新会话后 Jennifer 能复述记忆。
-2. **admin 冒烟（管理员）**：`/admin` 登录 → 编辑 identity 文档（保存即热重载，无需部署）→ playground 查看装配后 system prompt → 成本看板确认 `agent_call_logs` 有数据。
+1. **完整人工真机验收（用户）**：CI/本机模拟器已自动验证安装启动；仍需侧载正式 APK 验证真实邮件、权限、天气/日历/UsageStats、对话改动与重启恢复等硬件/账户链路。
+2. **Admin 写操作验收（管理员）**：每日工作流已只读验证登录、会话、文档和成本接口；编辑 identity、playground LLM 调用等有成本/写入的操作仍由管理员人工验收。
 3. **告警自动评估**（R6 暂缓）：`agent_call_logs` / `metrics_events` 数据已具备，后续加 CF Cron Trigger 即可启用投诉率/降级率自动告警（现有 admin 手动测试通道可用）。
 4. **M3 灰度**：100–300 种子用户招募与分发（指标看板已具备）。
 5. iOS 发布签名（需 Apple Developer 账号 + macOS 签名链路，GAP-IOS）；数据导出（GAP-EXPORT）；FCM/APNs 后端推送（GAP-FCM）；第三方日历 OAuth（GAP-CAL-OAUTH）。

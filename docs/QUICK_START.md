@@ -20,7 +20,7 @@ DIRECT_DATABASE_URL='postgres://...pooler.../postgres' npm run db:migrate
 ```
 
 - 迁移文件：`backend/supabase/migrations/*.sql`（golden rule：**任何环境不得用 Dashboard 直接改表结构**）。
-- 当前迁移含：15+1 表（0000）、护栏唯一索引（0001）、事务 RPC（0002/0003）、RLS 加固（0004）。
+- 当前迁移含：基础 16 表（0000）、护栏唯一索引（0001）、事务 RPC（0002/0003）、RLS 加固（0004）、v0.2 的 3 表与 v0.3 的 4 表，共 23 表。
 
 **部署（生产）**：push `main` 且改动 `backend/**` → GitHub Actions 自动 `wrangler deploy` 到
 `https://j-nify.williamhvollita.dpdns.org`；亦可 Dashboard → Actions → Deploy Backend → Run workflow 手动触发。
@@ -48,5 +48,5 @@ flutter run
 
 - 注册 → 邮箱确认（生产 SMTP 已接，j_nify@yeah.net）→ 登录 → 录入 → 决策 → 登出。
 - 「我的」页改昵称走 `GET/PUT /v1/me/profile`（昵称非唯一）；邮箱/密码经 Supabase Auth，邮箱改需到新邮箱点确认链接（回调回 App，App Link，见 `docs/devops/email-callback.md`）。
-- 本地集成测试（可选）：`SUPABASE_URL/SUPABASE_ANON_KEY/SUPABASE_SERVICE_KEY/DATABASE_URL` 环境下
-  `npx vitest run test/integration.test.ts`（5 用例：注册用 service key 建已确认用户再真实登录）。
+- 本地集成测试：`cd backend && npx supabase start` 启动一次性本地 Supabase 栈，按 `npx supabase status -o env` 映射 `API_URL/ANON_KEY/SERVICE_ROLE_KEY/DB_URL` 后运行 `npm run test:integration`。CI 自动执行这 5 项测试，不接触生产库或生产 service key。
+- 生产只读冒烟：`cd backend && npm run smoke:production`；提供 `ADMIN_USERNAME/ADMIN_PASSWORD` 与 `SMOKE_REQUIRE_ADMIN=1` 时同时验证 Admin 登录、会话、文档和成本接口。

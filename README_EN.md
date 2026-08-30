@@ -61,7 +61,7 @@ She notes it, then disappears. When the **truly fitting** moment comes, she retu
 | --- | --- | --- |
 | Frontend | Flutter (Dart) + supabase_flutter | Auth (Supabase Auth); three-screen UI + capture/decision loop; prod backend default `https://j-nify.williamhvollita.dpdns.org` |
 | Backend | **Cloudflare Worker**: TypeScript + Hono | Deploy = GitHub Actions `wrangler deploy` (auto on push to main) |
-| Data | **Supabase Postgres** (REST/PostgREST + RPC) | 15 entity tables + transactional RPC; full-table RLS (zero client-role data access) |
+| Data | **Supabase Postgres** (REST/PostgREST + RPC) | 23 tables + transactional RPC; RLS on every table (zero client-role data access) |
 | Accounts/email | **Supabase Auth + prod SMTP** | Confirmation/reset via j_nify@yeah.net (smtp.yeah.net:465) |
 | Modeling | 15 entities in SPEC §6 | USER / ITEM_COMMITMENT / OPPORTUNITY_WINDOW / NUDGE / DECISION … |
 
@@ -124,7 +124,8 @@ Product landing site: [https://j-nify.arr2018.dpdns.org](https://j-nify.arr2018.
 
 ## CI/CD & releases
 
-- ✅ **CI gate** (`.github/workflows/ci.yml`): on push / PR, parallel checks —— backend `npm test` + typecheck, frontend `flutter analyze` + `flutter test`.
+- ✅ **CI gate** (`.github/workflows/ci.yml`): on push / PR, parallel checks —— backend unit/type checks, five local-Supabase integration tests, frontend analysis + 16 tests, and website tests + lint + build.
+- 🩺 **Production smoke** (`.github/workflows/smoke-production.yml`): daily/manual public-site, backend, read-only Admin API checks, plus Android-emulator launch verification.
 - 📦 **Frontend auto build & release** (`.github/workflows/release-frontend.yml`): trigger on tag `vX.Y.Z`, verify the tag matches `frontend/pubspec.yaml`'s version, build Android APK/AAB (ubuntu, **fixed release-keystore signed**), and publish a GitHub Release; iOS archive (xcarchive, macos, unsigned — needs Apple cert). `SUPABASE_URL/SUPABASE_ANON_KEY` injected into the build via GH Secrets (dart-define). ⚠️ The `+N` in `pubspec.yaml` (= Android `versionCode`) must strictly increase per release (a decrease once blocked overlay installs); see [`docs/devops/release.md`](docs/devops/release.md).
 - 🚢 **Backend deploy** (`.github/workflows/deploy-backend.yml`): on push to main (backend/**) auto `wrangler deploy`; the single prod backend Base URL = **`https://j-nify.williamhvollita.dpdns.org`**.
 - 📧 **Email & SMTP** (Supabase custom SMTP, j_nify@yeah.net): live (confirm-email on); templates in [`docs/devops/smtp.md`](docs/devops/smtp.md).

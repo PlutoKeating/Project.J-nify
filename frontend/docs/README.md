@@ -28,7 +28,7 @@ frontend/
 - **固定 release 签名**：`build.gradle.kts` 从环境变量读 keystore（`ANDROID_KEYSTORE_PATH/PASSWORD/ALIAS/KEY_PASSWORD`，CI 经 GH Secrets 注入；未配置回退 debug）。签名固定才支持 APK 覆盖安装更新。
 - `.env` 为可选（`isOptional:true`）：release 无 `.env` 资产时回退 dart-define/内置生产默认值。
 - **App Link（v0.1.5 起）**：`AndroidManifest.xml` 的 `MainActivity` 已加 `android:autoVerify="true"` 的 VIEW intent-filter（`https://j-nify.arr2018.dpdns.org/auth`）；App Link 校验指纹在官网 `website/public/.well-known/assetlinks.json`（已填真实 release 证书 SHA-256）。
-- ⚠️ **versionCode 规则（v0.1.5 起）**：`pubspec.yaml` 的 `+N`=Android versionCode，**须随发版严格递增且 > 历史最大值**（当前最大=3，v0.1.5=`+4`）。曾因 v0.1.3/v0.1.4 用 `+1`（versionCode=1 < v0.1.2 的 3）导致从 v0.1.2 覆盖安装被系统以"版本落后"拒绝。
+- ⚠️ **versionCode 规则（v0.1.5 起）**：`pubspec.yaml` 的 `+N`=Android versionCode，**须随发版严格递增且 > 历史最大值**（当前最大=6，v0.3.0=`+6`）。曾因 v0.1.3/v0.1.4 用 `+1`（versionCode=1 < v0.1.2 的 3）导致覆盖安装被系统以"版本落后"拒绝。
 
 ## v0.2.0（M0.5+M1）增量
 
@@ -44,8 +44,9 @@ frontend/
 
 ## v0.3.0（Jennifer 完整实现）增量
 
-- **会话上下文纯客户端持久化**（`services/conversation_store.dart`，sqflite）：只存 user/assistant 文本消息；工具结果卡片与占位气泡不落库；服务端保持无状态。
+- **会话上下文纯客户端持久化**（`services/conversation_store.dart`，sqflite）：恢复最近一次会话，只存 user/assistant 文本消息；工具结果卡片与占位气泡不落库；服务端保持无状态。
 - **流式对话（SSE）**：`ApiService.chatStream` 解析 `text/event-stream`（start/tool/delta/done/error）；`ChatScreen` 发送后立即插入 responding 占位气泡，首 token 原位增量渲染。
-- **Markdown 渲染**：assistant 消息经 `flutter_markdown` 渲染（修复纯 Text 显示）。
+- **Markdown 渲染**：assistant 消息经持续维护的 `flutter_markdown_plus` 渲染；收到首个 SSE delta 后立即原位显示文本。
 - **数据改动卡片 + 一键撤销（R9）**：chat 响应的 `toolResults` 中带 `action_id` 的改动渲染为卡片（事项/节奏/护栏/记忆/拆解），卡片带撤销按钮调 `POST /v1/jennifer/undo`；卡片仅活跃会话内展示，退出 App 或开新会话即失效。
 - **本地引擎消费节奏策略**：`JenniferLocalEngine` 经 `GET /v1/rhythm` 按类目拉取 agent 写入的 `rhythm_policies`（替换硬编码 72h 冷却），本地通知真正跟随 agent 策略。
+- **自动化验证**：16 项单元/widget 测试覆盖 SSE 解析、SQLite 会话恢复、流式占位与 delta、改动卡片/撤销、节奏策略解析；`integration_test/app_smoke_test.dart` 在 Android 模拟器验证安装启动到认证页。

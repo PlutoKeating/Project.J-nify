@@ -8,7 +8,7 @@
 - **配置层** `core/config/`：`AppConfig`（`flutter_dotenv` 读 `.env`）：`backendBaseUrl`（**生产默认 `https://j-nify.williamhvollita.dpdns.org`**）、`supabaseUrl`、`supabaseAnonKey`；另含 `appLinkHost`=`j-nify.arr2018.dpdns.org`、`appLinkVerify`（邮件确认/重置回调 App Link 入口）；`Env` 常量（`String.fromEnvironment` 支持 dart-define）。
 - **auth/ 深链与会话**：`main.dart` 用 `app_links` 订阅深链 → `auth.verifyOTP`（token_hash）+ `auth.getSessionFromUrl`（code/access_token）；`Supabase.initialize` 显式 `autoRefreshToken/persistSession`；`AuthGate` 启动 `refreshSession()` 滑动重置未活动时钟。
 - **网络层** `core/api/`：`ApiClient` 自动附 `Authorization: Bearer <Supabase JWT>`（401 → 静默登出回登录页；未初始化 guard）。
-- **服务层** `services/`：`ApiService` 封装 `/v1/...`（capture/now/items/decision/guardrails/profile/chat/metrics）；`NotificationsService`（本地通知 + 别再提 action）；`SignalCollectors`（usage/日历/天气/位置，仅本地）；`LocalWindowEngine`（Dart 窗口规则）；`OfflineQueue`（sqflite 离线暂存）；`TourRegistry`（通用引导框架）；`TimezoneService`（时区检测/提示）；`JenniferLocalEngine`（本地评估 + 通知 + 静默）。
+- **服务层** `services/`：`ApiService` 封装 `/v1/...`（含可独立测试的 SSE 解码）；`ConversationStore` 恢复最近会话并仅持久化 user/assistant 文本；`NotificationsService`（本地通知 + 别再提 action）；`SignalCollectors`（usage/日历/天气/位置，仅本地）；`LocalWindowEngine`（Dart 窗口规则）；`OfflineQueue`（sqflite 离线暂存）；`TourRegistry`（通用引导框架）；`TimezoneService`（时区检测/提示）；`JenniferLocalEngine`（本地评估 + 通知 + 静默）。
 - **模型层** `models/`：`ItemCommitment`（const 构造器 + `options` 字段）。
 - **UI 层** `screens/ + widgets/`：现在/全部/我的；焦点卡按**后端 options** 渲染（now 主按钮/later/drop/条件 rescue）；录入分类 chips（life/chore/bill/return/study/social）+ 期限（无/明天/一周/两周）；Toast 顶部 pill（SPEC §3.5）收口（capture 用后端 message）。`HomeShell` body 包 `SafeArea` 避开刘海/状态栏；「隐私说明」「关于」用 `ExpansionTile` 默认折叠；登录/注册密码框带显示明文眼睛。
 

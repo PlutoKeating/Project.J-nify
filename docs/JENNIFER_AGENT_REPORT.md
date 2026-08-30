@@ -243,6 +243,6 @@ openrouter/thinkingmachines/inkling:free
 
 ### 13.4 验证
 
-- 后端：`npm run typecheck` 全绿；`npm test` **79 passed / 5 skipped**（新增 agent-full.test.ts：文档装配顺序、记忆分区编译、历史白名单全链路、热重载失效等）；
-- 前端：`flutter analyze` 0 issues；`flutter test` 11 passed；
+- 后端：`npm run typecheck` 全绿；`npm test` **80 passed / 5 skipped**，一次性本地 Supabase 集成测试 **5/5**（文档装配、记忆、历史白名单、PostgREST upsert、Auth/数据删除等）；
+- 前端：`flutter analyze` 0 issues；`flutter test` **16 passed**（SSE、会话恢复、流式 UI、撤销卡片与节奏策略均有覆盖）；
 - 官网：`npm run build` 通过；21 tests 通过。

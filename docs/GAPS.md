@@ -11,7 +11,6 @@
 | GAP-WECHAT | 微信消息/日程读取 | 个人微信无官方 API（企业微信会话存档为付费企业功能）；替代=分享到 J-nify / 手动录入 |
 | GAP-EXPORT | 数据导出（JSON） | M3 再做（D4 定案） |
 | GAP-IOS | iOS 安装包 / Universal Link / APNs | 需 Apple Developer 账号 + macOS 签名链路（I4 定案暂缓） |
-| GAP-INTEGRATION-CI | 集成测试 CI 化 | 当前无测试环境额度；CI 维持跳过；获测试项目额度后接入（F3/Q12） |
 | GAP-RATE-LIMIT | CF Rate Limiting 跨实例限流 | 单实例规模内进程内限流够用；多实例部署前接入（F2） |
 | GAP-OFFLINE-CLOUD | 离线/弱网下云端同步冲突合并策略 | 本期离线队列为 last-write-wins；冲突合并后续细化 |
 | GAP-DUAL-ENGINE | 本地窗口引擎与后端 /v1/now 双实现 | 执行层本地优先后，两端规则需保持同步；建议后续统一为共享规则文档 |

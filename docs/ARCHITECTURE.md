@@ -13,7 +13,7 @@ J-nify 采用「Flutter 客户端 + Cloudflare Worker 后端 + Supabase（Postgr
     │  jose JWKS 验签（Supabase Auth JWT）
     │  Supabase REST（PostgREST；service key，标准 HTTPS）
     ▼
-[ Supabase：Postgres 15+1 表 + RPC（fn_decide / fn_create_nudge / fn_ingest_signal）]
+[ Supabase：Postgres 23 表 + RPC（fn_decide / fn_create_nudge / fn_ingest_signal）]
     │  SMTP（j_nify@yeah.net）发确认/重置邮件
     ▼
 [ 用户邮箱 ]
@@ -75,12 +75,12 @@ J-nify 采用「Flutter 客户端 + Cloudflare Worker 后端 + Supabase（Postgr
 - PostgREST 语法要点：
   - 操作符在**值侧**：`?column=in.(a,b)`、`?column=gt.v`；
   - 含 uuid 的普通值**必须显式 `eq.`**（隐式 eq 会 400 PGRST100）；
-  - upsert：`on-conflict` 头 + `Prefer: resolution=merge-duplicates`；
+  - upsert：`on_conflict` 查询参数 + `Prefer: resolution=merge-duplicates`；
   - jsonb 列写数值须 `to_jsonb(...)`（RPC 内）。
 
 ## 安全（2026-08-27 加固）
 
-- **RLS**：全部 16 表开启 Row Level Security + 回收 `anon`/`authenticated` 权限（迁移 `0004`）→ 客户端角色（含 publishable key 直连 REST）**零数据访问**；仅 service_role（BYPASSRLS）可读写。
+- **RLS**：全部 23 表开启 Row Level Security + 回收 `anon`/`authenticated` 权限 → 客户端角色（含 publishable key 直连 REST）**零数据访问**；仅 service_role（BYPASSRLS）可读写。
 - 密钥纪律：`SUPABASE_SERVICE_KEY` 只存 CF Worker secrets 与 `.dev.vars`；前端只持有 publishable key（仅 Auth 用）；APK 不含 `.env`/密钥。
 - 邮箱确认开启（`mailer_autoconfirm=false`），确认/重置邮件走生产 SMTP。
 

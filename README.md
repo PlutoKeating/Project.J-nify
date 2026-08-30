@@ -61,7 +61,7 @@ P 人不是不想做好，是很多事**一旦放下就真的会蒸发**。拖�
 | --- | --- | --- |
 | 前端 | Flutter (Dart) + supabase_flutter | 认证（Supabase Auth）；三屏 UI + 录入/决策闭环；生产后端默认 `https://j-nify.williamhvollita.dpdns.org` |
 | 后端 | **Cloudflare Worker**：TypeScript + Hono | 部署=GitHub Actions `wrangler deploy`（push main 自动上线） |
-| 数据 | **Supabase Postgres**（REST/PostgREST + RPC） | 15 实体表 + 事务 RPC；全表 RLS（客户端角色零数据访问） |
+| 数据 | **Supabase Postgres**（REST/PostgREST + RPC） | 23 张表 + 事务 RPC；全表 RLS（客户端角色零数据访问） |
 | 账户/邮件 | **Supabase Auth + 生产 SMTP** | 邮箱确认/重置经 j_nify@yeah.net（smtp.yeah.net:465） |
 | 建模 | SPEC §6 的 15 个实体 | USER / ITEM_COMMITMENT / OPPORTUNITY_WINDOW / NUDGE / DECISION … |
 
@@ -129,7 +129,8 @@ LICENSE        AGPL-3.0
 
 ## CI/CD 与发布
 
-- ✅ **CI 门禁**（`.github/workflows/ci.yml`）：push / PR 自动并行校验 —— 后端 `npm test` + typecheck，前端 `flutter analyze` + `flutter test`。
+- ✅ **CI 门禁**（`.github/workflows/ci.yml`）：push / PR 自动并行校验 —— 后端单测+类型检查、本地 Supabase 5 项集成测试、前端静态分析+16 项测试、官网测试+lint+构建。
+- 🩺 **生产冒烟**（`.github/workflows/smoke-production.yml`）：每日及手动执行官网/后端/只读 Admin API 检查，并在 Android 模拟器验证 App 可安装启动到认证页。
 - 📦 **前端自动打包发布**（`.github/workflows/release-frontend.yml`）：推送 tag `vX.Y.Z` 触发，校验 tag 与 `frontend/pubspec.yaml` 的 version 一致后，构建 Android APK/AAB（ubuntu，**固定 release keystore 签名**）并发布 GitHub Release；iOS 归档（xcarchive，macos，未签名需 Apple 证书）。`SUPABASE_URL/SUPABASE_ANON_KEY` 经 GH Secrets 注入构建（dart-define）。⚠️ `pubspec.yaml` 的 `+N`（=`versionCode`）必须随发版单调递增（曾因降级致覆盖安装被拒），流程详见 [`docs/devops/release.md`](docs/devops/release.md)。
 - 🚢 **后端部署**（`.github/workflows/deploy-backend.yml`）：push main（backend/**）自动 `wrangler deploy`，生产后端唯一 Base URL = **`https://j-nify.williamhvollita.dpdns.org`**。
 - 📧 **邮件与 SMTP**（Supabase 自定义 SMTP，j_nify@yeah.net）：已上线（confirm-email 开启），模板见 [`docs/devops/smtp.md`](docs/devops/smtp.md)。

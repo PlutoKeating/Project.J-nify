@@ -11,13 +11,13 @@
 | `SMTP_AUTH_PROD` | yeah.net 客户端授权码（SMTP 密码，非登录密码） | GitHub Actions Secrets（已存）；CF Worker Secrets `SMTP_AUTH`（已同步 2026-08-29）| `gh secret set SMTP_AUTH_PROD`；切勿发公开渠道 |
 | `SESSION_SECRET` | admin 面板登录会话签名（随机 64 位 hex，2026-08-29 生成） | GitHub Actions Secrets（已存）+ CF Worker Secrets（已同步 2026-08-29）| `gh secret set SESSION_SECRET`；轮换=重新生成后重新同步 |
 | `OPENWEATHER_API_KEY` | App 本地天气查询（免费可商用，需署名 "Weather by OpenWeather"；2026-08-29 用户提供 prod key） | GitHub Actions Secrets（已存）；release 构建经 `--dart-define` 注入，本地开发走 gitignored `.env` | `gh secret set OPENWEATHER_API_KEY` |
-| `ADMIN_USERNAME` / `ADMIN_PASSWORD` | admin 面板登录账号口令 | 待用户创建 → GitHub Actions Secrets → 同步 CF Worker Secrets | `gh secret set` 后运行 `configure-worker-secrets` |
-| `GH_PAT` | 告警自动建 GitHub Issue（fine-grained，仅 Issues read/write） | 待用户创建 → GitHub Actions Secrets → 同步 CF Worker Secrets | 创建指引见 `docs/DECISION_REGISTER.md` §5.2 |
+| `ADMIN_USERNAME` / `ADMIN_PASSWORD` | admin 面板登录账号口令；生产只读冒烟使用 | GitHub Actions Secrets（已存）+ CF Worker Secrets（已同步） | `gh secret set` 后运行 `configure-worker-secrets`；每日 `smoke-production.yml` 验证登录 |
+| `GH_PAT` | 告警自动建 GitHub Issue（fine-grained，仅 Issues read/write） | GitHub Actions Secrets（已存）+ CF Worker Secrets（已同步） | 创建/轮换指引见 `docs/DECISION_REGISTER.md` §5.2 |
 | `TIANDITU_KEY` | 天地图逆地理编码（**浏览器端**类型 key，域名白名单 `j-nify.williamhvollita.dpdns.org`；App 经 `/v1/geo/reverse` 代理调用，不打包进 APK；代理请求携带 Referer 过白名单，见 DECISION_REGISTER §5.1） | 已配置（2026-08-29，用户提供）→ CF Worker Secrets | 天地图控制台申请「浏览器端」key → 白名单配本站域名 |
 | 发件显示名 | 邮件发件人 | 非敏感 → `docs/devops/smtp.md`（模板随 Task 16 生成） | 文案审校 |
 | `SUPABASE_URL`（**当前项目即生产**） | Worker 验签 JWKS / Supabase 客户端 | CF Dashboard secrets（已存）+ GH Secrets | Dashboard 维护 |
 | `SUPABASE_SERVICE_KEY` | **后端 DB 访问（PostgREST，2026-08-27 起）** | CF Dashboard secrets（已存）+ 本机 `backend/.dev.vars`；**只进后端** | Dashboard / `wrangler secret put` 维护 |
-| `DATABASE_URL`（pooler 事务模式 :6543） | 仅迁移脚本/集成测试（node 侧 postgres.js），**无需进 CF Worker** | 本机 `backend/.dev.vars` + GH Actions 集成测试 env | `.dev.vars` 维护 |
+| `DATABASE_URL`（pooler 事务模式 :6543） | 仅远端迁移/人工集成测试（node 侧 postgres.js），**无需进 CF Worker** | 本机 `backend/.dev.vars` | CI 集成测试改用一次性本地 Supabase 的临时 `DB_URL`，无需存生产连接串 |
 | `LLM_API_BASE/LLM_API_KEY/LLM_MODEL` | 预留 LLM 网关（空则模板降级） | CF Dashboard secrets（同上，暂空） | Dashboard 维护 |
 | Android 签名 keystore 及口令 | 前端 release APK/AAB 签名（v0.1.2 起固定签名，支持覆盖更新） | GitHub Actions Secrets：`ANDROID_KEYSTORE_BASE64` / `ANDROID_KEYSTORE_PASSWORD` / `ANDROID_KEY_ALIAS` / `ANDROID_KEY_PASSWORD`（已存）+ 本机 `~/.android/jnify-release.jks`（**不入库，务必备份**） | `gh secret set` |
 | App Link 校验指纹（SHA-256） | 邮件确认/重置回调用 App Link 唤起 App（`website/public/.well-known/assetlinks.json`） | **公开值，非密钥** → 直接入仓库该 JSON（无需 secret）；值=`9d9018a5…369d6b3`（release 证书，轮换签名才需更新） | 证书轮换时更新 JSON |

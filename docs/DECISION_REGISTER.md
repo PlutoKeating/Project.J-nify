@@ -1,6 +1,6 @@
 # J-nify 决策定案登记（DECISION REGISTER）
 
-> 状态：**已定案（2026-08-29）**。本文档是问卷 `docs/DECISION_QUESTIONNAIRE.md` 的最终裁决结果与实施输入，亦是「暂不做内容」的官方留档（对应 A1 备注要求：后续条件成熟时可随时发现缺口并补齐）。
+> 状态：**已定案（2026-08-29；2026-08-30 工程验证决策更新）**。本文档是问卷 `docs/DECISION_QUESTIONNAIRE.md` 的最终裁决结果与实施输入，亦是「暂不做内容」的官方留档（对应 A1 备注要求：后续条件成熟时可随时发现缺口并补齐）。
 > 三模块并行实施以此为唯一权威依据；与本文档冲突的旧文档口径以本文档为准并需同步修正。
 
 ---
@@ -15,7 +15,7 @@
 | P4 | **外部服务白名单**：天地图（用户已有 key）、天气源 OpenWeather（免费可商用，需署名，见 §五）、models.dev（公开模型列表）、GitHub API（已有）。其他一律不引入。 |
 | P5 | **频控（Q1 定案）**：删除硬编码提醒次数上限；仅保留 安静时段 + 窗口级去重 两道硬护栏；频率管理交由 Jennifer 按用户行为动态调整。 |
 | P6 | **宣传口径（Q2 定案）**：保留愿景文案不动，但官网/README 必须增加「已发布 / 进行中 / 规划中」状态标注；只有已发布能力可进正文（A5 生效）。 |
-| P7 | **集成测试**：不引入生产库测试（Q12 定案），CI 维持"环境缺失自动跳过"，集成测试仅手动运行。 |
+| P7 | **集成测试**：不引入生产库测试；CI 启动一次性本地 Supabase 栈并执行 5 项真实 Auth/PostgREST/RPC 集成测试，无需生产凭据。 |
 
 ---
 
@@ -91,7 +91,7 @@
 | --- | --- | --- |
 | F1 | `/v1/now` 候选 limit 20 + 并行窗口计算 + P95 基准脚本 | — |
 | F2 | 进程内限流维持，记录限制与后续 CF Rate Limiting 选项 | — |
-| F3 | **集成测试不接 CI/不碰生产库**；维持环境缺失跳过，手动运行 | Q12 定案 |
+| F3 | **集成测试接入本地 Supabase CI、仍不碰生产库**；push/PR 自动执行 5 项真实 Auth/PostgREST/RPC 测试 | 2026-08-30 以本地栈方案取代凭据型测试 |
 | F4 | 邮件模板贴入 Supabase（Dashboard 人工步骤），内测时再验证 | — |
 | F5 | 后端版本以 `APP_VERSION` 部署变量为准，随发版更新 | — |
 | F6 | **admin/ 管理面板**（浏览器页面 + API）：LLM 多 provider/多 key/多模型（models.dev 动态列表）、模型优先级与故障切换、热加载；Jennifer agent 完整 harness | Q13/G2 定案；Q18 采纳 |
@@ -141,7 +141,7 @@
 | Q9 | Firebase | 无 Firebase 项目、不引入该框架 |
 | Q10 | 天气/天地图 key | 天地图已有；天气源=**OpenWeather 免费可商用（需署名）**；**OpenWeather prod key 已由用户提供（2026-08-29），存于 GH Secret `OPENWEATHER_API_KEY`** |
 | Q11 | OAuth 凭据 | **同 Q4**：本期不接，记录缺口 |
-| Q12 | 生产库集成测试 | **先不做**：不新增生产 service key 到 CI；CI 维持跳过 |
+| Q12 | 生产库集成测试 | **仍不做**：不新增生产 service key 到 CI；改用一次性本地 Supabase 栈自动验证 |
 | Q13 | 告警通道 | **两个都做**：GitHub Issues（GH_PAT 最小权限）+ SMTP 邮件；secret 创建指引见 §五 |
 | Q14 | 兜底 fallback | **以 Jennifer agent 完全接管为主**；不做硬编码兜底话术；agent 不可用时诚实报错+重试 |
 | Q15 | 初始默认节奏 | 认可：账单 10/3 天、退货 3/5/1 天、作业 5/10/13 天、无死线同理由冷却 72h（均可被 agent 调整） |
@@ -159,7 +159,6 @@
 | GAP-WECHAT | 微信消息/日程读取 | 个人微信无官方 API（企业微信会话存档为付费企业功能）；替代=分享到 J-nify / 手动录入 |
 | GAP-EXPORT | 数据导出（JSON） | M3 再做（D4 定案） |
 | GAP-IOS | iOS 安装包 / Universal Link / APNs | 需 Apple Developer 账号 + macOS 签名链路（I4 定案） |
-| GAP-INTEGRATION-CI | 集成测试 CI 化 | 当前无测试环境额度；CI 维持跳过；若后续获测试项目额度再接入（F3/Q12 定案） |
 | GAP-RATE-LIMIT | CF Rate Limiting 跨实例限流 | 单实例规模内进程内限流够用；多实例部署前接入（F2 定案） |
 | GAP-PUSH-ACTION | 通知内交互动作（如"别再提"按钮） | 本地通知本期支持通知内 action；系统级富交互受限时记录 |
 | GAP-OFFLINE-CLOUD | 弱网/离线状态下的云端同步冲突策略 | 本期离线队列先做 last-write-wins；冲突合并策略后续细化 |
