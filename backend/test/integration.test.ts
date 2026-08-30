@@ -1,20 +1,26 @@
-// 集成 e2e（真实 Supabase 环境；3 个 env 任一缺失时本文件整体跳过）。
+// 集成 e2e（Supabase 本地栈或独立测试项目；4 个 env 任一缺失时整体跳过）。
 // 运行前置：
-//   ① 需 3 个环境变量：SUPABASE_URL / SUPABASE_ANON_KEY（publishable key）/ DATABASE_URL（pooler 串）；
-//   ② Supabase Auth 需关闭 Confirm email（mailer_autoconfirm=true），否则 signUp 不返回 session；
-//   ③ 迁移需已应用：cd backend && npm run db:migrate（需 DIRECT_DATABASE_URL）。
-// 运行：cd backend && npx vitest run test/integration.test.ts
+//   ① SUPABASE_URL / SUPABASE_ANON_KEY / SUPABASE_SERVICE_KEY / DATABASE_URL；
+//   ② 迁移已应用（`supabase start` 会自动应用本目录 migrations）。
+// 运行：cd backend && npm run test:integration
 import { beforeAll, describe, expect, it } from 'vitest';
 import postgres from 'postgres';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { makeApp } from '../src/app';
 
-const hasEnv = () => Boolean(process.env.SUPABASE_URL && process.env.SUPABASE_ANON_KEY && process.env.DATABASE_URL);
+const hasEnv = () =>
+  Boolean(
+    process.env.SUPABASE_URL &&
+      process.env.SUPABASE_ANON_KEY &&
+      process.env.SUPABASE_SERVICE_KEY &&
+      process.env.DATABASE_URL,
+  );
 const describeIf = hasEnv() ? describe : describe.skip;
 
 describeIf('integration e2e', () => {
   let supabase: SupabaseClient;
   let app: ReturnType<typeof makeApp>;
+  let admin: SupabaseClient;
   let token = '';
   let userId = '';
   let env: Parameters<typeof makeApp>[0];
@@ -34,7 +40,7 @@ describeIf('integration e2e', () => {
     const password = 'password-123456';
     // 生产环境 Confirm email 已开启（邮件走 SMTP）→ 注册需确认；用 service key 管理员建已确认用户，
     // 再真实登录拿会话（等价「用户点确认邮件后首次登录」）。
-    const admin = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_KEY!, { auth: { autoRefreshToken: false, persistSession: false } });
+    admin = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_KEY!, { auth: { autoRefreshToken: false, persistSession: false } });
     const { error: createErr } = await admin.auth.admin.createUser({ email, password, email_confirm: true });
     if (createErr) throw new Error(`admin createUser failed: ${createErr.message}`);
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
@@ -53,6 +59,15 @@ describeIf('integration e2e', () => {
       },
       env as never, // Hono app.request 第三参注入 Bindings 环境（否则 c.env 为 undefined → 401）
     );
+
+  const openDatabase = () => {
+    const url = process.env.DATABASE_URL!;
+    const hostname = new URL(url).hostname;
+    return postgres(url, {
+      prepare: false,
+      ssl: hostname === '127.0.0.1' || hostname === 'localhost' ? false : 'require',
+    });
+  };
 
   it('capture -> now shows window with reason', { timeout: 90_000 }, async () => {
     const cap = await call('/v1/items/capture', {
@@ -92,7 +107,7 @@ describeIf('integration e2e', () => {
   it('guardrails persist across client instances', { timeout: 90_000 }, async () => {
     await call('/v1/guardrails', { method: 'PUT', body: JSON.stringify({ max_nudge_budget: 5 }) });
     // 独立连接直接查库，验证持久化（不依赖 app 内的连接缓存）；按 user_id 过滤，避免历次运行残留行
-    const fresh = postgres(process.env.DATABASE_URL!, { prepare: false, ssl: 'require' });
+    const fresh = openDatabase();
     const rows = await fresh`select value from user_preferences where "key" = 'max_nudge_budget' and scene = 'guardrails' and user_id = ${userId}`;
     await fresh.end();
     expect(rows.length).toBe(1);
@@ -101,16 +116,10 @@ describeIf('integration e2e', () => {
     expect(((await g.json()) as { max_nudge_budget: number }).max_nudge_budget).toBe(5);
   });
 
-  it('signals accepted and me/data deletes everything', { timeout: 90_000 }, async () => {
-    const s = await call('/v1/signals', { method: 'POST', body: JSON.stringify({ signal_type: 'usage', payload: { free_slot: true } }) });
-    expect(s.status).toBe(200);
-    const d = await call('/v1/me/data', { method: 'DELETE' });
-    expect(d.status).toBe(200);
-    const list = await call('/v1/items');
-    expect((await list.json()) as unknown[]).toEqual([]);
-  });
-
   it('single item fully deferred: same item served but nudge suppressed', { timeout: 90_000 }, async () => {
+    const existing = (await (await call('/v1/items')).json()) as { id: string }[];
+    for (const item of existing) await call(`/v1/items/${item.id}`, { method: 'DELETE' });
+
     // 静默时段 start===end ⇒ 永不静默：保证首轮 now 必然 nudge（否则在 23:30-08:30 UTC 跑会假失败）
     await call('/v1/guardrails', { method: 'PUT', body: JSON.stringify({ quiet_hours_start: '00:00', quiet_hours_end: '00:00', max_nudge_budget: 3 }) });
     const cap = await call('/v1/items/capture', {
@@ -121,7 +130,7 @@ describeIf('integration e2e', () => {
     const itemId = ((await cap.json()) as { item: { id: string } }).item.id;
 
     const countNudges = async (id: string): Promise<number> => {
-      const fresh = postgres(process.env.DATABASE_URL!, { prepare: false, ssl: 'require' });
+      const fresh = openDatabase();
       try {
         const rows = await fresh`
           select count(*)::int as n
@@ -148,5 +157,23 @@ describeIf('integration e2e', () => {
     expect(body2.item.id).toBe(itemId); // 全 defer 回退：同一事项仍被动可见
     expect(body2.item.status).not.toBe('nudged'); // 该轮响应不置 nudged
     expect(await countNudges(itemId)).toBe(1); // 该轮抑制 nudge，nudge 数不变
+  });
+
+  it('signals accepted and me/data deletes business data and auth account', { timeout: 90_000 }, async () => {
+    const s = await call('/v1/signals', { method: 'POST', body: JSON.stringify({ signal_type: 'usage', payload: { free_slot: true } }) });
+    expect(s.status).toBe(200);
+    const d = await call('/v1/me/data', { method: 'DELETE' });
+    expect(d.status).toBe(200);
+
+    const fresh = openDatabase();
+    try {
+      const rows = await fresh`select count(*)::int as n from users where id = ${userId}`;
+      expect(Number(rows[0].n)).toBe(0);
+    } finally {
+      await fresh.end();
+    }
+    const { data, error } = await admin.auth.admin.getUserById(userId);
+    expect(data.user).toBeNull();
+    expect(error).not.toBeNull();
   });
 });

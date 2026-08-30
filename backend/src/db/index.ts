@@ -67,11 +67,12 @@ export async function restInsert<T = Json>(
 ): Promise<T[]> {
   const arr = Array.isArray(rows) ? rows : [rows];
   const headers: Record<string, string> = { Prefer: 'return=representation' };
+  const query: Record<string, string> = {};
   if (opts.onConflict) {
     headers.Prefer = `resolution=merge-duplicates,return=representation`;
-    headers['on-conflict'] = opts.onConflict;
+    query.on_conflict = opts.onConflict;
   }
-  const r = await rest(db, `/${table}`, { method: 'POST', headers, body: JSON.stringify(arr) });
+  const r = await rest(db, `/${table}${qs(query)}`, { method: 'POST', headers, body: JSON.stringify(arr) });
   if (!r.ok) throw new Error(`INSERT ${table} ${r.status}: ${await r.text()}`);
   return (await r.json()) as T[];
 }

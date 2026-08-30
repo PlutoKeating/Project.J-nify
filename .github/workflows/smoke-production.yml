@@ -1,0 +1,61 @@
+name: Production Smoke
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 1 * * *'
+
+permissions:
+  contents: read
+
+jobs:
+  public-and-admin:
+    name: Public + read-only admin smoke
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: backend
+        run: npm ci
+
+      - name: Run production smoke
+        working-directory: backend
+        run: npx --no-install tsx scripts/smoke-production.ts
+        env:
+          ADMIN_USERNAME: ${{ secrets.ADMIN_USERNAME }}
+          ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
+          SMOKE_REQUIRE_ADMIN: '1'
+
+  android-launch:
+    name: Android launch smoke
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: flutter pub get
+
+      - name: Launch app on Android emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 31
+          arch: x86_64
+          profile: pixel_6
+          working-directory: frontend
+          script: >-
+            flutter test integration_test/app_smoke_test.dart
+            --dart-define=SUPABASE_URL=${{ secrets.SUPABASE_URL }}
+            --dart-define=SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}

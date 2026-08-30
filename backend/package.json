@@ -8,6 +8,8 @@
     "deploy": "wrangler deploy",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
+    "test:integration": "vitest run test/integration.test.ts",
+    "smoke:production": "tsx scripts/smoke-production.ts",
     "db:push": "supabase db push",
     "db:migrate": "tsx scripts/apply-migrations.ts"
   },

@@ -38,6 +38,49 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
+  backend-integration:
+    name: Backend · local Supabase integration
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Start local Supabase
+        run: >-
+          npx supabase start
+          --exclude realtime,storage-api,imgproxy,mailpit,postgres-meta,studio,edge-runtime,logflare,vector,supavisor
+
+      - name: Export local integration environment
+        run: |
+          npx supabase status -o env > /tmp/jnify-supabase.env
+          . /tmp/jnify-supabase.env
+          {
+            echo "SUPABASE_URL=$API_URL"
+            echo "SUPABASE_ANON_KEY=$ANON_KEY"
+            echo "SUPABASE_SERVICE_KEY=$SERVICE_ROLE_KEY"
+            echo "DATABASE_URL=$DB_URL"
+          } >> "$GITHUB_ENV"
+
+      - name: Run integration tests
+        run: npm run test:integration
+
+      - name: Stop local Supabase
+        if: always()
+        run: npx supabase stop --no-backup
+
   frontend:
     name: Frontend · analyze + test
     runs-on: ubuntu-latest

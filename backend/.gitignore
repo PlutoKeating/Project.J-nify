@@ -7,3 +7,7 @@ coverage/.env
 
 # 临时工作目录（探针/产物，收尾统一清理）
 /.scratch/
+
+# Supabase CLI 本地栈状态（`supabase start` 自动生成）
+/supabase/.branches/
+/supabase/.temp/
