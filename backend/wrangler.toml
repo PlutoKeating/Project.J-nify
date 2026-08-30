@@ -1,7 +1,7 @@
 name = "j-nify-backend"
 main = "src/index.ts"
 compatibility_date = "2026-08-01"
-compatibility_flags = ["nodejs_compat"] # postgres.js/drizzle 需 Node 兼容层（node:events/net/tls 等）
+compatibility_flags = ["nodejs_compat"] # Worker 告警 SMTP 客户端使用 node:net/tls
 workers_dev = true
 
 
@@ -16,5 +16,5 @@ QUIET_HOURS_END = "08:30"
 MAX_NUDGE_BUDGET = "3"
 LLM_API_BASE = ""
 LLM_MODEL = ""
-# 注意：SUPABASE_URL/DATABASE_URL/LLM_API_KEY 为 secret，在 CF Dashboard 注入，
-# 不写入本文件；本地开发放 .dev.vars（已被 .gitignore 忽略）。
+# 注意：SUPABASE_URL/SUPABASE_SERVICE_KEY 及 SMTP/Admin/外部服务凭据为 Worker secrets，
+# 不写入本文件；本地开发放 .dev.vars（已被 .gitignore 忽略）。DATABASE_URL 不是 Worker 运行时依赖。

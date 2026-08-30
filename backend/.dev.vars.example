@@ -1,6 +1,11 @@
 SUPABASE_URL=https://<project-ref>.supabase.co
+# Worker 运行时 PostgREST 读写使用；只放 backend/.dev.vars，绝不进前端/仓库
+SUPABASE_SERVICE_KEY=sb_secret_xxxxxxxxxxxx
+# 仅本地 Auth/集成测试需要；wrangler dev 业务运行时不依赖
 SUPABASE_ANON_KEY=sb_publishable_xxxxxxxxxxxx
+# 仅 Node 集成测试；Worker 运行时不直连 Postgres
 DATABASE_URL=postgres://postgres.<ref>:<password>@aws-<region>.pooler.supabase.com:6543/postgres
+# 仅 npm run db:migrate；优先使用可达的 pooler/直连地址
 DIRECT_DATABASE_URL=postgresql://postgres:<password>@db.<ref>.supabase.co:5432/postgres
 CORS_ORIGINS=*
 RATE_LIMIT_PER_MINUTE=60
