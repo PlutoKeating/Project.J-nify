@@ -80,7 +80,7 @@
 - **Jennifer 对话（v0.3.0）**：`chat_screen.dart`（SSE 首 token 原位显示、`flutter_markdown_plus`、responding 占位气泡、数据改动卡片 + 一键撤销）、`conversation_store.dart`（sqflite 恢复最近会话，只存文本消息）、`api_service.chatStream/undoAgentAction/fetchRhythm`、`api_client.streamPost`（dart:io SSE）。
 - 测试：**16/16** 单元/widget（含 SSE、SQLite 会话恢复、流式 UI、卡片撤销、节奏解析）+ `flutter analyze` 0 issues；另有 Android 模拟器启动集成测试。
 - **依赖维护（2026-08-30）**：Flutter 直接依赖升级到当前可解析主版本，停用的 `flutter_markdown` 已替换为 `flutter_markdown_plus`；后端锁文件更新至约束内最新版；官网升级 ESLint 10 / react-hooks 7 / jest-dom 7。官网 TypeScript 保持 5.9（`typescript-eslint` 当前 peer 上限 `<6.1`），不是遗漏升级。
-- **Android 编译基线**：`permission_handler_android` 13.x 要求 `compileSdk=37`；App 的 `minSdk` 仍为 31，生产冒烟在 API 31 模拟器验证安装启动兼容性。
+- **Android 编译基线**：`permission_handler_android` 13.x 要求 `compileSdk=37`；App 的 `minSdk` 仍为 31，生产冒烟在 API 37 模拟器验证安装启动。
 - **构建**：release 必须带 `--dart-define=SUPABASE_URL=... --dart-define=SUPABASE_ANON_KEY=...`（CI secrets 已配；本机构建示例见 §7）。**勿在构建中途 kill Gradle 守护进程**（会致 assembleRelease 失败；`/tmp FileAlreadyExistsException` 为良性告警）。
 
 ---
