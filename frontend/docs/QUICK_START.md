@@ -20,7 +20,7 @@ flutter test integration_test/app_smoke_test.dart -d <android-device> --dart-def
 flutter build apk --release --dart-define=SUPABASE_URL=... --dart-define=SUPABASE_ANON_KEY=...   # 出手装包
 ```
 
-Android 使用 Flutter 稳定版默认编译 SDK，最低运行版本为 API 31；CI 在 API 31 模拟器执行安装启动冒烟。`permission_handler` 固定在最新 12.x，直到 API 37 进入稳定 Android SDK 渠道。
+Android 使用 Flutter 稳定版默认编译 SDK，最低运行版本为 API 31；CI 在启用 KVM 的 API 31 模拟器执行安装启动冒烟。`permission_handler` 固定在最新 12.x，直到 API 37 进入稳定 Android SDK 渠道。
 
 > 发布构建要点（v0.1.2 起）：
 > - **主 `AndroidManifest.xml` 必须声明 `INTERNET` 权限**（Flutter 仅 debug/profile manifest 默认带，release 只合入 main 清单；缺失会导致 release 包任何网络请求立即失败——曾致注册报 `Failed host lookup (errno=7)`）。

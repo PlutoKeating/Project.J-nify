@@ -9,7 +9,7 @@ void main() {
     await app.main();
     await tester.pump(const Duration(seconds: 3));
 
-    expect(find.text('J-nify'), findsWidgets);
+    expect(find.text('J-nify · Jennifer'), findsOneWidget);
     expect(find.text('登录'), findsWidgets);
     expect(find.text('邮箱'), findsOneWidget);
   });
