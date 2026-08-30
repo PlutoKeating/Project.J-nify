@@ -31,9 +31,11 @@ jobs:
           cache: npm
           cache-dependency-path: website/package-lock.json
 
-      - name: Install & build
+      - name: Install, verify & build
         run: |
           npm ci
+          npm test
+          npm run lint
           npm run build
           test -f dist/_redirects && echo "dist/_redirects OK"
 

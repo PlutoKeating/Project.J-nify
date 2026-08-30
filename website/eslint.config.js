@@ -18,4 +18,14 @@ export default tseslint.config(
     files: ['**/*.mjs'],
     languageOptions: { globals: { process: 'readonly', console: 'readonly' } },
   },
+  {
+    files: ['functions/**/*.js'],
+    languageOptions: {
+      globals: {
+        Request: 'readonly',
+        Response: 'readonly',
+        URL: 'readonly',
+      },
+    },
+  },
 );

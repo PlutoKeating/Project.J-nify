@@ -1,5 +1,5 @@
-# CI 门禁：push / PR 触发，后端与前端并行校验。
-# 仅做校验（npm test + typecheck / flutter analyze + test），不做任何部署。
+# CI 门禁：push / PR 触发，后端、前端与官网并行校验。
+# 仅做校验（测试 / 类型检查 / lint / 构建），不做任何部署。
 # 后端部署：.github/workflows/deploy-backend.yml（wrangler deploy，push main 自动上线）。
 name: CI
 
@@ -62,3 +62,32 @@ jobs:
 
       - name: Widget tests
         run: flutter test
+
+  website:
+    name: Website · test + lint + build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: website
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: website/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm test
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build
+        run: npm run build
