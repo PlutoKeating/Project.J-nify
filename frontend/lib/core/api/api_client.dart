@@ -3,33 +3,25 @@ import 'dart:convert';
 import 'dart:io' as io;
 
 import 'package:http/http.dart' as http;
-import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../auth/account.dart';
 import '../config/app_config.dart';
 import 'api_exception.dart';
 
 /// 轻量 HTTP 客户端。base URL 来自 `.env`（[AppConfig.backendBaseUrl]）；
-/// 若存在 Supabase 会话，自动附加 `Authorization: Bearer <accessToken>`。
+/// 已登录 PlutoKeating 账号时自动附加 `Authorization: Bearer <访问令牌>`（快过期时先静默刷新）。
 class ApiClient {
   ApiClient._();
 
   static final ApiClient instance = ApiClient._();
 
-  /// 当前 Supabase 会话的 access token；Supabase 未初始化或未登录时为 null。
-  ///
-  /// debug 下 `Supabase.instance` 在未初始化时会先抛 AssertionError（早于
-  /// `isInitialized` 判断），故整体 try/catch 包裹，保证 debug/test 不炸。
-  String? get _accessToken {
+  Future<Map<String, String>> _headers([Map<String, String>? extra]) async {
+    String? token;
     try {
-      if (!Supabase.instance.isInitialized) return null;
-      return Supabase.instance.client.auth.currentSession?.accessToken;
+      token = await Account.instance.accessToken();
     } catch (_) {
-      return null;
+      token = null; // 安全存储 / 插件不可用（测试环境）：不带令牌
     }
-  }
-
-  Map<String, String> _headers([Map<String, String>? extra]) {
-    final token = _accessToken;
     return {
       'Content-Type': 'application/json',
       if (token != null) 'Authorization': 'Bearer $token',
@@ -55,35 +47,35 @@ class ApiClient {
 
   Future<dynamic> get(String path, {Map<String, String>? query}) async {
     final res = await http
-        .get(_uri(path, query: query), headers: _headers())
+        .get(_uri(path, query: query), headers: await _headers())
         .timeout(_timeout);
     return _decode(res);
   }
 
   Future<dynamic> post(String path, {Map<String, dynamic>? body}) async {
     final res = await http
-        .post(_uri(path), headers: _headers(), body: jsonEncode(body ?? {}))
+        .post(_uri(path), headers: await _headers(), body: jsonEncode(body ?? {}))
         .timeout(_timeout);
     return _decode(res);
   }
 
   Future<dynamic> put(String path, {Map<String, dynamic>? body}) async {
     final res = await http
-        .put(_uri(path), headers: _headers(), body: jsonEncode(body ?? {}))
+        .put(_uri(path), headers: await _headers(), body: jsonEncode(body ?? {}))
         .timeout(_timeout);
     return _decode(res);
   }
 
   Future<dynamic> patch(String path, {Map<String, dynamic>? body}) async {
     final res = await http
-        .patch(_uri(path), headers: _headers(), body: jsonEncode(body ?? {}))
+        .patch(_uri(path), headers: await _headers(), body: jsonEncode(body ?? {}))
         .timeout(_timeout);
     return _decode(res);
   }
 
   Future<dynamic> delete(String path) async {
     final res =
-        await http.delete(_uri(path), headers: _headers()).timeout(_timeout);
+        await http.delete(_uri(path), headers: await _headers()).timeout(_timeout);
     return _decode(res);
   }
 
@@ -96,7 +88,7 @@ class ApiClient {
     final client = io.HttpClient();
     final req = await client.postUrl(_uri(path));
     req.headers.contentType = io.ContentType.json;
-    _headers().forEach((key, value) {
+    (await _headers()).forEach((key, value) {
       req.headers.set(key, value);
     });
     req.add(utf8.encode(jsonEncode(body ?? {})));
@@ -123,21 +115,9 @@ class ApiClient {
     throw ApiException(res.statusCode, message);
   }
 
-  /// 401 = 会话失效（token 过期/被吊销）：fire-and-forget 触发
-  /// `auth.signOut()`，onAuthStateChange 会让 AuthGate 在下次重建时回到登录页。
-  ///
-  /// 幂等（无会话时 signOut 为 no-op）且不阻塞当前请求；signOut 只清理本地
-  /// 会话，与当前请求抛出的 [ApiException]（含 401）互不干扰，无递归风险。
+  /// 401 = 登录失效（令牌被吊销或刷新失败）：清掉本机登录状态，[AuthGate] 回到登录页。
   void _invalidateSessionOn401(int statusCode) {
     if (statusCode != 401) return;
-    unawaited(_silentSignOut());
-  }
-
-  Future<void> _silentSignOut() async {
-    try {
-      await Supabase.instance.client.auth.signOut();
-    } catch (_) {
-      // 幂等兜底：会话已失效、无会话或 Supabase 未初始化（debug/test）时忽略。
-    }
+    unawaited(Account.instance.signOutLocal());
   }
 }

@@ -28,6 +28,8 @@ android {
         // flag during build.
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+        // PlutoKeating 账号登录（flutter_appauth）的回调：com.plutokeating.jnify://callback
+        manifestPlaceholders["appAuthRedirectScheme"] = "com.plutokeating.jnify"
     }
 
     signingConfigs {

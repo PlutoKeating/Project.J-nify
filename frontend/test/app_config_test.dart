@@ -12,7 +12,5 @@ void main() {
 
     // 未抛异常即通过到此处；并确认默认值生效（生产 URL / dart-define 注入值）。
     expect(AppConfig.instance.backendBaseUrl, AppConfig.prodBackendBaseUrl);
-    expect(AppConfig.instance.supabaseUrl, AppConfig.defaultSupabaseUrl);
-    expect(AppConfig.instance.supabaseAnonKey, AppConfig.defaultSupabaseAnonKey);
   });
 }

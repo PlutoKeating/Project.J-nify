@@ -94,7 +94,7 @@ class ApiService implements JenniferChatApi {
     return data as Map<String, dynamic>;
   }
 
-  /// 当前用户资料（昵称/邮箱 email 由 Supabase Auth 提供，这里取 users.nickname）。
+  /// 当前用户资料（邮箱来自 PlutoKeating 账号，见 [Account.email]；这里取 users.nickname）。
   Future<Map<String, dynamic>> getProfile() async {
     final data = await _client.get('/v1/me/profile');
     return data as Map<String, dynamic>;

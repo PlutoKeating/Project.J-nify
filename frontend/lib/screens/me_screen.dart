@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../auth/account.dart';
 import '../core/api/api_client.dart';
 import '../core/config/app_config.dart';
 import '../services/api_service.dart';
@@ -70,20 +70,11 @@ class _MeScreenState extends State<MeScreen> {
     }
   }
 
-  /// 当前登录邮箱（来自 Supabase Auth）。debug/test 下 Supabase 可能未初始化，
-  /// 整体 try/catch 兜底，与 [ApiClient] 的处理一致。
-  static String? _currentEmail() {
-    try {
-      if (!Supabase.instance.isInitialized) return null;
-      return Supabase.instance.client.auth.currentUser?.email;
-    } catch (_) {
-      return null;
-    }
-  }
+  /// 当前登录邮箱（来自 PlutoKeating 账号的 ID 令牌）。
+  static String? _currentEmail() => Account.instance.email;
 
-  /// 刷新资料（昵称/邮箱）。从设置页返回后调用，避免整页转圈。
   Future<void> _loadProfile() async {
-    // 邮箱来自 Supabase Auth；昵称来自后端 users 表。
+    // 邮箱来自 PlutoKeating 账号；昵称来自后端 users 表。
     final email = _currentEmail();
     try {
       final profile = await _api.getProfile();
@@ -119,7 +110,7 @@ class _MeScreenState extends State<MeScreen> {
   /// 无需手动导航；失败时 SnackBar 提示。
   Future<void> _signOut() async {
     try {
-      await Supabase.instance.client.auth.signOut();
+      await Account.instance.signOutLocal();
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(

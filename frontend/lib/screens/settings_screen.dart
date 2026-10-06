@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
 
+import '../auth/account.dart';
 import '../core/api/api_client.dart';
-import '../core/config/app_config.dart';
 import '../services/api_service.dart';
 
-/// 设置页：单页分组 **账户资料（昵称/邮箱）** + **安全（修改密码）**。
-/// 由「我的」页的齿轮入口进入。昵称经后端 `/v1/me/profile`（RLS 下客户端零数据
-/// 访问）；邮箱/密码经 Supabase Auth（敏感改动前先重认证当前密码）。
+/// 设置页：**账户资料（昵称）**、**PlutoKeating 账号**（邮箱、通行密钥、关联 GitHub 都在账号设置页里管理）、删除数据。
+/// 由「我的」页的齿轮入口进入。昵称经后端 `/v1/me/profile`。
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
 
@@ -35,15 +34,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     super.dispose();
   }
 
-  /// 当前登录邮箱（Supabase Auth）。debug/test 下 Supabase 可能未初始化，整体兜底。
-  static String? _currentEmail() {
-    try {
-      if (!Supabase.instance.isInitialized) return null;
-      return Supabase.instance.client.auth.currentUser?.email;
-    } catch (_) {
-      return null;
-    }
-  }
+  static String? _currentEmail() => Account.instance.email;
 
   Future<void> _load() async {
     final email = _currentEmail();
@@ -89,132 +80,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
-  Future<void> _changeEmail() async {
-    final newEmail = TextEditingController();
-    final password = TextEditingController();
-    final submitted = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('修改绑定邮箱'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: newEmail,
-              keyboardType: TextInputType.emailAddress,
-              decoration: const InputDecoration(labelText: '新邮箱'),
-            ),
-            TextField(
-              controller: password,
-              obscureText: true,
-              decoration: const InputDecoration(labelText: '当前密码（用于验证）'),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('取消'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('发送确认'),
-          ),
-        ],
-      ),
-    );
-    if (submitted != true) return;
-    final email = newEmail.text.trim();
-    final pwd = password.text;
-    if (_email == null) {
-      _toast('无法获取当前邮箱');
-      return;
-    }
-    if (email.isEmpty) {
-      _toast('新邮箱不能为空');
-      return;
-    }
-    setState(() => _busy = true);
-    try {
-      final auth = Supabase.instance.client.auth;
-      // 重认证当前密码（敏感改动前），再更新邮箱 → GoTrue 向新邮箱发确认邮件。
-      await auth.signInWithPassword(email: _email!, password: pwd);
-      await auth.updateUser(
-        UserAttributes(email: email),
-        emailRedirectTo: AppConfig.appLinkVerify,
-      );
-      _toast('确认邮件已发送至新邮箱，请在新邮箱点击确认后重新登录');
-    } catch (e) {
-      _toast('修改失败：$e');
-    } finally {
-      if (mounted) setState(() => _busy = false);
-    }
-  }
-
-  Future<void> _changePassword() async {
-    final current = TextEditingController();
-    final next = TextEditingController();
-    final confirm = TextEditingController();
-    final submitted = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('修改密码'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: current,
-              obscureText: true,
-              decoration: const InputDecoration(labelText: '当前密码'),
-            ),
-            TextField(
-              controller: next,
-              obscureText: true,
-              decoration: const InputDecoration(labelText: '新密码'),
-            ),
-            TextField(
-              controller: confirm,
-              obscureText: true,
-              decoration: const InputDecoration(labelText: '再次输入新密码'),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('取消'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('确认修改'),
-          ),
-        ],
-      ),
-    );
-    if (submitted != true) return;
-    if (_email == null) {
-      _toast('无法获取当前邮箱');
-      return;
-    }
-    if (next.text != confirm.text) {
-      _toast('两次输入的新密码不一致');
-      return;
-    }
-    if (next.text.isEmpty) {
-      _toast('新密码不能为空');
-      return;
-    }
-    setState(() => _busy = true);
-    try {
-      final auth = Supabase.instance.client.auth;
-      await auth.signInWithPassword(email: _email!, password: current.text);
-      await auth.updateUser(UserAttributes(password: next.text));
-      _toast('密码已修改');
-    } catch (e) {
-      _toast('修改失败：$e');
-    } finally {
-      if (mounted) setState(() => _busy = false);
-    }
+  /// 账号设置（邮箱、通行密钥、关联 GitHub、退出）在 PlutoKeating 账号的设置页里，用浏览器打开。
+  Future<void> _manageAccount() async {
+    final ok = await launchUrl(Uri.parse(Account.settingsUrl), mode: LaunchMode.externalApplication);
+    if (!ok) _toast('打不开浏览器');
   }
 
   Future<void> _deleteAccount() async {
@@ -222,11 +91,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('注销账户'),
+        title: const Text('删除我的数据'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('将永久删除您的全部事项与记录，且无法恢复。请输入「删除」确认。'),
+            const Text('将永久删除您在 J-nify 的全部事项与记录，且无法恢复。请输入「删除」确认。'),
             const SizedBox(height: 8),
             TextField(controller: confirmCtrl, decoration: const InputDecoration(labelText: '输入「删除」')),
           ],
@@ -235,7 +104,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('取消')),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, confirmCtrl.text.trim() == '删除'),
-            child: const Text('确认注销'),
+            child: const Text('确认删除'),
           ),
         ],
       ),
@@ -244,9 +113,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
     setState(() => _busy = true);
     try {
       await _api.deleteAllData();
-      await Supabase.instance.client.auth.signOut();
+      await Account.instance.signOutLocal();
     } catch (e) {
-      _toast('注销失败：$e');
+      _toast('删除失败：$e');
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -282,36 +151,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
             ),
           ),
-          ListTile(
-            title: const Text('邮箱'),
-            subtitle: Text(_email ?? '未登录'),
-            trailing: IconButton(
-              icon: const Icon(Icons.edit_outlined),
-              tooltip: '修改邮箱',
-              onPressed: _busy ? null : _changeEmail,
-            ),
-          ),
           const Divider(),
-          _sectionHeader('安全'),
+          _sectionHeader('PlutoKeating 账号'),
           ListTile(
-            leading: Icon(Icons.lock_outline, color: colorScheme.primary),
-            title: const Text('修改密码'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: _busy ? null : _changePassword,
-          ),
-          const SizedBox(height: 12),
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16),
-            child: Text(
-              '修改邮箱需在当前密码验证后，前往新邮箱点击确认链接完成，确认后请重新登录。',
-              style: TextStyle(color: Colors.grey, fontSize: 12),
-            ),
+            leading: Icon(Icons.account_circle_outlined, color: colorScheme.primary),
+            title: Text(_email ?? '未登录'),
+            subtitle: const Text('邮箱、通行密钥、关联 GitHub'),
+            trailing: const Icon(Icons.open_in_new),
+            onTap: _busy ? null : _manageAccount,
           ),
           const Divider(),
           ListTile(
             leading: Icon(Icons.delete_forever_outlined, color: colorScheme.error),
-            title: const Text('删除我的数据 / 注销账户'),
-            subtitle: const Text('永久删除全部事项与记录'),
+            title: const Text('删除我的数据'),
+            subtitle: const Text('永久删除在 J-nify 的全部事项与记录'),
             onTap: _busy ? null : _deleteAccount,
           ),
         ],

@@ -11,6 +11,6 @@ void main() {
 
     expect(find.text('J-nify · Jennifer'), findsOneWidget);
     expect(find.text('登录'), findsWidgets);
-    expect(find.text('邮箱'), findsOneWidget);
+    expect(find.text('使用 PlutoKeating 账号，第一次用会自动创建'), findsOneWidget);
   });
 }
