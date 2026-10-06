@@ -18,7 +18,7 @@ admin.use('/api/*', async (c, next) => {
   const okAdmin = await requireAdmin(c);
   if (!okAdmin) return c.json({ detail: 'unauthorized' }, 401);
   // /admin 不在 /v1/* 的 db 注入中间件内，此处自行注入（admin 路由不触网 DB 时无需）
-  c.set('db', makeDb(c.env.SUPABASE_URL, c.env.SUPABASE_SERVICE_KEY));
+  c.set('db', makeDb(c.env.JNIFY_DATA_URL, c.env.JNIFY_DATA_KEY));
   await next();
 });
 

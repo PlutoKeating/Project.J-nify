@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { makeApp } from '../src/app';
 
-const env = { SUPABASE_URL: 'https://x.supabase.co', DATABASE_URL: '' } as never;
+const env = { JNIFY_DATA_URL: 'https://data.example', JNIFY_DATA_KEY: 'k' } as never;
 
 describe('app assembly', () => {
   it('GET /v1/now without token returns 401', async () => {

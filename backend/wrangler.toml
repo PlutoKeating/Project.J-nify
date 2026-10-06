@@ -16,5 +16,5 @@ QUIET_HOURS_END = "08:30"
 MAX_NUDGE_BUDGET = "3"
 LLM_API_BASE = ""
 LLM_MODEL = ""
-# 注意：SUPABASE_URL/SUPABASE_SERVICE_KEY 及 SMTP/Admin/外部服务凭据为 Worker secrets，
-# 不写入本文件；本地开发放 .dev.vars（已被 .gitignore 忽略）。DATABASE_URL 不是 Worker 运行时依赖。
+# 注意：JNIFY_DATA_URL / JNIFY_DATA_KEY（jnify-data 数据服务）及 SMTP/Admin/外部服务凭据为 Worker secrets，
+# 不写入本文件；本地开发放 .dev.vars（已被 .gitignore 忽略）。登录校验用的账号服务地址 ID_ISSUER 缺省为 https://id.plutokeating.beer/。

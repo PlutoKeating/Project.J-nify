@@ -4,11 +4,20 @@ import { makeDb, restGet, restInsert, restUpdate, restDelete, restRpc, robustGua
 describe('REST db layer shape', () => {
   afterEach(() => vi.unstubAllGlobals());
 
-  it('makeDb requires SUPABASE_URL + SERVICE_KEY and normalizes trailing slash', () => {
+  it('makeDb requires JNIFY_DATA_URL + JNIFY_DATA_KEY and normalizes trailing slash', () => {
     expect(() => makeDb('', 'k')).toThrow();
-    expect(() => makeDb('https://x.supabase.co', '')).toThrow();
-    const db = makeDb('https://x.supabase.co/', 'k');
-    expect(db).toEqual({ supabaseUrl: 'https://x.supabase.co', serviceKey: 'k' });
+    expect(() => makeDb('https://data.example', '')).toThrow();
+    const db = makeDb('https://data.example/', 'k');
+    expect(db).toEqual({ url: 'https://data.example', key: 'k' });
+  });
+
+  it('sends the service key as a Bearer token to /rest/v1', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response('[]', { status: 200 }));
+    vi.stubGlobal('fetch', fetchMock);
+    await restGet(makeDb('https://data.example', 'svc'), 'users', { select: 'id', params: { id: 'u' } });
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe('https://data.example/rest/v1/users?select=id&id=eq.u');
+    expect(init.headers).toMatchObject({ Authorization: 'Bearer svc' });
   });
 
   it('helpers are fetch-based functions with expected arity', () => {
@@ -26,7 +35,7 @@ describe('REST db layer shape', () => {
     vi.stubGlobal('fetch', fetchMock);
 
     await restInsert(
-      makeDb('https://x.supabase.co', 'k'),
+      makeDb('https://data.example', 'k'),
       'user_preferences',
       { user_id: 'u', scene: 'guardrails', key: 'quiet_hours_start', value: '23:30' },
       { onConflict: 'user_id,scene,key' },

@@ -35,7 +35,7 @@ describe('nudge redline (Q1 定案)', () => {
   });
 
   it('nudge 落库与计数自增仍在 RPC 事务中（记录用，不再作为硬门）', () => {
-    const sql = read('supabase/migrations/20260827000002_rest_rpc.sql');
-    expect(sql).toContain('nudge_count = nudge_count + 1');
+    const rpc = read('../data/src/rpc.ts');
+    expect(rpc).toContain('nudge_count = nudge_count + 1');
   });
 });

@@ -1,26 +1,24 @@
-// DB 访问层：Supabase REST (PostgREST) over 标准 HTTPS。
-// 背景（2026-08-27 实测）：Workers 直连 TCP(postgres.js)→Supavisor 的私有根 CA 不被 workerd 信任
-// （ca 注入无效、Hyperdrive 账号未开通），而标准 HTTPS fetch 完全可用 →
-// 数据访问全部走 PostgREST；需要原子性的写操作经 RPC（supabase/migrations/20260827000002_rest_rpc.sql）。
+// DB 访问层：jnify-data 数据服务（../data，深圳服务器上的容器，SQLite）over 标准 HTTPS。
+// jnify-data 提供 PostgREST 写法的一个子集（/rest/v1/<表>、/rest/v1/rpc/<函数>），所以这里的写法与原来的 Supabase 相同；
+// 需要原子性的写操作经 RPC（fn_decide / fn_create_nudge / fn_ingest_signal，在 jnify-data 里用事务实现）。
+// 只有 Worker 持有服务密钥；App 不直接连数据服务。
 import { DEFAULTS } from '../config';
 import type { GuardrailsLike } from '../services/escalation';
 
-export type Db = { supabaseUrl: string; serviceKey: string };
+export type Db = { url: string; key: string };
 
-export function makeDb(supabaseUrl: string, serviceKey: string): Db {
-  if (!supabaseUrl || !serviceKey) throw new Error('SUPABASE_URL / SUPABASE_SERVICE_KEY are required');
-  return { supabaseUrl: supabaseUrl.replace(/\/$/, ''), serviceKey };
+export function makeDb(url: string, key: string): Db {
+  if (!url || !key) throw new Error('JNIFY_DATA_URL / JNIFY_DATA_KEY are required');
+  return { url: url.replace(/\/$/, ''), key };
 }
 
 type Json = Record<string, unknown>;
 
 function rest(db: Db, path: string, init: RequestInit = {}): Promise<Response> {
-  const { supabaseUrl, serviceKey } = db;
-  return fetch(`${supabaseUrl}/rest/v1${path}`, {
+  return fetch(`${db.url}/rest/v1${path}`, {
     ...init,
     headers: {
-      apikey: serviceKey,
-      Authorization: `Bearer ${serviceKey}`,
+      Authorization: `Bearer ${db.key}`,
       'Content-Type': 'application/json',
       ...init.headers,
     },
@@ -137,13 +135,4 @@ export async function getTimezone(db: Db, userId: string): Promise<string> {
     limit: 1,
   });
   return rows[0]?.timezone || 'UTC';
-}
-
-/** 彻底注销：调用 Supabase Auth admin API 删除 auth 账户（service key）。 */
-export async function adminDeleteAuthUser(db: Db, userId: string): Promise<boolean> {
-  const r = await fetch(`${db.supabaseUrl}/auth/v1/admin/users/${userId}`, {
-    method: 'DELETE',
-    headers: { apikey: db.serviceKey, Authorization: `Bearer ${db.serviceKey}` },
-  });
-  return r.ok || r.status === 404;
 }

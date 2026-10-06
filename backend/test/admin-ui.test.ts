@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { JSDOM } from 'jsdom';
 import { makeApp } from '../src/app';
 
-const env = { SUPABASE_URL: 'https://x.supabase.co' } as never;
+const env = { JNIFY_DATA_URL: 'https://data.example', JNIFY_DATA_KEY: 'k' } as never;
 
 const CATALOG = {
   providers: [

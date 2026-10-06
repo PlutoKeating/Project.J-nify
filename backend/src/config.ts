@@ -1,9 +1,10 @@
 export interface Env {
-  SUPABASE_URL: string;
-  SUPABASE_SERVICE_KEY: string;
-  DATABASE_URL?: string;
-  DIRECT_DATABASE_URL?: string;
-  SUPABASE_ANON_KEY?: string;
+  /** jnify-data 数据服务的地址（深圳服务器，经 Cloudflare Tunnel：https://data.jnify.plutokeating.beer） */
+  JNIFY_DATA_URL: string;
+  /** jnify-data 的服务密钥（Worker secret；与服务器上 data/.env 的 JNIFY_DATA_KEY 相同） */
+  JNIFY_DATA_KEY: string;
+  /** 账号服务（PlutoKeating 账号，OIDC issuer），缺省 https://id.plutokeating.beer/ */
+  ID_ISSUER?: string;
   APP_ENV?: string;
   APP_VERSION?: string;
   CORS_ORIGINS?: string;
@@ -25,7 +26,6 @@ export interface Env {
   SMTP_AUTH?: string;
   TIANDITU_KEY?: string;
   DEBUG?: string;
-  HYPERDRIVE?: { connectionString: string };
 }
 
 export const DEFAULTS = {

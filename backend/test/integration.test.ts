@@ -1,73 +1,58 @@
-// 集成 e2e（Supabase 本地栈或独立测试项目；4 个 env 任一缺失时整体跳过）。
-// 运行前置：
-//   ① SUPABASE_URL / SUPABASE_ANON_KEY / SUPABASE_SERVICE_KEY / DATABASE_URL；
-//   ② 迁移已应用（`supabase start` 会自动应用本目录 migrations）。
-// 运行：cd backend && npm run test:integration
-import { beforeAll, describe, expect, it } from 'vitest';
-import postgres from 'postgres';
-import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+// 集成 e2e：真的 Worker 应用（makeApp）+ 真的 jnify-data（../data，进程内、临时目录里的 SQLite）+ 假的账号服务（本机 JWKS，签发 Hydra 形状的访问令牌）。
+// 不需要任何外部服务。运行：cd backend && npm run test:integration（需要先在 ../data 里 npm ci）
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { createServer, type Server } from 'node:http';
+import type { AddressInfo } from 'node:net';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { randomUUID } from 'node:crypto';
+import { exportJWK, generateKeyPair, SignJWT } from 'jose';
 import { makeApp } from '../src/app';
+import { openDb } from '../../data/src/db.ts';
+import { createApp } from '../../data/src/app.ts';
 
-const hasEnv = () =>
-  Boolean(
-    process.env.SUPABASE_URL &&
-      process.env.SUPABASE_ANON_KEY &&
-      process.env.SUPABASE_SERVICE_KEY &&
-      process.env.DATABASE_URL,
-  );
-const describeIf = hasEnv() ? describe : describe.skip;
+/** 把一个 fetch 处理函数挂到本机随机端口（Worker 经 fetch 访问它）。 */
+async function listen(handler: (req: Request) => Response | Promise<Response>): Promise<{ url: string; server: Server }> {
+  const server = createServer(async (req, res) => {
+    const chunks: Buffer[] = [];
+    for await (const c of req) chunks.push(c as Buffer);
+    const body = chunks.length ? Buffer.concat(chunks) : undefined;
+    const r = await handler(new Request(`http://${req.headers.host}${req.url}`, { method: req.method, headers: req.headers as Record<string, string>, body: req.method === 'GET' || req.method === 'HEAD' ? undefined : body }));
+    res.writeHead(r.status, Object.fromEntries(r.headers));
+    res.end(Buffer.from(await r.arrayBuffer()));
+  });
+  await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+  return { url: `http://127.0.0.1:${(server.address() as AddressInfo).port}`, server };
+}
 
-describeIf('integration e2e', () => {
-  let supabase: SupabaseClient;
+describe('integration e2e（Worker + jnify-data）', () => {
+  const KEY = 'integration-'.padEnd(40, 'k');
+  const userId = randomUUID();
+  const db = openDb(fs.mkdtempSync(path.join(os.tmpdir(), 'jnify-int-')));
   let app: ReturnType<typeof makeApp>;
-  let admin: SupabaseClient;
-  let token = '';
-  let userId = '';
   let env: Parameters<typeof makeApp>[0];
+  let token = '';
+  const servers: Server[] = [];
 
   beforeAll(async () => {
-    env = {
-      ...process.env,
-      SUPABASE_URL: process.env.SUPABASE_URL!,
-      SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY!,
-      DATABASE_URL: process.env.DATABASE_URL!,
-      QUIET_HOURS_START: '23:30',
-      QUIET_HOURS_END: '08:30',
-      MAX_NUDGE_BUDGET: '3',
-    } as never;
-    supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_ANON_KEY!);
-    const email = `test-${Date.now().toString(36)}@jnify.dev`;
-    const password = 'password-123456';
-    // 生产环境 Confirm email 已开启（邮件走 SMTP）→ 注册需确认；用 service key 管理员建已确认用户，
-    // 再真实登录拿会话（等价「用户点确认邮件后首次登录」）。
-    admin = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_KEY!, { auth: { autoRefreshToken: false, persistSession: false } });
-    const { error: createErr } = await admin.auth.admin.createUser({ email, password, email_confirm: true });
-    if (createErr) throw new Error(`admin createUser failed: ${createErr.message}`);
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error || !data.session) throw new Error(`signin failed: ${error?.message ?? 'no session'}`);
-    token = data.session.access_token;
-    userId = data.user!.id;
+    const data = await listen(createApp(db, KEY).fetch);
+    const { publicKey, privateKey } = await generateKeyPair('RS256');
+    const jwks = JSON.stringify({ keys: [{ ...(await exportJWK(publicKey)), kid: 'k1', alg: 'RS256', use: 'sig' }] });
+    const id = await listen(() => new Response(jwks, { headers: { 'Content-Type': 'application/json' } }));
+    servers.push(data.server, id.server);
+    const issuer = `${id.url}/`;
+    token = await new SignJWT({ sub: userId, client_id: 'jnify-app', scp: ['openid', 'jnify.items.read', 'jnify.items.write'] })
+      .setProtectedHeader({ alg: 'RS256', kid: 'k1' }).setIssuer(issuer).setIssuedAt().setExpirationTime('1h').sign(privateKey);
+    env = { JNIFY_DATA_URL: data.url, JNIFY_DATA_KEY: KEY, ID_ISSUER: issuer, QUIET_HOURS_START: '23:30', QUIET_HOURS_END: '08:30', MAX_NUDGE_BUDGET: '3' } as never;
     app = makeApp(env);
   });
+  afterAll(() => { for (const s of servers) s.close(); db.close(); });
 
   const call = (path: string, init: RequestInit = {}) =>
-    app.request(
-      path,
-      {
-        ...init,
-        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json', ...init.headers },
-      },
-      env as never, // Hono app.request 第三参注入 Bindings 环境（否则 c.env 为 undefined → 401）
-    );
-
-  const openDatabase = () => {
-    const url = process.env.DATABASE_URL!;
-    const hostname = new URL(url).hostname;
-    return postgres(url, {
-      prepare: false,
-      ssl: hostname === '127.0.0.1' || hostname === 'localhost' ? false : 'require',
-    });
-  };
+    app.request(path, { ...init, headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json', ...init.headers } }, env as never);
+  /** 直接查数据服务的库，验证持久化（不经 Worker） */
+  const sql = <T = Record<string, unknown>>(q: string, ...args: unknown[]) => db.raw.prepare(q).all(...(args as never[])) as T[];
 
   it('capture -> now shows window with reason', { timeout: 90_000 }, async () => {
     const cap = await call('/v1/items/capture', {
@@ -107,9 +92,7 @@ describeIf('integration e2e', () => {
   it('guardrails persist across client instances', { timeout: 90_000 }, async () => {
     await call('/v1/guardrails', { method: 'PUT', body: JSON.stringify({ max_nudge_budget: 5 }) });
     // 独立连接直接查库，验证持久化（不依赖 app 内的连接缓存）；按 user_id 过滤，避免历次运行残留行
-    const fresh = openDatabase();
-    const rows = await fresh`select value from user_preferences where "key" = 'max_nudge_budget' and scene = 'guardrails' and user_id = ${userId}`;
-    await fresh.end();
+    const rows = sql<{ value: string }>(`select value from user_preferences where "key" = 'max_nudge_budget' and scene = 'guardrails' and user_id = ?`, userId);
     expect(rows.length).toBe(1);
     expect(rows[0].value).toBe('5');
     const g = await call('/v1/guardrails');
@@ -129,20 +112,8 @@ describeIf('integration e2e', () => {
     expect(cap.status).toBe(200);
     const itemId = ((await cap.json()) as { item: { id: string } }).item.id;
 
-    const countNudges = async (id: string): Promise<number> => {
-      const fresh = openDatabase();
-      try {
-        const rows = await fresh`
-          select count(*)::int as n
-          from nudges n
-          join item_commitments i on i.id = n.item_id
-          where n.item_id = ${id} and i.user_id = ${userId}
-        `;
-        return Number(rows[0].n);
-      } finally {
-        await fresh.end();
-      }
-    };
+    const countNudges = async (id: string): Promise<number> =>
+      Number(sql<{ n: number }>('select count(*) as n from nudges n join item_commitments i on i.id = n.item_id where n.item_id = ? and i.user_id = ?', id, userId)[0].n);
 
     const r1 = await call('/v1/now');
     expect(r1.status).toBe(200);
@@ -159,21 +130,15 @@ describeIf('integration e2e', () => {
     expect(await countNudges(itemId)).toBe(1); // 该轮抑制 nudge，nudge 数不变
   });
 
-  it('signals accepted and me/data deletes business data and auth account', { timeout: 90_000 }, async () => {
+  it('signals accepted and me/data deletes all J-nify data', { timeout: 90_000 }, async () => {
     const s = await call('/v1/signals', { method: 'POST', body: JSON.stringify({ signal_type: 'usage', payload: { free_slot: true } }) });
     expect(s.status).toBe(200);
     const d = await call('/v1/me/data', { method: 'DELETE' });
     expect(d.status).toBe(200);
 
-    const fresh = openDatabase();
-    try {
-      const rows = await fresh`select count(*)::int as n from users where id = ${userId}`;
-      expect(Number(rows[0].n)).toBe(0);
-    } finally {
-      await fresh.end();
+    expect(sql('select id from users where id = ?', userId)).toEqual([]);
+    for (const t of ['item_commitments', 'decisions', 'signal_events', 'user_preferences', 'memory_notes']) {
+      expect(sql(`select 1 from ${t} where user_id = ?`, userId), t).toEqual([]);
     }
-    const { data, error } = await admin.auth.admin.getUserById(userId);
-    expect(data.user).toBeNull();
-    expect(error).not.toBeNull();
   });
 });

@@ -4,7 +4,7 @@ import { buildSystemPromptWithDocs, buildFallbackPrompt } from '../src/services/
 import { buildUserMemoryDoc, upsertMemory, listMemories } from '../src/services/memory';
 import { runAgent } from '../src/services/agent';
 
-const db: Db = makeDb('https://x.supabase.co', 'svc-key');
+const db: Db = makeDb('https://data.example', 'svc-key');
 
 function jsonRes(body: unknown) {
   return { ok: true, json: async () => body };

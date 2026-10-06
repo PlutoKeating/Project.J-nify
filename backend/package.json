@@ -9,9 +9,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:integration": "vitest run test/integration.test.ts",
-    "smoke:production": "tsx scripts/smoke-production.ts",
-    "db:push": "supabase db push",
-    "db:migrate": "tsx scripts/apply-migrations.ts"
+    "smoke:production": "tsx scripts/smoke-production.ts"
   },
   "dependencies": {
     "hono": "^4.13.5",
@@ -19,12 +17,9 @@
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20260826.1",
-    "@supabase/supabase-js": "^2.112.4",
     "@types/jsdom": "^30.0.0",
     "@types/node": "^26.3.0",
     "jsdom": "^30.0.1",
-    "postgres": "^3.4.9",
-    "supabase": "^2.116.0",
     "tsx": "^4.23.12",
     "typescript": "^7.0.2",
     "vitest": "^4.1.11",

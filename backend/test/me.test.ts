@@ -9,7 +9,7 @@ import { makeApp } from '../src/app';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const read = (p: string) => readFileSync(resolve(root, p), 'utf8');
-const env = { SUPABASE_URL: 'https://x.supabase.co', DATABASE_URL: '' } as never;
+const env = { JNIFY_DATA_URL: 'https://data.example', JNIFY_DATA_KEY: 'k' } as never;
 
 describe('GET /v1/me/profile', () => {
   it('route exists under auth (no token → 401, not 404)', async () => {

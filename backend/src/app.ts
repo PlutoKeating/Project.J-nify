@@ -28,7 +28,7 @@ export function makeApp(env: Env): Hono<AppEnv> {
   // 先鉴权（拿到 userId 再限流，按用户计；未鉴权不建连）
   app.use('/v1/*', requireAuth);
   app.use('/v1/*', async (c, next) => {
-    const db = makeDb(env.SUPABASE_URL, env.SUPABASE_SERVICE_KEY); // Supabase REST（PostgREST，标准 HTTPS）
+    const db = makeDb(env.JNIFY_DATA_URL, env.JNIFY_DATA_KEY); // jnify-data（PostgREST 写法的子集，标准 HTTPS）
     c.set('db', db);
     await ensureUser(db, c.get('userId')); // users 懒创建（upsert 幂等）
     const limit = num(env, 'RATE_LIMIT_PER_MINUTE');

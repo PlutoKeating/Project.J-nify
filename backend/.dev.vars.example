@@ -1,12 +1,8 @@
-SUPABASE_URL=https://<project-ref>.supabase.co
-# Worker 运行时 PostgREST 读写使用；只放 backend/.dev.vars，绝不进前端/仓库
-SUPABASE_SERVICE_KEY=sb_secret_xxxxxxxxxxxx
-# 仅本地 Auth/集成测试需要；wrangler dev 业务运行时不依赖
-SUPABASE_ANON_KEY=sb_publishable_xxxxxxxxxxxx
-# 仅 Node 集成测试；Worker 运行时不直连 Postgres
-DATABASE_URL=postgres://postgres.<ref>:<password>@aws-<region>.pooler.supabase.com:6543/postgres
-# 仅 npm run db:migrate；优先使用可达的 pooler/直连地址
-DIRECT_DATABASE_URL=postgresql://postgres:<password>@db.<ref>.supabase.co:5432/postgres
+# jnify-data 数据服务（本地开发：cd ../data && npm run dev，监听 8789；服务密钥与 data 的 dev 脚本里相同）
+JNIFY_DATA_URL=http://127.0.0.1:8789
+JNIFY_DATA_KEY=dev-key-dev-key-dev-key-dev-key-0000
+# 账号服务（PlutoKeating 账号，OIDC issuer）；缺省就是线上地址
+ID_ISSUER=https://id.plutokeating.beer/
 CORS_ORIGINS=*
 RATE_LIMIT_PER_MINUTE=60
 QUIET_HOURS_START=23:30
