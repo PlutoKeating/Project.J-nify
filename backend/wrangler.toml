@@ -3,6 +3,15 @@ main = "src/index.ts"
 compatibility_date = "2026-08-01"
 compatibility_flags = ["nodejs_compat"] # Worker 告警 SMTP 客户端使用 node:net/tls
 workers_dev = true
+# 唯一的对外地址 jnify.plutokeating.beer：官网与接口同一个 Worker（Worker 的自定义域名，在 Cloudflare 上绑定，不写在这里——
+# 写在这里会要求部署用的令牌有该域名区域的权限）。不再用 Pages 与其他域名。
+
+# 官网（website/ 构建产物）由同一个 Worker 托管：接口路径先进 Worker，其余是静态页，子路由回退到 index.html
+[assets]
+directory = "../website/dist"
+binding = "ASSETS"
+not_found_handling = "single-page-application"
+run_worker_first = ["/v1/*", "/admin", "/admin/*", "/health"]
 
 
 [vars]

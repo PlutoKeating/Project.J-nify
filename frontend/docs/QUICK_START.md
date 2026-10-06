@@ -40,7 +40,7 @@ Android 使用 Flutter 稳定版默认编译 SDK，最低运行版本为 API 31�
 `.env` 字段：
 
 ```
-BACKEND_BASE_URL=https://j-nify.williamhvollita.dpdns.org   # 生产默认（代码内置）；本地开发改 http://localhost:8787
+BACKEND_BASE_URL=https://jnify.plutokeating.beer   # 生产默认（代码内置）；本地开发改 http://localhost:8787
 APP_ENV=development
 API_TIMEOUT=15
 ```

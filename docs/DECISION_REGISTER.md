@@ -215,9 +215,10 @@
 
 | 编号 | 定案 | 备注 |
 | --- | --- | --- |
-| SB1 | **数据放 jnify-data**：新增 `data/`（Node 24 + Hono + node:sqlite，Docker 容器），部署在作者的服务器（中国深圳），与 Quetzal 同步服务的容器并存、互不共用；只监听本机 127.0.0.1:8789，经 Cloudflare Tunnel 以 `https://jnify-data.plutokeating.beer` 对外。表结构由原 Postgres 迁移等价转写（`data/src/schema.sql`）；3 个原子操作在服务里用事务实现；每天备份，保留 7 份 | `backend/supabase/` 迁移、`apply-migrations.ts`、`db:push / db:migrate` 删除 |
+| SB1 | **数据放 jnify-data**：新增 `data/`（Node 24 + Hono + node:sqlite，Docker 容器），部署在作者的服务器（中国深圳），与 Quetzal 同步服务的容器并存、互不共用；只监听本机 127.0.0.1:8789，经 Cloudflare Tunnel 以 `https://data.jnify.plutokeating.beer` 对外。表结构由原 Postgres 迁移等价转写（`data/src/schema.sql`）；3 个原子操作在服务里用事务实现；每天备份，保留 7 份 | `backend/supabase/` 迁移、`apply-migrations.ts`、`db:push / db:migrate` 删除 |
 | SB2 | **Workers 接口不变**：jnify-data 提供 PostgREST 写法的子集，后端数据访问代码沿用原写法，`/v1/*` 路径与行为不变；环境变量换成 `JNIFY_DATA_URL`、`JNIFY_DATA_KEY`、可选 `ID_ISSUER`。服务密钥只有 Worker 持有，App 不直接连数据服务 | 取代原「全表 RLS + service key」做法 |
 | SB3 | **登录用 PlutoKeating 账号**（作者各产品共用，`https://id.plutokeating.beer`）：App 用 OIDC 授权码 + PKCE；Worker 按 JWKS 验签，读要 `jnify.items.read`、改要 `jnify.items.write`；Quetzal 运行基座在用户授权后拿到它申请的 scope，作为两个产品的互通方式 | 取代 D1（忘记密码）、D6（改邮箱后重新登录）；D7 的 30 天滑动会话由刷新令牌实现 |
 | SB4 | **删除数据只删 J-nify 的数据**：`DELETE /v1/me/data` 不再删账号；账号在 PlutoKeating 账号设置里管理 | 修改 D3 / Q17 的「彻底注销（含 auth 账户）」 |
 | SB5 | **隐私如实说明**：事项、决定、记忆、节奏策略在深圳服务器上按明文存储，靠服务密钥只在 Worker、逐请求核对本人账号与服务器隔离保护；原因是 Jennifer 用模型时要看到内容、Quetzal 授权后要能读。原始信号仍只在设备上处理。App「隐私说明」、官网隐私政策同步修改 | 修改 P3 / D5 中「RLS + 加密上云」的口径 |
 | SB6 | **集成测试**：真实 Worker 应用 + 进程内 jnify-data + 本机假 JWKS，不需要外部服务；CI 新增 data 作业 | 取代 P7、F3、Q12 中的本地 Supabase 栈；F4（Supabase 邮件模板）作废 |
+| SB7 | **一个域名**：官网与接口由同一个 Cloudflare Worker 托管（Workers 静态资源），统一用 `jnify.plutokeating.beer`；不再用 Cloudflare Pages 与 `j-nify.arr2018.dpdns.org` / `j-nify.williamhvollita.dpdns.org`。数据服务用 `data.jnify.plutokeating.beer`。 | 替换原官网与后端各自的域名、Pages 部署 |

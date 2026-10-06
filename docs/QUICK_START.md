@@ -24,7 +24,7 @@ npx wrangler dev                # 本地起 Worker（http://localhost:8787）
 - 业务接口要 PlutoKeating 账号的访问令牌（`ID_ISSUER` 缺省 `https://id.plutokeating.beer/`）。本地调接口最省事的办法是用 App 登录后发请求；自动化测试见下方「验证清单」，用本机假 JWKS，不需要真账号。
 
 **部署（生产）**：push `main` 且改动 `backend/**` → GitHub Actions 自动 `wrangler deploy` 到
-`https://j-nify.williamhvollita.dpdns.org`；亦可 Dashboard → Actions → Deploy Backend → Run workflow 手动触发。
+`https://jnify.plutokeating.beer`；亦可 Dashboard → Actions → Deploy Backend → Run workflow 手动触发。
 
 ## 前端（Flutter）
 
@@ -43,7 +43,7 @@ flutter run
 - 源码：`website/`
 - 本地预览：`cd website && npm ci && npm run dev`
 - 构建：`cd website && npm run build`（产物 `website/dist/`）
-- 生产域名：**https://j-nify.arr2018.dpdns.org**（Cloudflare Pages，push `main` 自动发布）；部署说明见 `docs/devops/website-deploy.md`。
+- 生产域名：**https://jnify.plutokeating.beer**（与接口同一个 Worker，push `main` 自动发布）；部署说明见 `docs/devops/website-deploy.md`。
 
 ## 验证清单
 

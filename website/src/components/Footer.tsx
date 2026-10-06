@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { t, useLang } from '../i18n';
 
-const PROD_DOMAIN = 'https://j-nify.arr2018.dpdns.org';
+const PROD_DOMAIN = 'https://jnify.plutokeating.beer';
 
 export default function Footer() {
   const { lang } = useLang();

@@ -11,12 +11,12 @@ class AppConfig {
 
   static final AppConfig instance = AppConfig._();
 
-  /// 生产上线环境唯一后端 Base URL（Cloudflare Worker，用户 2026-08-27 定案）。
+  /// 生产上线环境唯一后端 Base URL（Cloudflare Worker；官网与接口同一个域名，2026-10-07 起）。
   /// 开发环境通过 `.env` 的 `BACKEND_BASE_URL` 覆盖（见 `.env.example`）。
-  static const prodBackendBaseUrl = 'https://j-nify.williamhvollita.dpdns.org';
+  static const prodBackendBaseUrl = 'https://jnify.plutokeating.beer';
 
-  /// 官网生产域名（landing page，Cloudflare Pages）。
-  static const websiteUrl = 'https://j-nify.arr2018.dpdns.org';
+  /// 官网生产域名（与接口同一个 Worker 托管）。
+  static const websiteUrl = 'https://jnify.plutokeating.beer';
 
   /// App 版本，与 `pubspec.yaml` 的 `version` 保持一致（About us 展示失败时的回退值）。
   static const appVersion = '0.3.0+6';

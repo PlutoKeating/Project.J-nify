@@ -28,7 +28,7 @@ geo.post('/reverse', async (c) => {
         // 故同时携带浏览器 UA 与白名单域名 Referer 以通过校验。
         headers: {
           'User-Agent': 'Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Mobile Safari/537.36',
-          Referer: 'https://j-nify.williamhvollita.dpdns.org/',
+          Referer: 'https://jnify.plutokeating.beer/',
         },
         signal: AbortSignal.timeout(10_000),
       },

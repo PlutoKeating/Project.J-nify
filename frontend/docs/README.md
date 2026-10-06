@@ -1,6 +1,6 @@
 # J-nify Frontend
 
-Flutter（Dart）客户端，**无 Docker**。登录用 PlutoKeating 账号（flutter_appauth，OIDC 授权码 + PKCE）；业务 REST 调 Cloudflare Worker 后端（生产 `https://j-nify.williamhvollita.dpdns.org`，代码内置默认；`.env` 可覆盖）。
+Flutter（Dart）客户端，**无 Docker**。登录用 PlutoKeating 账号（flutter_appauth，OIDC 授权码 + PKCE）；业务 REST 调 Cloudflare Worker 后端（生产 `https://jnify.plutokeating.beer`，代码内置默认；`.env` 可覆盖）。
 
 结构：
 

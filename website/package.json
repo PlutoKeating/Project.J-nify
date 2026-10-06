@@ -7,7 +7,6 @@
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "build:web": "vite build",
-    "postbuild": "node scripts/postbuild.mjs",
     "preview": "vite preview",
     "lint": "eslint .",
     "test": "vitest run",

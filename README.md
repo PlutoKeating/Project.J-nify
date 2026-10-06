@@ -6,7 +6,7 @@
 
 把「不急、但会忘」的小事交给她，她会在真正顺手的那一刻，轻轻提醒你。
 
-[English](README_EN.md) · [官网](https://j-nify.arr2018.dpdns.org) · [AGPL-3.0](LICENSE)
+[English](README_EN.md) · [官网](https://jnify.plutokeating.beer) · [AGPL-3.0](LICENSE)
 
 </div>
 
@@ -59,7 +59,7 @@ P 人不是不想做好，是很多事**一旦放下就真的会蒸发**。拖�
 
 | 层 | 技术 | 说明 |
 | --- | --- | --- |
-| 前端 | Flutter (Dart) + flutter_appauth | 登录 PlutoKeating 账号（OIDC 授权码 + PKCE）；三屏 UI + 录入/决策闭环；生产后端默认 `https://j-nify.williamhvollita.dpdns.org` |
+| 前端 | Flutter (Dart) + flutter_appauth | 登录 PlutoKeating 账号（OIDC 授权码 + PKCE）；三屏 UI + 录入/决策闭环；生产地址 `https://jnify.plutokeating.beer` |
 | 后端 | **Cloudflare Worker**：TypeScript + Hono | 部署=GitHub Actions `wrangler deploy`（push main 自动上线） |
 | 数据 | **jnify-data**（`data/`：Node 24 + Hono + node:sqlite，Docker） | 23 张表 + 3 个事务操作；部署在作者的服务器（中国深圳），经 Cloudflare Tunnel 只对 Worker 开放 |
 | 账号 | **PlutoKeating 账号**（`id.plutokeating.beer`） | 作者各产品共用的统一账号：邮箱验证码 / 通行密钥 / GitHub，没有密码 |
@@ -125,11 +125,11 @@ LICENSE        AGPL-3.0
 
 ## 官网
 
-产品落地官网：[https://j-nify.arr2018.dpdns.org](https://j-nify.arr2018.dpdns.org)
+产品落地官网：[https://jnify.plutokeating.beer](https://jnify.plutokeating.beer)
 
 - 源码：`website/`（Vite + React + TypeScript + React Router + Tailwind CSS 4）
 - 内容：首页（营销）/ 功能详解 / 下载页（实时从 GitHub Release 读取最新版本，无需跳转）
-- 部署：GitHub Actions `deploy-website.yml` 在 `main` 的 `website/**` 变更后校验并直发 Cloudflare Pages；自定义域名 `https://j-nify.arr2018.dpdns.org`
+- 部署：官网与接口由同一个 Cloudflare Worker 托管、同一个域名 `https://jnify.plutokeating.beer`（`wrangler.toml` 的 `[assets]` 指向 `website/dist`）；随 `deploy-backend.yml` 一起发布
 - 本地预览：`cd website && npm ci && npm run dev`
 - 详细部署与自定义域名配置：[`docs/devops/website-deploy.md`](docs/devops/website-deploy.md)
 
@@ -138,7 +138,7 @@ LICENSE        AGPL-3.0
 - ✅ **CI 门禁**（`.github/workflows/ci.yml`）：push / PR 自动并行校验 —— 数据服务测试+类型检查、后端单测+类型检查（含 5 项集成测试：真实 Worker + 进程内 jnify-data + 本机假 JWKS）、前端静态分析+测试、官网测试+lint+构建。
 - 🩺 **生产冒烟**（`.github/workflows/smoke-production.yml`）：每日及手动执行官网/后端/只读 Admin API 检查，并在 Android 模拟器验证 App 可安装启动到认证页。
 - 📦 **前端自动打包发布**（`.github/workflows/release-frontend.yml`）：推送 tag `vX.Y.Z` 触发，校验 tag 与 `frontend/pubspec.yaml` 的 version 一致后，构建 Android APK/AAB（ubuntu，**固定 release keystore 签名**）并发布 GitHub Release；iOS 归档（xcarchive，macos，未签名需 Apple 证书）。⚠️ `pubspec.yaml` 的 `+N`（=`versionCode`）必须随发版单调递增（曾因降级致覆盖安装被拒），流程详见 [`docs/devops/release.md`](docs/devops/release.md)。
-- 🚢 **后端部署**（`.github/workflows/deploy-backend.yml`）：push main（backend/**）自动 `wrangler deploy`，生产后端唯一 Base URL = **`https://j-nify.williamhvollita.dpdns.org`**。
+- 🚢 **部署**（`.github/workflows/deploy-backend.yml`）：push main（backend/** 或 website/**）先构建官网再 `wrangler deploy`；官网与接口唯一地址 = **`https://jnify.plutokeating.beer`**（接口在 `/v1/*`、`/admin`、`/health`，其余路径是官网）。
 - 🗄️ **数据服务**：服务器上 `cd data && ./start.sh` 启动 / 更新（第一次生成 `.env` 与服务密钥）；每天备份，保留 7 份。见 [`data/README.md`](data/README.md)。
 - 📧 **告警邮件**：Worker 告警经 SMTP 发出，见 [`docs/devops/smtp.md`](docs/devops/smtp.md)。登录不再发邮件链接（验证码由 PlutoKeating 账号服务发送）。
 - 🔐 **密钥台账**：所有 prod 密钥以 GitHub Actions Secrets / Cloudflare Worker Secrets / 服务器上的 `data/.env` 存储，仓库内无明文密钥，见 [`docs/devops/SECRETS_REGISTRY.md`](docs/devops/SECRETS_REGISTRY.md)。

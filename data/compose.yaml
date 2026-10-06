@@ -1,5 +1,5 @@
 # jnify-data：一个容器。只发布到本机 127.0.0.1:${JNIFY_DATA_LOCAL_PORT}，由服务器上已有的 Cloudflare Tunnel 转发
-# （公共主机名 jnify-data.plutokeating.beer → http://localhost:8789）。数据在 ./data（SQLite 与每日备份）。
+# （公共主机名 data.jnify.plutokeating.beer → http://localhost:8789）。数据在 ./data（SQLite 与每日备份）。
 # 变量来自同目录的 .env（start.sh 生成，权限 600，不入库）。
 name: jnify-data
 

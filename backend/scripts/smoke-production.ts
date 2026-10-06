@@ -1,5 +1,5 @@
-const backendBaseUrl = (process.env.BACKEND_BASE_URL ?? 'https://j-nify.williamhvollita.dpdns.org').replace(/\/$/, '');
-const websiteBaseUrl = (process.env.WEBSITE_BASE_URL ?? 'https://j-nify.arr2018.dpdns.org').replace(/\/$/, '');
+const backendBaseUrl = (process.env.BACKEND_BASE_URL ?? 'https://jnify.plutokeating.beer').replace(/\/$/, '');
+const websiteBaseUrl = (process.env.WEBSITE_BASE_URL ?? 'https://jnify.plutokeating.beer').replace(/\/$/, '');
 const requireAdmin = process.env.SMOKE_REQUIRE_ADMIN === '1';
 
 async function expectOk(url: string, init?: RequestInit): Promise<Response> {
@@ -13,7 +13,7 @@ async function smokePublic(): Promise<void> {
   const body = (await health.json()) as { status?: string };
   if (body.status !== 'ok') throw new Error('backend health response is not ok');
 
-  for (const path of ['/', '/features', '/download', '/privacy', '/auth/verify']) {
+  for (const path of ['/', '/features', '/download', '/privacy']) {
     const response = await expectOk(`${websiteBaseUrl}${path}`);
     if (!(response.headers.get('content-type') ?? '').includes('text/html')) {
       throw new Error(`${websiteBaseUrl}${path} did not return HTML`);

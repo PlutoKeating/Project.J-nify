@@ -6,7 +6,7 @@
 
 Hand the small things that aren’t urgent but easy to forget to her — she’ll gently remind you at the moment that truly fits.
 
-[中文](README.md) · [Website](https://j-nify.arr2018.dpdns.org) · [AGPL-3.0](LICENSE)
+[中文](README.md) · [Website](https://jnify.plutokeating.beer) · [AGPL-3.0](LICENSE)
 
 </div>
 
@@ -59,7 +59,7 @@ She notes it, then disappears. When the **truly fitting** moment comes, she retu
 
 | Layer | Tech | Notes |
 | --- | --- | --- |
-| Frontend | Flutter (Dart) + flutter_appauth | Sign-in with a PlutoKeating account (OIDC authorization code + PKCE); three-screen UI + capture/decision loop; prod backend default `https://j-nify.williamhvollita.dpdns.org` |
+| Frontend | Flutter (Dart) + flutter_appauth | Sign-in with a PlutoKeating account (OIDC authorization code + PKCE); three-screen UI + capture/decision loop; production at `https://jnify.plutokeating.beer` |
 | Backend | **Cloudflare Worker**: TypeScript + Hono | Deploy = GitHub Actions `wrangler deploy` (auto on push to main) |
 | Data | **jnify-data** (`data/`: Node 24 + Hono + node:sqlite, Docker) | 23 tables + 3 transactional operations; runs on the author's server (Shenzhen, China), reachable only by the Worker via Cloudflare Tunnel |
 | Account | **PlutoKeating account** (`id.plutokeating.beer`) | One account shared by the author's products: email code / passkey / GitHub, no password |
@@ -120,11 +120,11 @@ LICENSE        AGPL-3.0
 
 ## Website
 
-Product landing site: [https://j-nify.arr2018.dpdns.org](https://j-nify.arr2018.dpdns.org)
+Product landing site: [https://jnify.plutokeating.beer](https://jnify.plutokeating.beer)
 
 - Source: `website/` (Vite + React + TypeScript + React Router + Tailwind CSS 4)
 - Content: Home (marketing) / Features / Download (reads the latest release live from GitHub Release, no redirect away)
-- Deploy: GitHub Actions `deploy-website.yml` verifies and deploys `website/**` changes on `main` directly to Cloudflare Pages; custom domain `https://j-nify.arr2018.dpdns.org`
+- Deploy: the website and the API are served by the same Cloudflare Worker on one domain, `https://jnify.plutokeating.beer` (`[assets]` in `wrangler.toml` points at `website/dist`), released by `deploy-backend.yml`
 - Local preview: `cd website && npm ci && npm run dev`
 - Full deploy & custom-domain config: [`docs/devops/website-deploy.md`](docs/devops/website-deploy.md)
 
@@ -133,7 +133,7 @@ Product landing site: [https://j-nify.arr2018.dpdns.org](https://j-nify.arr2018.
 - ✅ **CI gate** (`.github/workflows/ci.yml`): on push / PR, parallel checks —— data-service tests + type check, backend unit/type checks (incl. five integration tests: real Worker + in-process jnify-data + local fake JWKS), frontend analysis + tests, and website tests + lint + build.
 - 🩺 **Production smoke** (`.github/workflows/smoke-production.yml`): daily/manual public-site, backend, read-only Admin API checks, plus Android-emulator launch verification.
 - 📦 **Frontend auto build & release** (`.github/workflows/release-frontend.yml`): trigger on tag `vX.Y.Z`, verify the tag matches `frontend/pubspec.yaml`'s version, build Android APK/AAB (ubuntu, **fixed release-keystore signed**), and publish a GitHub Release; iOS archive (xcarchive, macos, unsigned — needs Apple cert). ⚠️ The `+N` in `pubspec.yaml` (= Android `versionCode`) must strictly increase per release (a decrease once blocked overlay installs); see [`docs/devops/release.md`](docs/devops/release.md).
-- 🚢 **Backend deploy** (`.github/workflows/deploy-backend.yml`): on push to main (backend/**) auto `wrangler deploy`; the single prod backend Base URL = **`https://j-nify.williamhvollita.dpdns.org`**.
+- 🚢 **Deploy** (`.github/workflows/deploy-backend.yml`): on push to main (backend/** or website/**) it builds the website, then runs `wrangler deploy`; the one address for site and API = **`https://jnify.plutokeating.beer`** (API under `/v1/*`, `/admin`, `/health`; everything else is the website).
 - 🗄️ **Data service**: on the server, `cd data && ./start.sh` starts / updates it (first run generates `.env` and the service key); daily backups, 7 kept. See [`data/README.md`](data/README.md).
 - 📧 **Alert email**: Worker alerts go out over SMTP; see [`docs/devops/smtp.md`](docs/devops/smtp.md). Sign-in no longer sends email links (codes are sent by the PlutoKeating account service).
 - 🔐 **Secrets registry**: all prod secrets live in GitHub Actions Secrets / Cloudflare Worker Secrets / `data/.env` on the server; no plaintext secrets in the repo; see [`docs/devops/SECRETS_REGISTRY.md`](docs/devops/SECRETS_REGISTRY.md).

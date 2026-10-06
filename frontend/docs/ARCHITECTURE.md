@@ -5,7 +5,7 @@
 ## 分层
 
 - **认证层** `auth/`：`Account`（单例，`ChangeNotifier`）：`signIn()` 打开 `https://id.plutokeating.beer` 的登录页（邮箱验证码、通行密钥或 GitHub；第一次用自动建账号，没有密码），client `jnify-app`，回调 `com.plutokeating.jnify://callback`，scope 含 `jnify.items.read`/`jnify.items.write`；令牌存 flutter_secure_storage；`accessToken()` 在访问令牌快过期时用刷新令牌静默换新（并发只刷新一次），刷新被拒时清掉本机登录状态；邮箱与名字从 ID 令牌读，只用于显示。`AuthGate` 跟着 `Account` 切 LoginScreen / HomeShell；登录页只有一个「登录」按钮；登出在「我的」页。
-- **配置层** `core/config/`：`AppConfig`（`flutter_dotenv` 读 `.env`）：`backendBaseUrl`（**生产默认 `https://j-nify.williamhvollita.dpdns.org`**）、`openWeatherApiKey`；账号服务地址与 client 固定在 `Account` 里，不走配置；`Env` 常量（`String.fromEnvironment` 支持 dart-define）。
+- **配置层** `core/config/`：`AppConfig`（`flutter_dotenv` 读 `.env`）：`backendBaseUrl`（**生产默认 `https://jnify.plutokeating.beer`**）、`openWeatherApiKey`；账号服务地址与 client 固定在 `Account` 里，不走配置；`Env` 常量（`String.fromEnvironment` 支持 dart-define）。
 - **会话**：访问令牌 1 小时，刷新令牌 30 天（滑动）；`main.dart` 启动时 `Account.load()` 只读本机存储、不触网。不再有邮件链接与 App Link。
 - **网络层** `core/api/`：`ApiClient` 自动附 `Authorization: Bearer <访问令牌>`（取令牌时按需静默刷新；401 → 清掉本机登录状态回登录页；安全存储不可用的测试环境下不带令牌）。
 - **服务层** `services/`：`ApiService` 封装 `/v1/...`（含可独立测试的 SSE 解码）；`ConversationStore` 恢复最近会话并仅持久化 user/assistant 文本；`NotificationsService`（本地通知 + 别再提 action）；`SignalCollectors`（usage/日历/天气/位置，仅本地）；`LocalWindowEngine`（Dart 窗口规则）；`OfflineQueue`（sqflite 离线暂存）；`TourRegistry`（通用引导框架）；`TimezoneService`（时区检测/提示）；`JenniferLocalEngine`（本地评估 + 通知 + 静默）。
@@ -24,7 +24,7 @@
 `.env`（不入库，模板见 `.env.example`）：
 
 ```
-BACKEND_BASE_URL=https://j-nify.williamhvollita.dpdns.org   # 生产默认（代码内置）；本地开发改为 http://localhost:8787
+BACKEND_BASE_URL=https://jnify.plutokeating.beer   # 生产默认（代码内置）；本地开发改为 http://localhost:8787
 APP_ENV=development
 API_TIMEOUT=15
 OPENWEATHER_API_KEY=      # 本地开发用；release 由 CI 以 dart-define 注入

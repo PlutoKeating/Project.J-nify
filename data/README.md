@@ -2,7 +2,7 @@
 
 J-nify 的数据服务：用户数据存在 SQLite 里，给 Workers 后端（`backend/`）提供数据接口。Node 24 + Hono + `node:sqlite`（内置），打成一个 Docker 容器。
 
-部署在作者的服务器上（中国深圳），与 Quetzal 同步服务的容器并存、互不共用；容器只发布到本机 `127.0.0.1:8789`，经 Cloudflare Tunnel 以 `https://jnify-data.plutokeating.beer` 对外，调用方只有 Workers 后端。
+部署在作者的服务器上（中国深圳），与 Quetzal 同步服务的容器并存、互不共用；容器只发布到本机 `127.0.0.1:8789`，经 Cloudflare Tunnel 以 `https://data.jnify.plutokeating.beer` 对外，调用方只有 Workers 后端。
 
 ## 接口
 
@@ -50,7 +50,7 @@ cd data
 ```
 
 - 配置见 `.env.example`：`JNIFY_DATA_KEY`（自动生成，至少 32 个字符）、`JNIFY_DATA_LOCAL_PORT`（缺省 8789）、可选 `NPM_REGISTRY`（npm 镜像源）。`.env` 不入库。
-- Cloudflare Tunnel 的公共主机名 `jnify-data.plutokeating.beer` → `http://localhost:8789`。Worker 的 `JNIFY_DATA_URL` 设为 `https://jnify-data.plutokeating.beer`。
+- Cloudflare Tunnel 的公共主机名 `data.jnify.plutokeating.beer` → `http://localhost:8789`。Worker 的 `JNIFY_DATA_URL` 设为 `https://data.jnify.plutokeating.beer`。
 - 容器：非 root 用户、只读根文件系统、去掉全部 capabilities、内存 192 MB；数据在 `./data`（`jnify.db`，WAL 模式）。
 - 换密钥：改 `.env` 里的 `JNIFY_DATA_KEY` 后再跑 `./start.sh`，同时更新 Worker 的 secret。
 

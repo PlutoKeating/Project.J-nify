@@ -47,7 +47,7 @@ async function bootAdmin() {
 
   const dom = new JSDOM(html, {
     runScripts: 'dangerously',
-    url: 'https://j-nify.williamhvollita.dpdns.org/admin',
+    url: 'https://jnify.plutokeating.beer/admin',
     beforeParse(window) {
       window.fetch = (async (url: unknown, opt: RequestInit = {}) => {
         const u = String(url);

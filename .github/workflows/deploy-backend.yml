@@ -1,10 +1,11 @@
-name: Deploy Backend (Cloudflare Workers)
+name: Deploy (Cloudflare Workers：官网 + 接口)
 
 on:
   push:
     branches: [main]
     paths:
       - backend/**
+      - website/**
       - .github/workflows/deploy-backend.yml
   workflow_dispatch: # 手动重部署入口：Actions → Deploy Backend → Run workflow
 
@@ -25,11 +26,18 @@ jobs:
         with:
           node-version: 24 # 与 CI 一致（npm 11）；npm 10 的 npm ci 会拒绝 npm11 生成的 lockfile
           cache: npm
-          cache-dependency-path: backend/package-lock.json
+          cache-dependency-path: |
+            backend/package-lock.json
+            website/package-lock.json
 
       - name: Install dependencies
         working-directory: backend
         run: npm ci
+
+      # 官网由同一个 Worker 托管（wrangler.toml 的 [assets] 指向 website/dist），部署前先构建
+      - name: Build website
+        working-directory: website
+        run: npm ci && npm run build
 
       # CI 已跑 test/typecheck；部署 job 精简为直接上线。
       # 运行期 secrets（JNIFY_DATA_URL / JNIFY_DATA_KEY / LLM_API_KEY 等）在 CF Dashboard

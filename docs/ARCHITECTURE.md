@@ -15,13 +15,13 @@ J-nify 采用「Flutter 客户端 + Cloudflare Worker 后端 + jnify-data 数据
     │  jose 按 <ID_ISSUER>.well-known/jwks.json 验签 + 检查 scope
     │  /rest/v1/<表>、/rest/v1/rpc/<函数>（服务密钥 JNIFY_DATA_KEY，标准 HTTPS）
     ▼
-[ Cloudflare Tunnel：jnify-data.plutokeating.beer ]
+[ Cloudflare Tunnel：data.jnify.plutokeating.beer ]
     ▼
 [ jnify-data data/ ]（作者的服务器，中国深圳；Docker 容器，只监听 127.0.0.1:8789）
     SQLite（node:sqlite）23 表 + 视图 v_closure_rate + 事务（fn_decide / fn_create_nudge / fn_ingest_signal）
 ```
 
-- **前端**：Flutter（`frontend/`），flutter_appauth 登录 PlutoKeating 账号；生产后端默认 `https://j-nify.williamhvollita.dpdns.org`。
+- **前端**：Flutter（`frontend/`），flutter_appauth 登录 PlutoKeating 账号；生产地址 `https://jnify.plutokeating.beer`。
 - **后端**：Cloudflare Worker（`backend/`），TypeScript + Hono。部署 = GitHub Actions `wrangler deploy`（push main 自动）。
 - **数据层**：jnify-data（`data/`，Node 24 + Hono + node:sqlite），部署在作者的服务器（中国深圳），与 Quetzal 同步服务的容器并存、互不共用。它提供 Supabase 数据接口（PostgREST）写法的一个子集，所以 Worker 的数据访问代码沿用原写法；详情见 §「数据访问层」与 [`data/README.md`](../data/README.md)。
 
@@ -69,7 +69,7 @@ J-nify 采用「Flutter 客户端 + Cloudflare Worker 后端 + jnify-data 数据
 
 ## 数据访问层（jnify-data，PostgREST 写法的子集）
 
-- Worker 经 `JNIFY_DATA_URL`（生产 `https://jnify-data.plutokeating.beer`，Cloudflare Tunnel 转到服务器本机 127.0.0.1:8789）访问 jnify-data：`GET/POST/PATCH/DELETE /rest/v1/<table>`，头部 `Authorization: Bearer <JNIFY_DATA_KEY>`。服务密钥只有 Worker 有，App 不直接连数据服务。
+- Worker 经 `JNIFY_DATA_URL`（生产 `https://data.jnify.plutokeating.beer`，Cloudflare Tunnel 转到服务器本机 127.0.0.1:8789）访问 jnify-data：`GET/POST/PATCH/DELETE /rest/v1/<table>`，头部 `Authorization: Bearer <JNIFY_DATA_KEY>`。服务密钥只有 Worker 有，App 不直接连数据服务。
 - 支持的写法只到后端实际用到的：`select=`；过滤 `eq/neq/gt/gte/lt/lte`、`in.(a,b)`、`is.null|true|false`（操作符在**值侧**，无前缀的值后端一律补 `eq.`）；`order`、`limit`、`offset`；插入带 `on_conflict` 即 upsert；按过滤条件更新、删除。表名、列名只认数据库里真实存在的，值一律参数绑定。
 - **需要原子性的写操作走 RPC**（`POST /rest/v1/rpc/<fn>`，在 jnify-data 里用 SQLite 事务实现，`data/src/rpc.ts`）：
   - `fn_decide(item_id,user_id,decision,reason)` — 决策 + 状态迁移（later 两步队列尾）+ memory note；
@@ -89,8 +89,8 @@ J-nify 采用「Flutter 客户端 + Cloudflare Worker 后端 + jnify-data 数据
 
 - **后端**：CF Worker secrets：`JNIFY_DATA_URL`、`JNIFY_DATA_KEY`（可选 `ID_ISSUER`，缺省 `https://id.plutokeating.beer/`）；本地 `.dev.vars`（gitignored，见 `backend/.dev.vars.example`）。
 - **数据服务**：服务器上 `cd data && ./start.sh`（第一次生成 `.env` 与服务密钥，`./start.sh --key` 打印密钥，填进 Worker 的 `JNIFY_DATA_KEY`）；表结构改动改 `data/src/schema.sql`，随服务重启生效。详见 [`data/README.md`](../data/README.md)。
-- **部署**：push main（backend/**）→ Actions `wrangler deploy` → 生产 URL `https://j-nify.williamhvollita.dpdns.org`；CI 门禁另跑 test/typecheck（data 作业跑 jnify-data 的测试；backend 作业先装 data 的依赖，集成测试用真实 Worker 应用 + 进程内 jnify-data + 本机假 JWKS）。
-- **官网**：push main（website/**）→ Actions 完成 test/lint/build 后直发 Cloudflare Pages；不依赖 Dashboard Git 集成。
+- **部署**：push main（backend/** 或 website/**）→ Actions 先构建官网再 `wrangler deploy` → 生产 URL `https://jnify.plutokeating.beer`；CI 门禁另跑 test/typecheck（data 作业跑 jnify-data 的测试；backend 作业先装 data 的依赖，集成测试用真实 Worker 应用 + 进程内 jnify-data + 本机假 JWKS）。
+- **官网**：与接口同一个 Worker 托管（Workers 静态资源：`wrangler.toml` 的 `[assets]` 指向 `website/dist`，单页应用回退；`/v1/*`、`/admin`、`/health` 先进 Worker）。同一个域名 `https://jnify.plutokeating.beer`（Worker 自定义域名），不再用 Pages 与其他域名。
 - **生产监测**：`smoke-production.yml` 每日 01:17 UTC（北京时间 09:17）及手动执行，覆盖官网 SPA 路由、Worker `/health`、Admin 登录/会话/只读端点与 Android API 31 模拟器安装启动。
 - **发布**：tag `vX.Y.Z` → Actions 构建 APK/AAB/iOS 归档并发布 GitHub Release（详见 `docs/devops/release.md`）。Android **固定 release keystore 签名**（v0.1.2 起，keystore/口令走 GH Secrets，不入库；保证版本间签名一致、支持覆盖安装更新）。
 - **前端**：生产构建无需 `.env`（`AppConfig.load` 用 `isOptional` 回退内置生产 Base URL；账号服务地址与 client 固定在 `Account` 里）；**主 `AndroidManifest.xml` 声明 `INTERNET` 权限**（release 网络必需，Flutter 默认只在 debug/profile manifest 带）。

@@ -1,6 +1,6 @@
 # API 文档
 
-基于 SPEC §7.2 的 API 草案实现于 Cloudflare Worker 后端。生产 Base URL：**`https://j-nify.williamhvollita.dpdns.org`**（本地开发 `http://localhost:8787`，`wrangler dev`）。
+基于 SPEC §7.2 的 API 草案实现于 Cloudflare Worker 后端。生产 Base URL：**`https://jnify.plutokeating.beer`**（与官网同一个域名；本地开发 `http://localhost:8787`，`wrangler dev`）。
 
 业务接口 base path 为 `/v1`。`/health` 和 `/admin` / `/admin/api/*` 不在 `/v1` 下。**业务接口鉴权**：`Authorization: Bearer <PlutoKeating 账号的访问令牌>`（账号服务 `https://id.plutokeating.beer` 签发的 JWT；App 用 OIDC 授权码 + PKCE 登录后取得）。`sub` 即账号编号（UUID）= `users.id`。读接口（`GET`）要求 scope `jnify.items.read`，其余（改动）要求 `jnify.items.write`：J-nify App（client `jnify-app`）两项都有；Quetzal 运行基座（client `quetzal-runtime`）只有用户在授权页点「允许」后才拿到它申请的那几项。令牌缺失 / 无效 / 过期 / 缺 scope → `401 {"detail":"unauthorized"}`。错误统一 `{"detail":"<msg>"}`。
 
@@ -56,7 +56,7 @@
 ### 录入
 
 ```sh
-curl -X POST https://j-nify.williamhvollita.dpdns.org/v1/items/capture \
+curl -X POST https://jnify.plutokeating.beer/v1/items/capture \
   -H "Authorization: Bearer <JWT>" -H 'Content-Type: application/json' \
   -d '{"raw_text":"月底还信用卡账单","category":"bill","due_at":"2026-09-25T00:00:00"}'
 ```
@@ -64,13 +64,13 @@ curl -X POST https://j-nify.williamhvollita.dpdns.org/v1/items/capture \
 ### 获取当前最佳窗口
 
 ```sh
-curl https://j-nify.williamhvollita.dpdns.org/v1/now -H "Authorization: Bearer <JWT>"
+curl https://jnify.plutokeating.beer/v1/now -H "Authorization: Bearer <JWT>"
 ```
 
 ### 决策（三选项 + 兜底）
 
 ```sh
-curl -X POST https://j-nify.williamhvollita.dpdns.org/v1/items/<id>/decision \
+curl -X POST https://jnify.plutokeating.beer/v1/items/<id>/decision \
   -H "Authorization: Bearer <JWT>" -H 'Content-Type: application/json' \
   -d '{"decision":"later"}'
 ```

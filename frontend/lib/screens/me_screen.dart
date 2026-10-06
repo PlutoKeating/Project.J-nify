@@ -216,7 +216,7 @@ class _MeScreenState extends State<MeScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text('官方网站：'),
-                              Flexible(child: SelectableText('https://j-nify.arr2018.dpdns.org')),
+                              Flexible(child: SelectableText('https://jnify.plutokeating.beer')),
                             ],
                           ),
                           const SizedBox(height: 4),

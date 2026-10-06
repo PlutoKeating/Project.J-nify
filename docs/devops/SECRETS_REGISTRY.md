@@ -13,10 +13,10 @@
 | `OPENWEATHER_API_KEY` | App 本地天气查询（免费可商用，需署名 "Weather by OpenWeather"；2026-08-29 用户提供 prod key） | GitHub Actions Secrets（已存）；release 构建经 `--dart-define` 注入，本地开发走 gitignored `.env` | `gh secret set OPENWEATHER_API_KEY` |
 | `ADMIN_USERNAME` / `ADMIN_PASSWORD` | admin 面板登录账号口令；生产只读冒烟使用 | GitHub Actions Secrets（管理员 2026-08-30 更新）+ CF Worker Secrets（同日已同步） | 先 `gh secret set`，再运行 `configure-worker-secrets`，最后运行 `smoke-production.yml` 验证登录 |
 | `GH_PAT` | 告警自动建 GitHub Issue（fine-grained，仅 Issues read/write） | GitHub Actions Secrets（已存）+ CF Worker Secrets（已同步） | 创建/轮换指引见 `docs/DECISION_REGISTER.md` §5.2 |
-| `TIANDITU_KEY` | 天地图逆地理编码（**浏览器端**类型 key，域名白名单 `j-nify.williamhvollita.dpdns.org`；App 经 `/v1/geo/reverse` 代理调用，不打包进 APK；代理请求携带 Referer 过白名单，见 DECISION_REGISTER §5.1） | 已配置（2026-08-29，用户提供）→ CF Worker Secrets | 天地图控制台申请「浏览器端」key → 白名单配本站域名 |
+| `TIANDITU_KEY` | 天地图逆地理编码（**浏览器端**类型 key，域名白名单 `jnify.plutokeating.beer`（Worker 代理调用时带的 Referer）；App 经 `/v1/geo/reverse` 代理调用，不打包进 APK；代理请求携带 Referer 过白名单，见 DECISION_REGISTER §5.1） | 已配置（2026-08-29，用户提供）→ CF Worker Secrets | 天地图控制台申请「浏览器端」key → 白名单配本站域名 |
 | `CLOUDFLARE_ACCOUNT_ID` | Wrangler 定位 Cloudflare 账户 | GitHub Actions Secrets（已存） | 部署/运维工作流使用；更换账户时更新 |
-| `CLOUDFLARE_API_TOKEN` | Worker/Pages 部署、Worker secrets 与域名运维 | GitHub Actions Secrets（已存） | Cloudflare 控制台轮换后 `gh secret set`；权限保持最小化 |
-| `JNIFY_DATA_URL` | Worker 访问 jnify-data 的地址（生产 `https://jnify-data.plutokeating.beer`，经 Cloudflare Tunnel） | CF Worker Secrets；本地 `backend/.dev.vars` 指向 `http://127.0.0.1:8789` | `wrangler secret put JNIFY_DATA_URL` |
+| `CLOUDFLARE_API_TOKEN` | Worker 部署（官网 + 接口）与 Worker secrets | GitHub Actions Secrets（已存） | Cloudflare 控制台轮换后 `gh secret set`；权限保持最小化 |
+| `JNIFY_DATA_URL` | Worker 访问 jnify-data 的地址（生产 `https://data.jnify.plutokeating.beer`，经 Cloudflare Tunnel） | CF Worker Secrets；本地 `backend/.dev.vars` 指向 `http://127.0.0.1:8789` | `wrangler secret put JNIFY_DATA_URL` |
 | `JNIFY_DATA_KEY` | jnify-data 的服务密钥（只有 Worker 持有；App 不持有） | 服务器上 `data/.env`（`./start.sh` 第一次运行时生成，权限 600）+ CF Worker Secrets，两边必须相同 | 轮换：改 `data/.env` 后 `./start.sh`，再 `wrangler secret put JNIFY_DATA_KEY`；`./start.sh --key` 只在服务器终端查看 |
 | `ID_ISSUER`（可选） | Worker 验签用的账号服务地址（PlutoKeating 账号，OIDC issuer） | 非敏感；缺省 `https://id.plutokeating.beer/`，一般不设 | 只在换账号服务时设置 |
 | `LLM_API_BASE/LLM_API_KEY/LLM_MODEL` | 旧版兼容环境变量，非 v0.3 Jennifer 主配置通道 | CF 变量/密钥（可留空） | 当前 provider/key/model 由 Admin 写入 `system_config.llm` 并热加载；不应在文档或仓库写真值 |
