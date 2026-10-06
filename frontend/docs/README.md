@@ -1,25 +1,25 @@
 # J-nify Frontend
 
-Flutter（Dart）客户端，**无 Docker**。认证用 supabase_flutter（Supabase Auth）；业务 REST 调 Cloudflare Worker 后端（生产 `https://j-nify.williamhvollita.dpdns.org`，代码内置默认；`.env` 可覆盖）。
+Flutter（Dart）客户端，**无 Docker**。登录用 PlutoKeating 账号（flutter_appauth，OIDC 授权码 + PKCE）；业务 REST 调 Cloudflare Worker 后端（生产 `https://j-nify.williamhvollita.dpdns.org`，代码内置默认；`.env` 可覆盖）。
 
 结构：
 
 ```
 frontend/
 ├── lib/
-│   ├── main.dart              # 入口：Supabase.initialize + app_links 深链(verifyOTP) + AuthGate
-│   ├── auth/                  # AuthGate（登录态路由 + 启动 refreshSession）+ 登录/注册逻辑
-│   ├── core/config/           # AppConfig（dotenv + 生产默认值 + appLinkHost/appLinkVerify）
-│   ├── core/api/              # ApiClient（Bearer JWT 注入、401 静默登出）
+│   ├── main.dart              # 入口：AppConfig.load + Account.load（读出已保存的登录状态）+ AuthGate
+│   ├── auth/                  # Account（PlutoKeating 账号登录、令牌存取与静默刷新）+ AuthGate（登录态路由）
+│   ├── core/config/           # AppConfig（dotenv + 生产默认值）
+│   ├── core/api/              # ApiClient（Bearer 访问令牌注入、401 清掉本机登录状态）
 │   ├── services/              # API/SSE、会话 SQLite、离线队列、信号/本地窗口与通知
 │   ├── models/                # ItemCommitment（含 options）
 │   ├── screens/               # 现在/全部/我的/设置/Jennifer 对话/登录
 │   └── widgets/               # 焦点卡/录入/任务行/对话卡片
 ├── test/                       # 16 项单元/widget 测试
 ├── integration_test/           # Android 安装启动冒烟
-├── android/ ios/ web/         # 平台目录（minSdk 31 / iOS target 15.0；Android 已加 App Link intent-filter）
+├── android/ ios/ web/         # 平台目录（minSdk 31 / iOS target 15.0；Android 用 manifestPlaceholders 的 appAuthRedirectScheme 接登录回调）
 ├── pubspec.yaml               # 唯一版本来源（version:；`+N`=versionCode 必须单调递增）
-└── .env.example               # BACKEND_BASE_URL / SUPABASE_URL / SUPABASE_ANON_KEY（publishable）
+└── .env.example               # BACKEND_BASE_URL / APP_ENV / API_TIMEOUT / OPENWEATHER_API_KEY
 ```
 
 相关文档：[ARCHITECTURE.md](ARCHITECTURE.md)、[QUICK_START.md](QUICK_START.md)；发布流程见 `docs/devops/release.md`。
@@ -29,7 +29,7 @@ frontend/
 - **主 `AndroidManifest.xml` 声明 `INTERNET` 权限**：Flutter 默认只在 debug/profile manifest 带该权限，release 只合入 main 清单；缺失 → release 包无网络（注册/登录报 `Failed host lookup`）。
 - **固定 release 签名**：`build.gradle.kts` 从环境变量读 keystore（`ANDROID_KEYSTORE_PATH/PASSWORD/ALIAS/KEY_PASSWORD`，CI 经 GH Secrets 注入；未配置回退 debug）。签名固定才支持 APK 覆盖安装更新。
 - `.env` 为可选（`isOptional:true`）：release 无 `.env` 资产时回退 dart-define/内置生产默认值。
-- **App Link（v0.1.5 起）**：`AndroidManifest.xml` 的 `MainActivity` 已加 `android:autoVerify="true"` 的 VIEW intent-filter（`https://j-nify.arr2018.dpdns.org/auth`）；App Link 校验指纹在官网 `website/public/.well-known/assetlinks.json`（已填真实 release 证书 SHA-256）。
+- **登录回调（2026-10-07 起）**：`build.gradle.kts` 设 `manifestPlaceholders["appAuthRedirectScheme"] = "com.plutokeating.jnify"`，回调 `com.plutokeating.jnify://callback`。原先给 Supabase 邮件回调用的 App Link intent-filter 已删除。
 - ⚠️ **versionCode 规则（v0.1.5 起）**：`pubspec.yaml` 的 `+N`=Android versionCode，**须随发版严格递增且 > 历史最大值**（当前最大=6，v0.3.0=`+6`）。曾因 v0.1.3/v0.1.4 用 `+1`（versionCode=1 < v0.1.2 的 3）导致覆盖安装被系统以"版本落后"拒绝。
 
 ## v0.2.0（M0.5+M1）增量
@@ -39,7 +39,7 @@ frontend/
 - **离线队列**（sqflite）：capture/decision/profile 离线暂存，重连自动同步。
 - **对话闭环**：聊天入口（「现在」页右上角）→ `POST /v1/jennifer/chat`。
 - **全部页**：进行中/已收口分组、每行窗口理由、长按多选硬删（二次确认）、清空已收口（软归档）。
-- **设置/账户**：忘记密码入口、彻底注销（含 auth 账户）、时区变化提示、隐私说明修正、移除反打扰上限。
+- **设置/账户**：时区变化提示、隐私说明修正、移除反打扰上限。（当时的忘记密码入口与「彻底注销（含 auth 账户）」已随 2026-10-07 换成 PlutoKeating 账号去掉：密码不再存在，「删除我的数据」只删 J-nify 的数据，账号在账号设置里管理。）
 - **引导框架**：通用 feature-tour registry（onboarding v1，完成/跳过防二次触发，未来新功能复用）。
 - **品牌**：Android/iOS 显示名统一 `J-nify`，启动图标品牌化（#FF5A4E + J）。
 - **指标埋点**：capture/nudge_sent/nudge_opened/decision/rescue_action/complaint（匿名）→ `/v1/metrics/events`。

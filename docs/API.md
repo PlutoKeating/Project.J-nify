@@ -2,7 +2,7 @@
 
 基于 SPEC §7.2 的 API 草案实现于 Cloudflare Worker 后端。生产 Base URL：**`https://j-nify.williamhvollita.dpdns.org`**（本地开发 `http://localhost:8787`，`wrangler dev`）。
 
-业务接口 base path 为 `/v1`。`/health` 和 `/admin` / `/admin/api/*` 不在 `/v1` 下。**业务接口鉴权**：`Authorization: Bearer <Supabase Auth JWT>`（邮箱注册/登录后由 supabase_flutter 取得）；缺失/无效 → `401 {"detail":"unauthorized"}`。错误统一 `{"detail":"<msg>"}`。
+业务接口 base path 为 `/v1`。`/health` 和 `/admin` / `/admin/api/*` 不在 `/v1` 下。**业务接口鉴权**：`Authorization: Bearer <PlutoKeating 账号的访问令牌>`（账号服务 `https://id.plutokeating.beer` 签发的 JWT；App 用 OIDC 授权码 + PKCE 登录后取得）。`sub` 即账号编号（UUID）= `users.id`。读接口（`GET`）要求 scope `jnify.items.read`，其余（改动）要求 `jnify.items.write`：J-nify App（client `jnify-app`）两项都有；Quetzal 运行基座（client `quetzal-runtime`）只有用户在授权页点「允许」后才拿到它申请的那几项。令牌缺失 / 无效 / 过期 / 缺 scope → `401 {"detail":"unauthorized"}`。错误统一 `{"detail":"<msg>"}`。
 
 | 方法 | 路径 | 说明 |
 | --- | --- | --- |
@@ -15,7 +15,7 @@
 | POST | `/v1/signals` | 端侧信号上报，受 privacy scope 限制（403） |
 | GET | `/v1/guardrails` | 安静时段 / 授权 / 兼容字段 `max_nudge_budget`（不作提醒次数硬门） |
 | PUT | `/v1/guardrails` | 更新护栏（持久化到 user_preferences） |
-| DELETE | `/v1/me/data` | 可验证删除（级联清空业务数据 + **删除 Supabase Auth 账户**，彻底注销） |
+| DELETE | `/v1/me/data` | 删除当前用户在 J-nify 的全部数据（删 `users` 行，级联清空业务表）；返回 `{ deleted_commitments, deleted_signals, message }`。**不删账号**：PlutoKeating 账号在账号设置里管理 |
 | POST | `/v1/llm/draft` | 旧版兼容草稿端点（模板降级）；Jennifer 对话内的草稿使用 `/v1/jennifer/chat` 工具链 |
 | GET | `/v1/me/profile` | 当前用户资料（`{ id, nickname }`；昵称来自 `users` 表，可空） |
 | PUT | `/v1/me/profile` | 更新昵称（用户名，**非唯一**）：`{ nickname }`，空/超 64 字符 → 400 |
@@ -76,7 +76,7 @@ curl -X POST https://j-nify.williamhvollita.dpdns.org/v1/items/<id>/decision \
 ```
 
 > 说明：决策文案由后端返回（`message`），前端 Toast 直接展示；`decision` 取值统一 `now/later/drop/rescue`（`do` 为旧文档笔误，已废弃）。
-> 鉴权：Worker 用 jose 从 Supabase JWKS 验签；数据访问在 Worker 内以 service key 走 PostgREST —— **客户端不需要也拿不到 service key**。
+> 鉴权：示例里的 `<JWT>` 是 PlutoKeating 账号的访问令牌；Worker 用 jose 按 `<ID_ISSUER>.well-known/jwks.json` 验签并检查 scope。数据在 jnify-data 数据服务里，只有 Worker 持有它的服务密钥（`JNIFY_DATA_KEY`）—— **客户端不需要也拿不到这把密钥**。
 
 ### 与 Jennifer 对话（v0.3.0 完整版）
 

@@ -59,22 +59,25 @@ She notes it, then disappears. When the **truly fitting** moment comes, she retu
 
 | Layer | Tech | Notes |
 | --- | --- | --- |
-| Frontend | Flutter (Dart) + supabase_flutter | Auth (Supabase Auth); three-screen UI + capture/decision loop; prod backend default `https://j-nify.williamhvollita.dpdns.org` |
+| Frontend | Flutter (Dart) + flutter_appauth | Sign-in with a PlutoKeating account (OIDC authorization code + PKCE); three-screen UI + capture/decision loop; prod backend default `https://j-nify.williamhvollita.dpdns.org` |
 | Backend | **Cloudflare Worker**: TypeScript + Hono | Deploy = GitHub Actions `wrangler deploy` (auto on push to main) |
-| Data | **Supabase Postgres** (REST/PostgREST + RPC) | 23 tables + transactional RPC; RLS on every table (zero client-role data access) |
-| Accounts/email | **Supabase Auth + prod SMTP** | Confirmation/reset via j_nify@yeah.net (smtp.yeah.net:465) |
+| Data | **jnify-data** (`data/`: Node 24 + Hono + node:sqlite, Docker) | 23 tables + 3 transactional operations; runs on the author's server (Shenzhen, China), reachable only by the Worker via Cloudflare Tunnel |
+| Account | **PlutoKeating account** (`id.plutokeating.beer`) | One account shared by the author's products: email code / passkey / GitHub, no password |
 | Modeling | 15 entities in SPEC §6 | USER / ITEM_COMMITMENT / OPPORTUNITY_WINDOW / NUDGE / DECISION … |
 
-**Runtime secrets** live only on the backend: `SUPABASE_URL` + `SUPABASE_SERVICE_KEY` (CF Worker secrets); the frontend only uses a client-level publishable key for Auth; no plaintext secrets in the repo.
+**Runtime secrets** live only on the backend: `JNIFY_DATA_URL` + `JNIFY_DATA_KEY` (CF Worker secrets); the app holds no server-side keys; no plaintext secrets in the repo.
+
+**Where data lives (plainly):** items, decisions, memories and rhythm policies are stored in plain text in a database on the author's server in Shenzhen, China, protected by "only the Worker holds the service key, and every request is checked against your own account" plus server isolation. Jennifer needs to see item content when she uses a model, and Quetzal needs to read it once you authorize it. Raw signals (calendar / weather / location / usage) are processed only on the device.
 
 ## Quick start
 
-**Backend (local development):**
+**Data service + backend (local development):**
 
 ```bash
+cd data && npm ci && npm run dev        # jnify-data on 127.0.0.1:8789
 cd backend
 npm ci                                  # install deps
-cp .dev.vars.example .dev.vars          # fill SUPABASE_URL / SUPABASE_SERVICE_KEY / DATABASE_URL
+cp .dev.vars.example .dev.vars          # already points at the local jnify-data
 npx wrangler dev                        # run Worker locally
 ```
 
@@ -84,7 +87,7 @@ npx wrangler dev                        # run Worker locally
 
 ```bash
 cd frontend
-cp .env.example .env                    # optional: override BACKEND_BASE_URL / SUPABASE_* (prod defaults are built in)
+cp .env.example .env                    # optional: override BACKEND_BASE_URL (prod default is built in)
 flutter pub get
 flutter run
 # Release packages: see docs/devops/release.md (tag vX.Y.Z auto-builds APK/AAB and publishes a GitHub Release)
@@ -95,10 +98,11 @@ flutter run
 ## Repository structure
 
 ```
-frontend/      Flutter client (auth + three screens + capture/decision loop)
-backend/       Cloudflare Worker backend (TS + Hono; Supabase REST/RPC data layer)
+frontend/      Flutter client (sign-in + three screens + capture/decision loop)
+backend/       Cloudflare Worker backend (TS + Hono; data via jnify-data)
+data/          jnify-data service (Node + SQLite, Docker; see data/README.md)
 docs/          Docs: SPEC / ARCHITECTURE / API / QUICK_START / HANDOVER
-docs/devops/   Release guide / SMTP / secrets registry
+docs/devops/   Release guide / alert SMTP / secrets registry
 .github/       GitHub Actions (CI / backend & website deploy / app release / ops / production smoke)
 LICENSE        AGPL-3.0
 ```
@@ -109,10 +113,10 @@ LICENSE        AGPL-3.0
 - 🏛️ [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) —— system architecture
 - 🔌 [`docs/API.md`](docs/API.md) —— REST API
 - 🚀 [`docs/QUICK_START.md`](docs/QUICK_START.md) —— quick start
-- 🗂️ [`docs/HANDOVER.md`](docs/HANDOVER.md) —— project handoff (latest implementation / deployment / ops notes)
+- 🗂️ [`docs/HANDOVER.md`](docs/HANDOVER.md) —— project handoff (implementation / deployment / ops snapshot as of 2026-08-30)
 - 📐 [`docs/compose/specs/2026-08-29-jennifer-agent-complete-spec.md`](docs/compose/specs/2026-08-29-jennifer-agent-complete-spec.md) —— Jennifer agent complete implementation spec (official doc set / MCP-style context / structured memory / streaming / change cards & undo / admin surface)
 
-> Documentation freshness: `README`, `ARCHITECTURE`, `API`, `QUICK_START`, `HANDOVER`, and `docs/devops/*` describe the current implementation and operations. Dated files under `docs/compose/plans|specs|reports` and `DECISION_QUESTIONNAIRE` are historical records. Use [`docs/HANDOVER.md`](docs/HANDOVER.md) for the latest working state.
+> Documentation freshness: `README`, `ARCHITECTURE`, `API`, `QUICK_START`, `data/README`, and `docs/devops/*` describe the current implementation and operations. Dated files under `docs/compose/plans|specs|reports` and `DECISION_QUESTIONNAIRE` are historical records. [`docs/HANDOVER.md`](docs/HANDOVER.md) stops at 2026-08-30; data and sign-in changed on 2026-10-07 (see `ARCHITECTURE` and `DECISION_REGISTER` §7), so its Supabase parts are out of date.
 
 ## Website
 
@@ -126,12 +130,13 @@ Product landing site: [https://j-nify.arr2018.dpdns.org](https://j-nify.arr2018.
 
 ## CI/CD & releases
 
-- ✅ **CI gate** (`.github/workflows/ci.yml`): on push / PR, parallel checks —— backend unit/type checks, five local-Supabase integration tests, frontend analysis + 16 tests, and website tests + lint + build.
+- ✅ **CI gate** (`.github/workflows/ci.yml`): on push / PR, parallel checks —— data-service tests + type check, backend unit/type checks (incl. five integration tests: real Worker + in-process jnify-data + local fake JWKS), frontend analysis + tests, and website tests + lint + build.
 - 🩺 **Production smoke** (`.github/workflows/smoke-production.yml`): daily/manual public-site, backend, read-only Admin API checks, plus Android-emulator launch verification.
-- 📦 **Frontend auto build & release** (`.github/workflows/release-frontend.yml`): trigger on tag `vX.Y.Z`, verify the tag matches `frontend/pubspec.yaml`'s version, build Android APK/AAB (ubuntu, **fixed release-keystore signed**), and publish a GitHub Release; iOS archive (xcarchive, macos, unsigned — needs Apple cert). `SUPABASE_URL/SUPABASE_ANON_KEY` injected into the build via GH Secrets (dart-define). ⚠️ The `+N` in `pubspec.yaml` (= Android `versionCode`) must strictly increase per release (a decrease once blocked overlay installs); see [`docs/devops/release.md`](docs/devops/release.md).
+- 📦 **Frontend auto build & release** (`.github/workflows/release-frontend.yml`): trigger on tag `vX.Y.Z`, verify the tag matches `frontend/pubspec.yaml`'s version, build Android APK/AAB (ubuntu, **fixed release-keystore signed**), and publish a GitHub Release; iOS archive (xcarchive, macos, unsigned — needs Apple cert). ⚠️ The `+N` in `pubspec.yaml` (= Android `versionCode`) must strictly increase per release (a decrease once blocked overlay installs); see [`docs/devops/release.md`](docs/devops/release.md).
 - 🚢 **Backend deploy** (`.github/workflows/deploy-backend.yml`): on push to main (backend/**) auto `wrangler deploy`; the single prod backend Base URL = **`https://j-nify.williamhvollita.dpdns.org`**.
-- 📧 **Email & SMTP** (Supabase custom SMTP, j_nify@yeah.net): live (confirm-email on); templates in [`docs/devops/smtp.md`](docs/devops/smtp.md).
-- 🔐 **Secrets registry**: all prod secrets live in GitHub Actions Secrets / Cloudflare Worker Secrets / Supabase; no plaintext secrets in the repo; see [`docs/devops/SECRETS_REGISTRY.md`](docs/devops/SECRETS_REGISTRY.md).
+- 🗄️ **Data service**: on the server, `cd data && ./start.sh` starts / updates it (first run generates `.env` and the service key); daily backups, 7 kept. See [`data/README.md`](data/README.md).
+- 📧 **Alert email**: Worker alerts go out over SMTP; see [`docs/devops/smtp.md`](docs/devops/smtp.md). Sign-in no longer sends email links (codes are sent by the PlutoKeating account service).
+- 🔐 **Secrets registry**: all prod secrets live in GitHub Actions Secrets / Cloudflare Worker Secrets / `data/.env` on the server; no plaintext secrets in the repo; see [`docs/devops/SECRETS_REGISTRY.md`](docs/devops/SECRETS_REGISTRY.md).
 
 ## Roadmap
 

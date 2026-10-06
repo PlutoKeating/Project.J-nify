@@ -1,5 +1,5 @@
 export interface Env {
-  /** jnify-data 数据服务的地址（深圳服务器，经 Cloudflare Tunnel：https://data.jnify.plutokeating.beer） */
+  /** jnify-data 数据服务的地址（深圳服务器，经 Cloudflare Tunnel：https://jnify-data.plutokeating.beer） */
   JNIFY_DATA_URL: string;
   /** jnify-data 的服务密钥（Worker secret；与服务器上 data/.env 的 JNIFY_DATA_KEY 相同） */
   JNIFY_DATA_KEY: string;

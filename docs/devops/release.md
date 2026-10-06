@@ -17,7 +17,7 @@
 git tag v0.1.0 && git push origin v0.1.0
 ```
 
-运行时：`validate`（版本比对）→ `android`（ubuntu：apk + appbundle --release，dart-define 注入 `SUPABASE_URL/SUPABASE_ANON_KEY` secrets）→ `ios`（macos：`--no-codesign` 产 xcarchive）→ `release`（**仅依赖 android**，iOS 失败不阻塞发布）→ GitHub Release。
+运行时：`validate`（版本比对）→ `android`（ubuntu：apk + appbundle --release，dart-define 注入 `OPENWEATHER_API_KEY` secret；登录用的账号服务地址与 client 固定在代码里，不需要注入）→ `ios`（macos：`--no-codesign` 产 xcarchive）→ `release`（**仅依赖 android**，iOS 失败不阻塞发布）→ GitHub Release。
 
 ## 产物与 Release 资产
 
@@ -37,8 +37,8 @@ git tag v0.1.0 && git push origin v0.1.0
 4. **release 作业依赖**：`needs: [android]`（iOS 独立 job），保证 MVP 安装包发布不被签名类问题阻塞。
 5. **tag 重切**：工作流修改后需 `git tag -d` + 删远端 tag + 重新打 tag 指向新提交（tag 内嵌工作流快照）。
 6. **不要打断构建**：勿在 `flutter build`/gradle 运行中 kill 守护进程（会 assembleRelease 失败）；`/tmp FileAlreadyExistsException` 为良性告警；首次 release 构建较慢（R8）。
-7. **发布前确认 GH Secrets**：`SUPABASE_URL` / `SUPABASE_ANON_KEY` 缺失会让 release 包指向 localhost（登录必坏）。
-8. **App Link 验证资产（邮件回调，需真实值）**：邮件确认/重置回调用 `https://j-nify.arr2018.dpdns.org` App Link 唤起 App。由于 release 包用**固定签名**（见坑 10），`website/public/.well-known/assetlinks.json` 里的 `sha256_cert_fingerprints` 必须是**该 release 签名证书**的 SHA-256（`keytool -list -v -keystore <release.keystore> -alias <alias>`），否则 Android 不会静默唤起 App（走浏览器回退）。拿到指纹后替换进文件并部署 CF Pages；忘记替换 = 回调落到网站首页（功能不完整）。详见 `docs/devops/email-callback.md`。
+7. **发布前确认 GH Secrets**：签名四项（见坑 10）与 `OPENWEATHER_API_KEY`。（2026-10-07 前还需 `SUPABASE_URL` / `SUPABASE_ANON_KEY`，缺失会让 release 包登录必坏；换成 PlutoKeating 账号后已不再需要。）
+8. **App Link 验证资产（2026-10-07 起已不用：App 不再声明 App Link，登录回调是 `com.plutokeating.jnify://callback`）**：当时邮件确认/重置回调用 `https://j-nify.arr2018.dpdns.org` App Link 唤起 App。由于 release 包用**固定签名**（见坑 10），`website/public/.well-known/assetlinks.json` 里的 `sha256_cert_fingerprints` 必须是**该 release 签名证书**的 SHA-256（`keytool -list -v -keystore <release.keystore> -alias <alias>`），否则 Android 不会静默唤起 App（走浏览器回退）。拿到指纹后替换进文件并部署 CF Pages；忘记替换 = 回调落到网站首页（功能不完整）。详见 `docs/devops/email-callback.md`。
 9. **`.env` 缺失导致启动黑屏（v0.1.1 修复）**：`main()` 里 `AppConfig.load()` → `dotenv.load('.env')` 默认 `isOptional: false`，而 release APK 无 `.env` 资产（pubspec 未声明 assets、`.env` 在 .gitignore）→ `load()` 抛 `FileNotFoundError` → `runApp` 未执行 → **完全黑屏**。修复：`dotenv.load(fileName: '.env', isOptional: true)` 静默回退到编译期默认值（`String.fromEnvironment` + 内置 prod Base URL）。回归测试：`frontend/test/app_config_test.dart`。
 9. **release 缺 `INTERNET` 权限致注册 DNS 失败（v0.1.2 修复）**：Flutter 默认模板只在 debug/profile manifest 声明 `INTERNET`，release 只合入 `src/main/AndroidManifest.xml` → release APK 无网络权限，任何网络请求（含 DNS 解析）立即失败（`Failed host lookup, errno=7`），与 WiFi/流量卡/代理无关、瞬间报错。修复=主清单声明 `<uses-permission android:name="android.permission.INTERNET"/>`；验证 `aapt dump permissions <apk>`。
 10. **release 必须固定签名 keystore（v0.1.2 修复）**：release 用 `signingConfigs.getByName("debug")` 时，CI 每次全新 runner 生成**不同** debug keystore → 相邻版本签名不一致 → Android 拒绝覆盖安装（提示"版本有问题无法更新"）。修复=固定 release keystore（secrets `ANDROID_KEYSTORE_BASE64/PASSWORD/ALIAS/KEY_PASSWORD`；`build.gradle.kts` 读环境变量，未配置回退 debug 保本地构建）。⚠️ 首次换签名版本需用户**卸载重装一次**，之后签名固定可覆盖更新。
@@ -53,7 +53,7 @@ git tag v0.1.0 && git push origin v0.1.0
 
 ## 当前签名状态（✅ 已接入固定 release 签名，v0.1.2 起）
 
-> 当前最新版本：**v0.3.0**（已发布，2026-08-29；自 v0.1.2 起均为固定 release keystore 签名，可覆盖安装更新）。App Link 校验指纹（`website/public/.well-known/assetlinks.json`）取自该固定 release 证书：`9d9018a5…369d6b3`。
+> 当前最新版本：**v0.3.0**（已发布，2026-08-29；自 v0.1.2 起均为固定 release keystore 签名，可覆盖安装更新）。（旧 App Link 校验指纹 `website/public/.well-known/assetlinks.json` 取自该固定 release 证书：`9d9018a5…369d6b3`；App 已不再用 App Link。）
 > GitHub Release 资产已于 2026-08-30 复核：`app-release.apk` 与 `app-release.aab` 均存在；Release 页为 `https://github.com/PlutoKeating/Project.J-nify/releases/tag/v0.3.0`。
 > 构建提示：**flutter_local_notifications v17+ 要求启用 core library desugaring**（`build.gradle.kts` 已配置 `isCoreLibraryDesugaringEnabled` + `desugar_jdk_libs:2.1.4`），改动 Android 构建配置后需重切 tag 重发。
 
@@ -86,4 +86,4 @@ git tag v0.1.0 && git push origin v0.1.0
 ## 相关文档
 
 - CI：`.github/workflows/ci.yml`；后端部署：`.github/workflows/deploy-backend.yml`
-- 密钥台账：`docs/devops/SECRETS_REGISTRY.md`；邮件/SMTP：`docs/devops/smtp.md`
+- 密钥台账：`docs/devops/SECRETS_REGISTRY.md`；告警 SMTP：`docs/devops/smtp.md`；数据服务：`data/README.md`

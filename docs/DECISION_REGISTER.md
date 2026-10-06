@@ -1,6 +1,6 @@
 # J-nify 决策定案登记（DECISION REGISTER）
 
-> 状态：**已定案（2026-08-29；2026-08-30 工程验证决策更新）**。本文档是问卷 `docs/DECISION_QUESTIONNAIRE.md` 的最终裁决结果与实施输入，亦是「暂不做内容」的官方留档（对应 A1 备注要求：后续条件成熟时可随时发现缺口并补齐）。
+> 状态：**已定案（2026-08-29；2026-08-30 工程验证决策更新；2026-10-07 数据与登录更换，见 §七）**。本文档是问卷 `docs/DECISION_QUESTIONNAIRE.md` 的最终裁决结果与实施输入，亦是「暂不做内容」的官方留档（对应 A1 备注要求：后续条件成熟时可随时发现缺口并补齐）。
 > 三模块并行实施以此为唯一权威依据；与本文档冲突的旧文档口径以本文档为准并需同步修正。
 
 ---
@@ -208,3 +208,16 @@
 1. Q6「同 4，先不做」：按 Q4 定案解释为 **系统日历本期接入**，第三方 OAuth 日历源不接；若你本意是系统日历也本期不做，请告知（影响 App 模块范围）。
 2. Q1「采用备选方案」：按"完全无限制（仅安静时段+去重），Jennifer 动态管理频率"实施。
 3. 天气源选择 OpenWeather（免费计划商用允许+署名）；如你更倾向国内源（和风），其免费订阅商用条款不清晰，需另行确认后切换（架构已做 provider 抽象，切换成本低）。
+
+---
+
+## 七、2026-10-07 追加定案：去掉 Supabase
+
+| 编号 | 定案 | 备注 |
+| --- | --- | --- |
+| SB1 | **数据放 jnify-data**：新增 `data/`（Node 24 + Hono + node:sqlite，Docker 容器），部署在作者的服务器（中国深圳），与 Quetzal 同步服务的容器并存、互不共用；只监听本机 127.0.0.1:8789，经 Cloudflare Tunnel 以 `https://jnify-data.plutokeating.beer` 对外。表结构由原 Postgres 迁移等价转写（`data/src/schema.sql`）；3 个原子操作在服务里用事务实现；每天备份，保留 7 份 | `backend/supabase/` 迁移、`apply-migrations.ts`、`db:push / db:migrate` 删除 |
+| SB2 | **Workers 接口不变**：jnify-data 提供 PostgREST 写法的子集，后端数据访问代码沿用原写法，`/v1/*` 路径与行为不变；环境变量换成 `JNIFY_DATA_URL`、`JNIFY_DATA_KEY`、可选 `ID_ISSUER`。服务密钥只有 Worker 持有，App 不直接连数据服务 | 取代原「全表 RLS + service key」做法 |
+| SB3 | **登录用 PlutoKeating 账号**（作者各产品共用，`https://id.plutokeating.beer`）：App 用 OIDC 授权码 + PKCE；Worker 按 JWKS 验签，读要 `jnify.items.read`、改要 `jnify.items.write`；Quetzal 运行基座在用户授权后拿到它申请的 scope，作为两个产品的互通方式 | 取代 D1（忘记密码）、D6（改邮箱后重新登录）；D7 的 30 天滑动会话由刷新令牌实现 |
+| SB4 | **删除数据只删 J-nify 的数据**：`DELETE /v1/me/data` 不再删账号；账号在 PlutoKeating 账号设置里管理 | 修改 D3 / Q17 的「彻底注销（含 auth 账户）」 |
+| SB5 | **隐私如实说明**：事项、决定、记忆、节奏策略在深圳服务器上按明文存储，靠服务密钥只在 Worker、逐请求核对本人账号与服务器隔离保护；原因是 Jennifer 用模型时要看到内容、Quetzal 授权后要能读。原始信号仍只在设备上处理。App「隐私说明」、官网隐私政策同步修改 | 修改 P3 / D5 中「RLS + 加密上云」的口径 |
+| SB6 | **集成测试**：真实 Worker 应用 + 进程内 jnify-data + 本机假 JWKS，不需要外部服务；CI 新增 data 作业 | 取代 P7、F3、Q12 中的本地 Supabase 栈；F4（Supabase 邮件模板）作废 |

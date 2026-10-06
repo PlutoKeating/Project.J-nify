@@ -154,23 +154,27 @@ export const messages: Messages = {
   // 隐私政策页
   'privacy.title': { zh: '隐私政策', en: 'Privacy Policy' },
   'privacy.body1': {
-    zh: '原始信号（屏幕使用、日历内容、精确位置、天气上下文）只在您的设备本地处理，不上传。事项与决策记录加密传输并存储于云端，仅您本人可访问。',
-    en: 'Raw signals (screen usage, calendar content, precise location, weather context) are processed locally on your device and never uploaded. Items and decisions are encrypted in transit and stored in the cloud, accessible only to you.',
+    zh: '原始信号（屏幕使用、日历内容、精确位置、天气上下文）只在您的设备上处理，不上传。位置坐标在使用前先模糊到约 1 公里，只用城市 / 区域级信息。',
+    en: 'Raw signals (screen usage, calendar content, precise location, weather context) are processed on your device and never uploaded. Location is rounded to about 1 km before use; only city/region-level info is used.',
   },
   'privacy.body2': {
-    zh: '位置坐标在使用前会先模糊化（约 1 公里）；我们只使用城市/区域级信息。您可以在设置中随时删除全部数据并注销账户。',
-    en: 'Location coordinates are rounded (about 1 km) before use; only city/region-level info is used. You can delete all data and close your account anytime in Settings.',
+    zh: '事项、决定、记忆和提醒节奏存放在作者运营的服务器（中国深圳）上的数据库里，传输走 HTTPS，存储是明文。只有 J-nify 的后端持有访问它的密钥，每个请求都会核对是您本人的账号；App 不直接连数据库。没有做成服务器看不到内容，是因为 Jennifer 用模型帮您拆解、写草稿时要看到事项内容，您授权 Quetzal 之后它也要能读。',
+    en: 'Items, decisions, memories and reminder rhythms are stored in a database on a server run by the author in Shenzhen, China — sent over HTTPS, stored in plain text. Only the J-nify backend holds the key to it, and every request is checked against your own account; the app never connects to the database directly. The server can read this content because Jennifer needs to see your items when she uses a model to break them down or draft replies, and Quetzal needs to read them once you authorize it.',
   },
   'privacy.body3': {
+    zh: '登录用 PlutoKeating 账号：账号服务保存您的邮箱、登录方式（没有密码；通行密钥只存公钥）与登录记录。在设置里「删除我的数据」会删除您在 J-nify 的全部数据；账号本身在 PlutoKeating 账号设置里管理。',
+    en: 'You sign in with a PlutoKeating account: the account service keeps your email, sign-in methods (no password; only the public key of a passkey) and sign-in records. “Delete my data” in Settings deletes all your J-nify data; the account itself is managed in PlutoKeating account settings.',
+  },
+  'privacy.body4': {
     zh: '天气数据由 OpenWeather 提供（免费商用许可，署名义务）。',
     en: 'Weather data is provided by OpenWeather (free commercial license with attribution).',
   },
 
   // 深链回退页
-  'verify.title': { zh: '链接已失效', en: 'Link expired' },
+  'verify.title': { zh: '这个链接已不再使用', en: 'This link is no longer used' },
   'verify.body': {
-    zh: '该确认/重置链接已失效或过期。请回到 J-nify App 内重新发起（注册确认请重新注册，重置密码请在登录页重新发起）。',
-    en: 'This confirmation/reset link is invalid or expired. Please return to the J-nify app and start over.',
+    zh: 'J-nify 现在用 PlutoKeating 账号登录，不再通过邮件链接确认邮箱或重置密码。请打开 J-nify App 直接登录。',
+    en: 'J-nify now uses a PlutoKeating account to sign in and no longer sends email links to confirm addresses or reset passwords. Open the J-nify app and sign in there.',
   },
 
   // 功能详解页

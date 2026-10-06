@@ -16,8 +16,8 @@ flutter run
 ```sh
 flutter analyze    # 0 issues
 flutter test       # 16 用例全绿（基础 UI + SSE/会话恢复/流式/撤销卡片/节奏策略）
-flutter test integration_test/app_smoke_test.dart -d <android-device> --dart-define=SUPABASE_URL=... --dart-define=SUPABASE_ANON_KEY=...
-flutter build apk --release --dart-define=SUPABASE_URL=... --dart-define=SUPABASE_ANON_KEY=...   # 出手装包
+flutter test integration_test/app_smoke_test.dart -d <android-device>
+flutter build apk --release --dart-define=OPENWEATHER_API_KEY=...   # 出手装包
 ```
 
 Android 使用 Flutter 稳定版默认编译 SDK，最低运行版本为 API 31；CI 在启用 KVM 的 API 31 模拟器执行安装启动冒烟。`permission_handler` 固定在最新 12.x，直到 API 37 进入稳定 Android SDK 渠道。
@@ -30,9 +30,9 @@ Android 使用 Flutter 稳定版默认编译 SDK，最低运行版本为 API 31�
 > - 本地构建验证签名：`apksigner verify --print-certs <apk>`；验证权限：`aapt dump permissions <apk>`。
 >
 > **功能/配置变更（v0.1.5 起）**：
-> - 「我的」页加资料卡（昵称+邮箱）+ 设置入口；新增 `SettingsScreen`（改昵称/邮箱/密码）。昵称经后端 `GET/PUT /v1/me/profile`；邮箱/密码经 Supabase Auth。
-> - 邮件确认/重置回调用 **App Link**：`main.dart` 用 `app_links` 订阅深链 → `auth.verifyOTP`/`getSessionFromUrl`；平台配置见根 `docs/devops/email-callback.md`（Android intent-filter 已在 `AndroidManifest.xml`；校验指纹在官网 `/.well-known/assetlinks.json`）。
-> - 登录会话：`Supabase.initialize` 显式 `autoRefreshToken/persistSession`；`AuthGate` 启动 `refreshSession()` 滑动重置（服务端 Inactivity timeout=30 天）。
+> - 「我的」页加资料卡（昵称+邮箱）+ 设置入口 `SettingsScreen`。昵称经后端 `GET/PUT /v1/me/profile`。
+>
+> **登录（2026-10-07 起）**：PlutoKeating 账号（`https://id.plutokeating.beer`，client `jnify-app`，回调 `com.plutokeating.jnify://callback`）。登录页一个「登录」按钮，打开账号服务的登录页（邮箱验证码、通行密钥或 GitHub，没有密码）；设置页「PlutoKeating 账号」点开账号设置页。访问令牌快过期时用刷新令牌（30 天，滑动）静默换新。原 Supabase 的邮件确认 / 重置回调与 App Link 已去掉。
 > - ⚠️ `pubspec.yaml` 的 `+N`（=Android versionCode）**必须随发版单调递增**（v0.1.3/v0.1.4 曾 `+1` 致 versionCode=1 < v0.1.2 的 3，覆盖安装被拒）。当前最大=6（v0.3.0=`+6`），下一版本须 ≥+7。
 
 ## 配置
@@ -41,13 +41,11 @@ Android 使用 Flutter 稳定版默认编译 SDK，最低运行版本为 API 31�
 
 ```
 BACKEND_BASE_URL=https://j-nify.williamhvollita.dpdns.org   # 生产默认（代码内置）；本地开发改 http://localhost:8787
-SUPABASE_URL=                                             # 生产 release 由 CI dart-define 注入
-SUPABASE_ANON_KEY=
 APP_ENV=development
 API_TIMEOUT=15
 ```
 
-> 生产/发布包无需 `.env`：后端地址内置为生产 Base URL；Supabase 配置（URL + publishable key）由 CI 构建时注入（GH Secrets）。注册后需邮箱确认（生产 SMTP 已接，j_nify@yeah.net）。
+> 生产/发布包无需 `.env`：后端地址内置为生产 Base URL；账号服务地址固定在代码里，不需要注入。
 
 > v0.2.0 新增环境变量（release 用 `--dart-define` 注入，本地写 gitignored `.env`）：
 > - `OPENWEATHER_API_KEY`（天气，免费可商用需署名 "Weather by OpenWeather"）

@@ -1,5 +1,6 @@
 # J-nify 项目交接文档（HANDOVER）— v0.3.0
 
+> **2026-10-07 起数据与登录已换**（Supabase → jnify-data + PlutoKeating 账号），本文关于 Supabase、RLS、邮件回调、迁移与相关 secrets 的内容已过时，以 `docs/ARCHITECTURE.md`、`docs/QUICK_START.md`、`data/README.md` 为准。
 > 更新：2026-08-30（v0.3.0 发布后工程质量收口）。目的：让**新 session 可立即找回工作状态**。
 > 权威信息源：`docs/DECISION_REGISTER.md`（决策定案）、`docs/compose/specs/2026-08-29-jennifer-agent-complete-spec.md`（Jennifer 完整实现 spec，R0–R11 定案）、`docs/JENNIFER_AGENT_REPORT.md`（agent 设计与现状）、`docs/devops/SECRETS_REGISTRY.md`（密钥台账）。
 > ⚠️ 仓库 **public**：本文不含任何密钥明文，只列「名称 + 存放位置」；真值在 GitHub Actions Secrets / CF Dashboard Worker secrets / 本机 `backend/.dev.vars`（gitignored）/ 密码管理器。

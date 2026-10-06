@@ -40,14 +40,14 @@ Pages 项目已存在，日常运维无需重建。如灾难恢复需要新建�
 - 浏览器访问 **`https://j-nify.arr2018.dpdns.org`** 应显示官网首页。
 - `/features`、`/download` 直接刷新或直达可用（`_redirects` 提供 SPA 回退）。
 - 下载页应显示**真实最新版本**（来自 GitHub Release，非硬编码），点资产为直链下载、不跳转 GitHub。
-- **App Link 校验资产**（邮件确认/重置回调用）：`public/.well-known/assetlinks.json`（Android）与 `public/.well-known/apple-app-site-association`（iOS）随 `public/` 一起被 Vite 复制进 `dist/` 并由 CF Pages 直出（`_redirects` 只兜底未命中路径，不影响 `.well-known` 真实文件）。`/_headers` 为 AASA 强制 `Content-Type: application/json`。验证：
+- **App Link 校验资产**（原用于 Supabase 邮件确认/重置回调；2026-10-07 起 App 已不声明 App Link，文件暂留）：`public/.well-known/assetlinks.json`（Android）与 `public/.well-known/apple-app-site-association`（iOS）随 `public/` 一起被 Vite 复制进 `dist/` 并由 CF Pages 直出（`_redirects` 只兜底未命中路径，不影响 `.well-known` 真实文件）。`/_headers` 为 AASA 强制 `Content-Type: application/json`。验证：
   - `https://j-nify.arr2018.dpdns.org/.well-known/assetlinks.json` 返回**真实** release 证书 SHA-256（见 `docs/devops/email-callback.md`；Android 校验失败则 App Link 不会静默唤起 App，回落浏览器）。
   - `https://j-nify.arr2018.dpdns.org/.well-known/apple-app-site-association` 返回 `Content-Type: application/json`。
 
 ## 五、发布节奏
 
 - push 到 `main`（改动 `website/**` 或部署工作流）→ `Deploy Website` 自动运行 `npm ci` + test + lint + build + Pages 发布。
-- 工作流会同时检查 `pages.dev` 和自定义域名的 `/features` / `/download` / `/privacy` / `/auth/verify` 都返回 200。
+- 工作流会同时检查 `pages.dev` 和自定义域名的 `/features` / `/download` / `/privacy` / `/auth/verify` 都返回 200（`/auth/verify` 现在只是旧邮件链接的提示页）。
 - 如需强制重部署：GitHub Actions → `Deploy Website (Cloudflare Pages)` → `Run workflow`。Dashboard `Retry deployment` 仅作备用。
 - 回滚：切换到先前成功的 Deployment 并 `Rollback`。
 

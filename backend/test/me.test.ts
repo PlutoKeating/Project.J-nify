@@ -1,4 +1,4 @@
-// 资料接口 GET/PUT /v1/me/profile：昵称（非唯一）经 service key 读写 users 表。
+// 资料接口 GET/PUT /v1/me/profile：昵称（非唯一）经 jnify-data 服务密钥读写 users 表。
 // 无库单测里用「路由存在性（无 token → 401）+ 源码断言钉住接线/校验」，与
 // redline.test.ts 的机读替身手法一致（DB-bound 逻辑由集成测试覆盖）。
 import { describe, expect, it } from 'vitest';

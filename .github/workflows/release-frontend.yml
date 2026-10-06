@@ -108,7 +108,7 @@ jobs:
           channel: stable
           cache: true
 
-      # ios/ 平台目录已入库；无需 ensure。构建时注入 Supabase 配置（secrets），
+      # ios/ 平台目录已入库；无需 ensure。构建时注入天气等配置（secrets），
       # 运行时可选签名（当前 --no-codesign）。
       - name: Install dependencies
         run: flutter pub get

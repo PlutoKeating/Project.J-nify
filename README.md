@@ -59,22 +59,25 @@ P 人不是不想做好，是很多事**一旦放下就真的会蒸发**。拖�
 
 | 层 | 技术 | 说明 |
 | --- | --- | --- |
-| 前端 | Flutter (Dart) + supabase_flutter | 认证（Supabase Auth）；三屏 UI + 录入/决策闭环；生产后端默认 `https://j-nify.williamhvollita.dpdns.org` |
+| 前端 | Flutter (Dart) + flutter_appauth | 登录 PlutoKeating 账号（OIDC 授权码 + PKCE）；三屏 UI + 录入/决策闭环；生产后端默认 `https://j-nify.williamhvollita.dpdns.org` |
 | 后端 | **Cloudflare Worker**：TypeScript + Hono | 部署=GitHub Actions `wrangler deploy`（push main 自动上线） |
-| 数据 | **Supabase Postgres**（REST/PostgREST + RPC） | 23 张表 + 事务 RPC；全表 RLS（客户端角色零数据访问） |
-| 账户/邮件 | **Supabase Auth + 生产 SMTP** | 邮箱确认/重置经 j_nify@yeah.net（smtp.yeah.net:465） |
+| 数据 | **jnify-data**（`data/`：Node 24 + Hono + node:sqlite，Docker） | 23 张表 + 3 个事务操作；部署在作者的服务器（中国深圳），经 Cloudflare Tunnel 只对 Worker 开放 |
+| 账号 | **PlutoKeating 账号**（`id.plutokeating.beer`） | 作者各产品共用的统一账号：邮箱验证码 / 通行密钥 / GitHub，没有密码 |
 | 建模 | SPEC §6 的 15 个实体 | USER / ITEM_COMMITMENT / OPPORTUNITY_WINDOW / NUDGE / DECISION … |
 
-**运行时密钥**只在后端：`SUPABASE_URL` + `SUPABASE_SERVICE_KEY`（CF Worker secrets）；前端仅用客户端级 publishable key 做 Auth；仓库无明文密钥。
+**运行时密钥**只在后端：`JNIFY_DATA_URL` + `JNIFY_DATA_KEY`（CF Worker secrets）；App 不持有任何服务端密钥；仓库无明文密钥。
+
+**数据存放（如实说明）**：事项、决定、记忆、节奏策略存在作者服务器（中国深圳）上的数据库里，按明文存储，靠「只有 Worker 持有服务密钥、每个请求都核对是本人账号」与服务器隔离保护——Jennifer 用模型时要看到事项内容，Quetzal 在你授权后也要能读。原始信号（日历 / 天气 / 位置 / 使用情况）只在设备上处理。
 
 ## 快速开始
 
-**后端（本地开发）：**
+**数据服务 + 后端（本地开发）：**
 
 ```bash
+cd data && npm ci && npm run dev        # jnify-data，127.0.0.1:8789
 cd backend
 npm ci                                  # 安装依赖
-cp .dev.vars.example .dev.vars          # 填 SUPABASE_URL / SUPABASE_SERVICE_KEY / DATABASE_URL
+cp .dev.vars.example .dev.vars          # 默认已指向本地 jnify-data
 npx wrangler dev                        # 本地起 Worker
 ```
 
@@ -84,7 +87,7 @@ npx wrangler dev                        # 本地起 Worker
 
 ```bash
 cd frontend
-cp .env.example .env                    # 可选：覆盖 BACKEND_BASE_URL / SUPABASE_*（生产默认已内置）
+cp .env.example .env                    # 可选：覆盖 BACKEND_BASE_URL（生产默认已内置）
 flutter pub get
 flutter run
 # 发布安装包：见 docs/devops/release.md（打 tag vX.Y.Z 自动出 APK/AAB 并发布 GitHub Release）
@@ -95,10 +98,11 @@ flutter run
 ## 仓库结构
 
 ```
-frontend/      Flutter 客户端（认证 + 三屏 + 录入/决策闭环）
-backend/       Cloudflare Worker 后端（TS + Hono；Supabase REST/RPC 数据层）
+frontend/      Flutter 客户端（登录 + 三屏 + 录入/决策闭环）
+backend/       Cloudflare Worker 后端（TS + Hono；数据经 jnify-data）
+data/          jnify-data 数据服务（Node + SQLite，Docker；见 data/README.md）
 docs/          文档：SPEC / ARCHITECTURE / API / QUICK_START / HANDOVER
-docs/devops/   发布规范 / SMTP / 密钥台账
+docs/devops/   发布规范 / 告警 SMTP / 密钥台账
 .github/       GitHub Actions（CI / 后端与官网部署 / App 发布 / 运维 / 生产冒烟）
 LICENSE        AGPL-3.0
 ```
@@ -109,7 +113,7 @@ LICENSE        AGPL-3.0
 - 🏛️ [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) —— 系统架构
 - 🔌 [`docs/API.md`](docs/API.md) —— REST API
 - 🚀 [`docs/QUICK_START.md`](docs/QUICK_START.md) —— 快速开始
-- 🗂️ [`docs/HANDOVER.md`](docs/HANDOVER.md) —— 项目状态交接（本仓库最新实现/部署/运维要点）
+- 🗂️ [`docs/HANDOVER.md`](docs/HANDOVER.md) —— 项目状态交接（2026-08-30 的实现/部署/运维快照）
 - 🤖 [`docs/JENNIFER_AGENT_REPORT.md`](docs/JENNIFER_AGENT_REPORT.md) —— Jennifer agent 设计与实现现状记录（LLM 调用构建 / prompt / 记忆 / 会话 / 人格设定 / 实测与缺口）
 - 📐 [`docs/compose/specs/2026-08-29-jennifer-agent-complete-spec.md`](docs/compose/specs/2026-08-29-jennifer-agent-complete-spec.md) —— Jennifer agent 完整实现需求 Spec（官方文档集 / MCP 风格上下文 / 结构化记忆 / 流式 / 改动卡片与撤销 / admin 管理面）
 - 📋 [`docs/DECISION_QUESTIONNAIRE.md`](docs/DECISION_QUESTIONNAIRE.md) —— 产品决策问卷（v0.1.5 全链路审视汇总，已人工填写并定案）
@@ -117,7 +121,7 @@ LICENSE        AGPL-3.0
 - 🗺️ [`docs/compose/plans/2026-08-29-v020-m0.5-m1-implementation.md`](docs/compose/plans/2026-08-29-v020-m0.5-m1-implementation.md) —— v0.2.0 实施计划
 - 🕳️ [`docs/GAPS.md`](docs/GAPS.md) —— 缺口登记（暂不实现，条件成熟时补齐）
 
-> 文档时效性：`README` / `ARCHITECTURE` / `API` / `QUICK_START` / `HANDOVER` / `docs/devops/*` 描述当前实现与运维状态；`docs/compose/plans|specs|reports` 与 `DECISION_QUESTIONNAIRE` 是带日期的过程档案，保留当时语境，不作为当前运维手册。最新工作状态以 [`docs/HANDOVER.md`](docs/HANDOVER.md) 为准。
+> 文档时效性：`README` / `ARCHITECTURE` / `API` / `QUICK_START` / `data/README` / `docs/devops/*` 描述当前实现与运维状态；`docs/compose/plans|specs|reports` 与 `DECISION_QUESTIONNAIRE` 是带日期的过程档案，保留当时语境，不作为当前运维手册。[`docs/HANDOVER.md`](docs/HANDOVER.md) 停在 2026-08-30；2026-10-07 起数据与登录已换（见 `ARCHITECTURE` 与 `DECISION_REGISTER` §七），其中 Supabase 相关内容已过时。
 
 ## 官网
 
@@ -131,12 +135,13 @@ LICENSE        AGPL-3.0
 
 ## CI/CD 与发布
 
-- ✅ **CI 门禁**（`.github/workflows/ci.yml`）：push / PR 自动并行校验 —— 后端单测+类型检查、本地 Supabase 5 项集成测试、前端静态分析+16 项测试、官网测试+lint+构建。
+- ✅ **CI 门禁**（`.github/workflows/ci.yml`）：push / PR 自动并行校验 —— 数据服务测试+类型检查、后端单测+类型检查（含 5 项集成测试：真实 Worker + 进程内 jnify-data + 本机假 JWKS）、前端静态分析+测试、官网测试+lint+构建。
 - 🩺 **生产冒烟**（`.github/workflows/smoke-production.yml`）：每日及手动执行官网/后端/只读 Admin API 检查，并在 Android 模拟器验证 App 可安装启动到认证页。
-- 📦 **前端自动打包发布**（`.github/workflows/release-frontend.yml`）：推送 tag `vX.Y.Z` 触发，校验 tag 与 `frontend/pubspec.yaml` 的 version 一致后，构建 Android APK/AAB（ubuntu，**固定 release keystore 签名**）并发布 GitHub Release；iOS 归档（xcarchive，macos，未签名需 Apple 证书）。`SUPABASE_URL/SUPABASE_ANON_KEY` 经 GH Secrets 注入构建（dart-define）。⚠️ `pubspec.yaml` 的 `+N`（=`versionCode`）必须随发版单调递增（曾因降级致覆盖安装被拒），流程详见 [`docs/devops/release.md`](docs/devops/release.md)。
+- 📦 **前端自动打包发布**（`.github/workflows/release-frontend.yml`）：推送 tag `vX.Y.Z` 触发，校验 tag 与 `frontend/pubspec.yaml` 的 version 一致后，构建 Android APK/AAB（ubuntu，**固定 release keystore 签名**）并发布 GitHub Release；iOS 归档（xcarchive，macos，未签名需 Apple 证书）。⚠️ `pubspec.yaml` 的 `+N`（=`versionCode`）必须随发版单调递增（曾因降级致覆盖安装被拒），流程详见 [`docs/devops/release.md`](docs/devops/release.md)。
 - 🚢 **后端部署**（`.github/workflows/deploy-backend.yml`）：push main（backend/**）自动 `wrangler deploy`，生产后端唯一 Base URL = **`https://j-nify.williamhvollita.dpdns.org`**。
-- 📧 **邮件与 SMTP**（Supabase 自定义 SMTP，j_nify@yeah.net）：已上线（confirm-email 开启），模板见 [`docs/devops/smtp.md`](docs/devops/smtp.md)。
-- 🔐 **密钥台账**：所有 prod 密钥以 GitHub Actions Secrets / Cloudflare Worker Secrets / Supabase 平台存储，仓库内无明文密钥，见 [`docs/devops/SECRETS_REGISTRY.md`](docs/devops/SECRETS_REGISTRY.md)。
+- 🗄️ **数据服务**：服务器上 `cd data && ./start.sh` 启动 / 更新（第一次生成 `.env` 与服务密钥）；每天备份，保留 7 份。见 [`data/README.md`](data/README.md)。
+- 📧 **告警邮件**：Worker 告警经 SMTP 发出，见 [`docs/devops/smtp.md`](docs/devops/smtp.md)。登录不再发邮件链接（验证码由 PlutoKeating 账号服务发送）。
+- 🔐 **密钥台账**：所有 prod 密钥以 GitHub Actions Secrets / Cloudflare Worker Secrets / 服务器上的 `data/.env` 存储，仓库内无明文密钥，见 [`docs/devops/SECRETS_REGISTRY.md`](docs/devops/SECRETS_REGISTRY.md)。
 
 ## 路线图
 

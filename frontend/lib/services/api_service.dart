@@ -114,7 +114,7 @@ class ApiService implements JenniferChatApi {
     return data as Map<String, dynamic>;
   }
 
-  /// 彻底注销（D3/Q17：清空业务数据 + 删除 auth 账户）
+  /// 删除我在 J-nify 的全部数据（账号本身在 PlutoKeating 账号设置里管理）
   Future<Map<String, dynamic>> deleteAllData() async {
     final data = await _client.delete('/v1/me/data');
     return data as Map<String, dynamic>;

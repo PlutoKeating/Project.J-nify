@@ -1,4 +1,4 @@
-// 需要整体成功或整体失败的写操作（原来是 Postgres 函数，见 backend/supabase/migrations/20260827000002 与 0003），在这里用一个事务实现，语义不变。
+// 需要整体成功或整体失败的写操作（原来是 Supabase 上的 Postgres 函数，已随迁移删除，见 git 历史），在这里用一个事务实现，语义不变。
 import crypto from "node:crypto";
 import { BadRequest, normalizeTs, type Db } from "./db.ts";
 
